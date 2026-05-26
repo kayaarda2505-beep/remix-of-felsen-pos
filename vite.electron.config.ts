@@ -7,9 +7,13 @@ import { renameSync, existsSync, writeFileSync } from "fs";
 
 // Stub server-only modules for Electron client-only build
 const stubPath = resolve(__dirname, "src/electron-stub.ts");
-writeFileSync(stubPath, `export const createServerFn = () => { const chain: any = { middleware: () => chain, inputValidator: () => chain, validator: () => chain, handler: (fn: any) => fn }; return chain; };
-export default {};
-export const createMiddleware = () => ({ server: () => ({ client: () => ({}) }) });
+writeFileSync(stubPath, `const proxy: any = new Proxy(function(){}, { get: () => proxy, apply: () => proxy, construct: () => proxy });
+export default proxy;
+export const createServerFn = () => proxy;
+export const createMiddleware = () => proxy;
+export const supabaseAdmin = proxy;
+export const requireSupabaseAuth = proxy;
+export const attachSupabaseAuth = proxy;
 `);
 
 export default defineConfig({
