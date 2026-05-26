@@ -15,11 +15,12 @@ export const createMiddleware = () => ({ server: () => ({ client: () => ({}) }) 
 export default defineConfig({
   base: "./",
   resolve: {
-    alias: {
-      "@tanstack/react-start": stubPath,
-      "@tanstack/start-server-core": stubPath,
-      "@tanstack/react-start/server": stubPath,
-    },
+    alias: [
+      { find: /^@tanstack\/react-start(\/.*)?$/, replacement: stubPath },
+      { find: /^@tanstack\/start-server-core(\/.*)?$/, replacement: stubPath },
+      { find: /^@\/integrations\/supabase\/auth-middleware$/, replacement: stubPath },
+      { find: /^@\/integrations\/supabase\/auth-attacher$/, replacement: stubPath },
+    ],
   },
   build: {
     outDir: "dist-electron",
