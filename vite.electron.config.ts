@@ -24,6 +24,7 @@ export const verifyWebhook = proxy;
 export const StripeEnv = proxy;
 export const stripe = proxy;
 export const resend = proxy;
+export const createStripeClient = proxy;
 export const getEvent = proxy;
 export const getHeaders = proxy;
 export const setHeaders = proxy;
