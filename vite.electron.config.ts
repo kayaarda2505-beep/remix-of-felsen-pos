@@ -27,8 +27,6 @@ export const resend = proxy;
 export const getEvent = proxy;
 export const getHeaders = proxy;
 export const setHeaders = proxy;
-export const getHeaders = proxy;
-export const setHeaders = proxy;
 `;
 
 function stubPlugin() {
