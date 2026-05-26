@@ -1,7 +1,15 @@
 const proxy: any = new Proxy(function(){}, { get: () => proxy, apply: () => proxy, construct: () => proxy });
 export default proxy;
-export const createServerFn = () => proxy;
-export const createMiddleware = () => proxy;
+export const createServerFn = proxy;
+export const createMiddleware = proxy;
 export const supabaseAdmin = proxy;
 export const requireSupabaseAuth = proxy;
 export const attachSupabaseAuth = proxy;
+export const useServerFn = () => proxy;
+export const serverOnly = proxy;
+export const json = proxy;
+export const getEvent = proxy;
+export const getHeaders = proxy;
+export const setHeaders = proxy;
+export const getCookie = proxy;
+export const setCookie = proxy;
