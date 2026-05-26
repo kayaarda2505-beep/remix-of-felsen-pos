@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient } from "@tanstack/react-query";
-import { createHashHistory, createRouter } from "@tanstack/react-router";
+import { createHashHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
@@ -25,7 +25,7 @@ const rootElement = document.getElementById("root");
 if (rootElement) {
   createRoot(rootElement).render(
     <StrictMode>
-      <router.RouterProvider />
+      <RouterProvider router={router} />
     </StrictMode>
   );
 }
