@@ -20,6 +20,8 @@ export default defineConfig({
       { find: /^@tanstack\/start-server-core(\/.*)?$/, replacement: stubPath },
       { find: /^@\/integrations\/supabase\/auth-middleware$/, replacement: stubPath },
       { find: /^@\/integrations\/supabase\/auth-attacher$/, replacement: stubPath },
+      { find: /^@\/integrations\/supabase\/client\.server$/, replacement: stubPath },
+      { find: /\.server$/, replacement: stubPath },
     ],
   },
   build: {
