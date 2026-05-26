@@ -5,24 +5,18 @@ import { createHashHistory, createRouter, RouterProvider } from "@tanstack/react
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
-// Mark as electron so CSS can disable expensive effects (backdrop-filter, fixed bg)
-document.documentElement.classList.add("is-electron");
-
-// Inject perf overrides
+// Disable expensive backdrop-filter blur in Electron (causes input lag on Windows)
 const style = document.createElement("style");
 style.textContent = `
-  html.is-electron body {
-    background-image: none !important;
-    background-attachment: scroll !important;
-  }
-  html.is-electron .glass,
-  html.is-electron .glass-strong {
+  .glass, .glass-strong {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    background: oklch(0.18 0.006 270) !important;
   }
-  html.is-electron * {
-    -webkit-font-smoothing: antialiased;
+  .glass-strong {
+    background: oklch(0.2 0.006 270) !important;
+  }
+  body {
+    background-attachment: scroll !important;
   }
 `;
 document.head.appendChild(style);
