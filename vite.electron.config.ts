@@ -21,7 +21,8 @@ export default defineConfig({
       { find: /^@\/integrations\/supabase\/auth-middleware$/, replacement: stubPath },
       { find: /^@\/integrations\/supabase\/auth-attacher$/, replacement: stubPath },
       { find: /^@\/integrations\/supabase\/client\.server$/, replacement: stubPath },
-      { find: /\.server$/, replacement: stubPath },
+      { find: /^.*\.server$/, replacement: stubPath },
+      { find: /^.*\.server\.(ts|tsx|js)$/, replacement: stubPath },
     ],
   },
   build: {
