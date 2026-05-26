@@ -1,0 +1,1 @@
+ALTER TABLE public.floor_elements ADD COLUMN IF NOT EXISTS points jsonb;

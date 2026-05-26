@@ -1,0 +1,259 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Plus, Trash2, Printer, Wifi, MonitorSmartphone, Globe, Search, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { SettingsPage } from "@/components/SettingsPage";
+import { supabase } from "@/integrations/supabase/client";
+import { isDesktopApp, testPrinter, discoverPrintersOnNetwork } from "@/lib/printer-bridge";
+
+export const Route = createFileRoute("/settings/printers")({
+  component: PrintersPage,
+});
+
+type P = {
+  id: string;
+  name: string;
+  type: string;
+  ip_address: string | null;
+  port: number | null;
+  active: boolean;
+};
+
+const TYPES = ["bon", "kueche", "bar", "rechnung"] as const;
+
+function PrintersPage() {
+  const [items, setItems] = useState<P[]>([]);
+  const [form, setForm] = useState({ name: "", type: "bon", ip_address: "", port: 9100 });
+  const [scanning, setScanning] = useState(false);
+  const [found, setFound] = useState<Array<{ ip_address: string; port: number }>>([]);
+
+  const load = async () => {
+    const { data } = await supabase.from("printers").select("*").order("created_at");
+    setItems(data ?? []);
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const scan = async () => {
+    if (!isDesktopApp()) {
+      return toast.error("Suche nur in der SAINTS-POS Desktop-App verfügbar");
+    }
+    setScanning(true);
+    setFound([]);
+    try {
+      toast.message("Netzwerk wird durchsucht…", { description: "Dauert ca. 10–30 Sekunden" });
+      const r = await discoverPrintersOnNetwork({ port: 9100 });
+      if (!r.ok) throw new Error(r.error ?? "Fehler bei der Suche");
+      const results = r.results ?? [];
+      // bereits konfigurierte IPs ausblenden
+      const existing = new Set(items.map((p) => p.ip_address).filter(Boolean));
+      const fresh = results.filter((x) => !existing.has(x.ip_address));
+      setFound(fresh);
+      if (fresh.length === 0) toast.message("Keine neuen Drucker gefunden");
+      else toast.success(`${fresh.length} Drucker gefunden`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Suche fehlgeschlagen");
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const addFromScan = async (ip: string, port: number) => {
+    const name = `Drucker ${ip.split(".").pop()}`;
+    const { error } = await supabase.from("printers").insert({
+      name,
+      type: "bon",
+      ip_address: ip,
+      port,
+    });
+    if (error) return toast.error(error.message);
+    toast.success(`${name} hinzugefügt`);
+    setFound((f) => f.filter((x) => x.ip_address !== ip));
+    load();
+  };
+
+  const create = async () => {
+    if (!form.name.trim()) return toast.error("Name fehlt");
+    const { error } = await supabase.from("printers").insert({
+      name: form.name,
+      type: form.type,
+      ip_address: form.ip_address || null,
+      port: form.port || 9100,
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Drucker hinzugefügt");
+    setForm({ name: "", type: "bon", ip_address: "", port: 9100 });
+    load();
+  };
+
+  const testPrint = async (p: P) => {
+    if (!p.ip_address) return toast.error("Keine IP konfiguriert");
+    if (!isDesktopApp()) {
+      return toast.error("Druck nur in der SAINTS-POS Desktop-App verfügbar");
+    }
+    const r = await testPrinter(p);
+    if (r.ok) toast.success(`Test-Druck an ${p.name} gesendet`);
+    else toast.error(r.error ?? "Druckfehler");
+  };
+  const desktop = isDesktopApp();
+
+  const toggle = async (p: P) => {
+    await supabase.from("printers").update({ active: !p.active }).eq("id", p.id);
+    load();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Löschen?")) return;
+    await supabase.from("printers").delete().eq("id", id);
+    load();
+  };
+
+  return (
+    <SettingsPage title="Drucker" subtitle="Bon-, Küchen- und Bar-Drucker konfigurieren">
+      <div
+        className={`glass rounded-2xl px-4 py-3 mb-4 flex items-center gap-3 text-sm border ${
+          desktop ? "border-success/40 bg-success/5" : "border-warning/40 bg-warning/5"
+        }`}
+      >
+        {desktop ? (
+          <MonitorSmartphone className="w-4 h-4 text-success shrink-0" />
+        ) : (
+          <Globe className="w-4 h-4 text-warning shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="font-medium">
+            {desktop ? "Desktop-App verbunden" : "Browser-Modus"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {desktop
+              ? "Bons werden direkt an die Netzwerk-Drucker gesendet."
+              : "Druck erst aktiv, wenn die SAINTS-POS Desktop-App (.exe) genutzt wird."}
+          </div>
+        </div>
+      </div>
+      <div className="glass rounded-3xl p-6 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="text-sm font-medium">Drucker im Netzwerk suchen</div>
+            <div className="text-xs text-muted-foreground">
+              Scannt das lokale Netzwerk auf Bondrucker (Port 9100).
+            </div>
+          </div>
+          <button
+            onClick={scan}
+            disabled={scanning || !desktop}
+            className="rounded-xl bg-accent/20 hover:bg-accent/30 text-accent px-4 py-2 text-sm font-medium flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            title={desktop ? "Netzwerk scannen" : "Nur in Desktop-App verfügbar"}
+          >
+            {scanning ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Suche…</>
+            ) : (
+              <><Search className="w-4 h-4" /> Suchen</>
+            )}
+          </button>
+        </div>
+        {found.length > 0 && (
+          <div className="space-y-2 mt-2">
+            {found.map((f) => (
+              <div key={f.ip_address} className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2">
+                <Printer className="w-4 h-4 text-accent shrink-0" />
+                <div className="flex-1 text-sm font-mono">{f.ip_address}:{f.port}</div>
+                <button
+                  onClick={() => addFromScan(f.ip_address, f.port)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-accent text-accent-foreground hover:opacity-90 flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> Hinzufügen
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="glass rounded-3xl p-6 mb-6">
+        <div className="text-sm font-medium mb-4">Neuer Drucker</div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Name"
+            className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm md:col-span-2"
+          />
+          <select
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm"
+          >
+            {TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            value={form.port}
+            onChange={(e) => setForm({ ...form, port: Number(e.target.value) })}
+            placeholder="Port"
+            className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm"
+          />
+          <input
+            value={form.ip_address}
+            onChange={(e) => setForm({ ...form, ip_address: e.target.value })}
+            placeholder="IP-Adresse (192.168.1.50)"
+            className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm md:col-span-3"
+          />
+          <button
+            onClick={create}
+            className="rounded-xl bg-accent text-accent-foreground font-medium py-2.5 text-sm md:col-span-4 hover:opacity-90 flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Hinzufügen
+          </button>
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">
+          Keine Drucker eingerichtet
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((p) => (
+            <div key={p.id} className="glass rounded-2xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                <Printer className="w-4 h-4 text-accent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">{p.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {p.type} · {p.ip_address ?? "keine IP"}:{p.port}
+                </div>
+              </div>
+              <button
+                onClick={() => testPrint(p)}
+                className="text-[10px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 flex items-center gap-1"
+              >
+                <Wifi className="w-3 h-3" /> Test
+              </button>
+              <button
+                onClick={() => toggle(p)}
+                className={`text-[10px] px-2 py-1 rounded-md ${
+                  p.active ? "bg-success/15 text-success" : "bg-white/5 text-muted-foreground"
+                }`}
+              >
+                {p.active ? "Aktiv" : "Aus"}
+              </button>
+              <button
+                onClick={() => remove(p.id)}
+                className="p-2 rounded-lg hover:bg-destructive/15 hover:text-destructive transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </SettingsPage>
+  );
+}

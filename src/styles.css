@@ -1,0 +1,247 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* FELSEN POS — Apple-inspired dark luxury design system */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter",
+    system-ui, sans-serif;
+}
+
+:root {
+  --radius: 1rem;
+
+  /* Pure dark luxury — black canvas with subtle warm whites */
+  --background: oklch(0.13 0.005 270);
+  --foreground: oklch(0.98 0.002 90);
+
+  --card: oklch(0.18 0.006 270);
+  --card-foreground: oklch(0.98 0.002 90);
+
+  --popover: oklch(0.2 0.006 270);
+  --popover-foreground: oklch(0.98 0.002 90);
+
+  --primary: oklch(0.98 0.002 90);
+  --primary-foreground: oklch(0.13 0.005 270);
+
+  --secondary: oklch(0.24 0.008 270);
+  --secondary-foreground: oklch(0.98 0.002 90);
+
+  --muted: oklch(0.22 0.006 270);
+  --muted-foreground: oklch(0.65 0.01 270);
+
+  --accent: oklch(0.98 0 0);
+  --accent-foreground: oklch(0.13 0.005 270);
+
+  --destructive: oklch(0.65 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --success: oklch(0.7 0.17 155);
+  --success-foreground: oklch(0.13 0.005 270);
+
+  --warning: oklch(0.78 0.15 75);
+  --warning-foreground: oklch(0.13 0.005 270);
+
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.98 0 0);
+
+  /* Glass system */
+  --glass: oklch(1 0 0 / 4%);
+  --glass-border: oklch(1 0 0 / 10%);
+
+  /* Charts — warm metallic palette */
+  --chart-1: oklch(0.78 0.13 75);
+  --chart-2: oklch(0.7 0.17 155);
+  --chart-3: oklch(0.65 0.18 250);
+  --chart-4: oklch(0.7 0.2 350);
+  --chart-5: oklch(0.85 0.05 90);
+
+  /* Sidebar */
+  --sidebar: oklch(0.1 0.005 270);
+  --sidebar-foreground: oklch(0.85 0.005 270);
+  --sidebar-primary: oklch(0.98 0 0);
+  --sidebar-primary-foreground: oklch(0.13 0.005 270);
+  --sidebar-accent: oklch(0.2 0.006 270);
+  --sidebar-accent-foreground: oklch(0.98 0.002 90);
+  --sidebar-border: oklch(1 0 0 / 6%);
+  --sidebar-ring: oklch(0.98 0 0);
+
+  /* Gradients & shadows */
+  --gradient-gold: linear-gradient(135deg, oklch(1 0 0), oklch(0.88 0 0));
+  --gradient-surface: linear-gradient(
+    180deg,
+    oklch(1 0 0 / 6%),
+    oklch(1 0 0 / 2%)
+  );
+  --gradient-glow: radial-gradient(
+    circle at 50% 0%,
+    oklch(1 0 0 / 12%),
+    transparent 60%
+  );
+
+  --shadow-glass: 0 1px 0 0 oklch(1 0 0 / 8%) inset,
+    0 20px 40px -20px oklch(0 0 0 / 60%);
+  --shadow-elevated: 0 1px 0 0 oklch(1 0 0 / 10%) inset,
+    0 30px 60px -30px oklch(0 0 0 / 80%);
+  --shadow-gold: 0 0 0 1px oklch(1 0 0 / 25%),
+    0 20px 40px -10px oklch(1 0 0 / 20%);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01", "ss03";
+  }
+
+  body {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, oklch(0.78 0.13 75 / 6%), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 100%, oklch(0.65 0.18 250 / 5%), transparent);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: oklch(0.78 0.13 75 / 30%);
+  }
+}
+
+@layer components {
+  .glass {
+    background: var(--gradient-surface);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-glass);
+  }
+
+  .glass-strong {
+    background: oklch(0.18 0.006 270 / 80%);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .text-gradient-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .tap-highlight-none {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+.pulse-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+/* Compact mode: tighten spacing & typography on phone + tablet */
+@media (max-width: 1023px) {
+  html { font-size: 14px; }
+  main { padding-bottom: 5rem; }
+
+  h1 { font-size: 1.5rem !important; line-height: 1.15 !important; }
+  h2 { font-size: 1.125rem !important; line-height: 1.2 !important; }
+  h3 { font-size: 1rem !important; line-height: 1.25 !important; }
+
+  /* Generic spacing compaction via Tailwind utility overrides */
+  .p-8 { padding: 1rem !important; }
+  .p-7 { padding: 0.875rem !important; }
+  .p-6 { padding: 0.875rem !important; }
+  .p-5 { padding: 0.75rem !important; }
+  .p-4 { padding: 0.625rem !important; }
+
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .px-6 { padding-left: 0.875rem !important; padding-right: 0.875rem !important; }
+  .py-8 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+  .py-6 { padding-top: 0.875rem !important; padding-bottom: 0.875rem !important; }
+
+  .gap-8 { gap: 0.75rem !important; }
+  .gap-6 { gap: 0.625rem !important; }
+  .gap-5 { gap: 0.5rem !important; }
+  .gap-4 { gap: 0.5rem !important; }
+
+  .space-y-8 > * + * { margin-top: 0.75rem !important; }
+  .space-y-6 > * + * { margin-top: 0.625rem !important; }
+  .space-y-5 > * + * { margin-top: 0.5rem !important; }
+  .space-y-4 > * + * { margin-top: 0.5rem !important; }
+
+  .mb-8 { margin-bottom: 1rem !important; }
+  .mb-6 { margin-bottom: 0.75rem !important; }
+  .mt-8 { margin-top: 1rem !important; }
+  .mt-6 { margin-top: 0.75rem !important; }
+
+  .text-4xl { font-size: 1.5rem !important; line-height: 1.15 !important; }
+  .text-3xl { font-size: 1.375rem !important; line-height: 1.15 !important; }
+  .text-2xl { font-size: 1.125rem !important; line-height: 1.2 !important; }
+  .text-xl  { font-size: 1rem !important; line-height: 1.25 !important; }
+
+  .rounded-3xl { border-radius: 1rem !important; }
+  .rounded-2xl { border-radius: 0.875rem !important; }
+}
+
