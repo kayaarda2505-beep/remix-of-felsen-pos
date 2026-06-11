@@ -2,11 +2,29 @@
 // - Kein TanStack-Start, kein Cloudflare-Plugin → reines SPA-Bundle.
 // - Output: dist-electron/index.html (entstanden aus electron.html).
 // - `base: './'` damit Assets über `file://` geladen werden können.
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import path from "node:path";
+import fs from "node:fs";
+
+// Mini-Plugin: benennt electron.html → index.html im Output, damit Electron
+// einfach win.loadFile('dist-electron/index.html') aufrufen kann.
+function renameHtmlPlugin(): Plugin {
+  return {
+    name: "rename-electron-html",
+    apply: "build",
+    closeBundle() {
+      const outDir = path.resolve(__dirname, "dist-electron");
+      const src = path.join(outDir, "electron.html");
+      const dest = path.join(outDir, "index.html");
+      if (fs.existsSync(src)) {
+        fs.renameSync(src, dest);
+      }
+    },
+  };
+}
 
 export default defineConfig({
   base: "./",
@@ -19,6 +37,7 @@ export default defineConfig({
     }),
     react(),
     tailwindcss(),
+    renameHtmlPlugin(),
   ],
   resolve: {
     alias: [
