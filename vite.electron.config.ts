@@ -14,13 +14,14 @@ import fs from "node:fs";
 function renameHtmlPlugin(): Plugin {
   return {
     name: "rename-electron-html",
-    apply: "build",
-    closeBundle() {
-      const outDir = path.resolve(__dirname, "dist-electron");
+    writeBundle(options) {
+      const outDir = options.dir ?? path.resolve(__dirname, "dist-electron");
       const src = path.join(outDir, "electron.html");
       const dest = path.join(outDir, "index.html");
       if (fs.existsSync(src)) {
         fs.renameSync(src, dest);
+        // eslint-disable-next-line no-console
+        console.log(`[electron] renamed electron.html → index.html`);
       }
     },
   };
