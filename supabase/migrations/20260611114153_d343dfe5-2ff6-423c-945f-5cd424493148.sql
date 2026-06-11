@@ -1,0 +1,25 @@
+
+TRUNCATE TABLE
+  public.order_items,
+  public.orders,
+  public.payment_requests,
+  public.service_calls,
+  public.song_requests,
+  public.product_recipes,
+  public.ingredient_suppliers,
+  public.ingredients,
+  public.products,
+  public.dining_tables,
+  public.floor_elements,
+  public.payment_methods,
+  public.happy_hour_rules,
+  public.printers,
+  public.shifts,
+  public.time_entries,
+  public.payrolls,
+  public.members,
+  public.team_members,
+  public.expenses,
+  public.app_settings,
+  public.locations
+RESTART IDENTITY CASCADE;
