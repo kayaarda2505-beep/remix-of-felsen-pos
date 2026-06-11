@@ -216,9 +216,9 @@ function PrintersPage() {
           </div>
           <button
             onClick={scan}
-            disabled={scanning || !desktop}
+            disabled={scanning || !configured}
             className="rounded-xl bg-accent/20 hover:bg-accent/30 text-accent px-4 py-2 text-sm font-medium flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-            title={desktop ? "Netzwerk scannen" : "Nur in Desktop-App verfügbar"}
+            title={configured ? "Netzwerk scannen" : "Erst Print-Agent konfigurieren"}
           >
             {scanning ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Suche…</>
