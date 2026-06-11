@@ -1,0 +1,1 @@
+UPDATE public.team_members SET pin_hash = extensions.crypt('123456', extensions.gen_salt('bf', 8)) WHERE account_number = 2;
