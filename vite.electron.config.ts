@@ -25,15 +25,27 @@ export default defineConfig({
       { find: "@", replacement: path.resolve(__dirname, "src") },
       // Serverseitige Module durch Stubs ersetzen.
       {
-        find: /^@tanstack\/react-start\/server.*/,
+        find: "@tanstack/react-start/server",
         replacement: path.resolve(__dirname, "src/electron-stub.ts"),
       },
       {
-        find: /^@tanstack\/start-server-core.*/,
+        find: "@tanstack/start-server-core",
         replacement: path.resolve(__dirname, "src/electron-stub.ts"),
       },
       {
-        find: /^@tanstack\/start-storage-context.*/,
+        find: /^@tanstack\/start-server-core\/.*/,
+        replacement: path.resolve(__dirname, "src/electron-stub.ts"),
+      },
+      {
+        find: "@tanstack/start-storage-context",
+        replacement: path.resolve(__dirname, "src/electron-stub.ts"),
+      },
+      {
+        find: /^@tanstack\/start-storage-context\/.*/,
+        replacement: path.resolve(__dirname, "src/electron-stub.ts"),
+      },
+      {
+        find: "node:async_hooks",
         replacement: path.resolve(__dirname, "src/electron-stub.ts"),
       },
       {
