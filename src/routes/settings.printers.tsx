@@ -33,6 +33,9 @@ function PrintersPage() {
   const [form, setForm] = useState({ name: "", type: "bon", ip_address: "", port: 9100 });
   const [scanning, setScanning] = useState(false);
   const [found, setFound] = useState<Array<{ ip_address: string; port: number }>>([]);
+  const [agentUrl, setAgentUrl] = useState<string>(getPrintAgentUrl() ?? "");
+  const [agentOnline, setAgentOnline] = useState<boolean | null>(null);
+  const [pinging, setPinging] = useState(false);
 
   const load = async () => {
     const { data } = await supabase.from("printers").select("*").order("created_at");
@@ -42,9 +45,34 @@ function PrintersPage() {
     load();
   }, []);
 
+  const refreshPing = async () => {
+    if (!isPrintAgentConfigured()) {
+      setAgentOnline(null);
+      return;
+    }
+    setPinging(true);
+    const ok = await pingPrintAgent();
+    setAgentOnline(ok);
+    setPinging(false);
+  };
+
+  useEffect(() => {
+    refreshPing();
+  }, []);
+
+  const saveAgentUrl = async () => {
+    const v = agentUrl.trim();
+    if (v && !/^https?:\/\//i.test(v)) {
+      return toast.error("URL muss mit http:// oder https:// beginnen");
+    }
+    setPrintAgentUrl(v || null);
+    toast.success(v ? "Print-Agent gespeichert" : "Print-Agent entfernt");
+    await refreshPing();
+  };
+
   const scan = async () => {
-    if (!isDesktopApp()) {
-      return toast.error("Suche nur in der SAINTS-POS Desktop-App verfügbar");
+    if (!isPrintAgentConfigured()) {
+      return toast.error("Bitte zuerst Print-Agent-URL konfigurieren");
     }
     setScanning(true);
     setFound([]);
@@ -53,7 +81,6 @@ function PrintersPage() {
       const r = await discoverPrintersOnNetwork({ port: 9100 });
       if (!r.ok) throw new Error(r.error ?? "Fehler bei der Suche");
       const results = r.results ?? [];
-      // bereits konfigurierte IPs ausblenden
       const existing = new Set(items.map((p) => p.ip_address).filter(Boolean));
       const fresh = results.filter((x) => !existing.has(x.ip_address));
       setFound(fresh);
@@ -96,14 +123,15 @@ function PrintersPage() {
 
   const testPrint = async (p: P) => {
     if (!p.ip_address) return toast.error("Keine IP konfiguriert");
-    if (!isDesktopApp()) {
-      return toast.error("Druck nur in der SAINTS-POS Desktop-App verfügbar");
+    if (!isPrintAgentConfigured()) {
+      return toast.error("Bitte zuerst Print-Agent-URL konfigurieren");
     }
     const r = await testPrinter(p);
     if (r.ok) toast.success(`Test-Druck an ${p.name} gesendet`);
     else toast.error(r.error ?? "Druckfehler");
   };
-  const desktop = isDesktopApp();
+  const configured = isPrintAgentConfigured();
+  const online = configured && agentOnline === true;
 
   const toggle = async (p: P) => {
     await supabase.from("printers").update({ active: !p.active }).eq("id", p.id);
@@ -120,25 +148,64 @@ function PrintersPage() {
     <SettingsPage title="Drucker" subtitle="Bon-, Küchen- und Bar-Drucker konfigurieren">
       <div
         className={`glass rounded-2xl px-4 py-3 mb-4 flex items-center gap-3 text-sm border ${
-          desktop ? "border-success/40 bg-success/5" : "border-warning/40 bg-warning/5"
+          online
+            ? "border-success/40 bg-success/5"
+            : configured
+            ? "border-warning/40 bg-warning/5"
+            : "border-warning/40 bg-warning/5"
         }`}
       >
-        {desktop ? (
+        {online ? (
           <MonitorSmartphone className="w-4 h-4 text-success shrink-0" />
         ) : (
           <Globe className="w-4 h-4 text-warning shrink-0" />
         )}
         <div className="flex-1 min-w-0">
           <div className="font-medium">
-            {desktop ? "Desktop-App verbunden" : "Browser-Modus"}
+            {online
+              ? "Print-Agent verbunden"
+              : configured
+              ? "Print-Agent nicht erreichbar"
+              : "Kein Print-Agent konfiguriert"}
           </div>
           <div className="text-xs text-muted-foreground">
-            {desktop
-              ? "Bons werden direkt an die Netzwerk-Drucker gesendet."
-              : "Druck erst aktiv, wenn die SAINTS-POS Desktop-App (.exe) genutzt wird."}
+            {online
+              ? "Bons werden über den lokalen Agent an die Netzwerk-Drucker gesendet."
+              : configured
+              ? "Agent-URL ist gesetzt, aber der Agent antwortet nicht. Läuft das Programm im lokalen Netz?"
+              : "Druck erst aktiv, wenn unten eine Agent-URL hinterlegt und der Agent erreichbar ist."}
           </div>
         </div>
+        <button
+          onClick={refreshPing}
+          disabled={pinging || !configured}
+          className="text-[10px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 disabled:opacity-40"
+        >
+          {pinging ? "…" : "Prüfen"}
+        </button>
       </div>
+
+      <div className="glass rounded-3xl p-6 mb-4">
+        <div className="text-sm font-medium mb-1">Print-Agent URL</div>
+        <div className="text-xs text-muted-foreground mb-3">
+          Adresse des lokalen Hilfsprogramms (z.B. <code>http://192.168.1.10:9110</code>). Wird nur in diesem Browser gespeichert.
+        </div>
+        <div className="flex flex-col md:flex-row gap-2">
+          <input
+            value={agentUrl}
+            onChange={(e) => setAgentUrl(e.target.value)}
+            placeholder="http://192.168.1.10:9110"
+            className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm flex-1"
+          />
+          <button
+            onClick={saveAgentUrl}
+            className="rounded-xl bg-accent text-accent-foreground font-medium px-4 py-2.5 text-sm hover:opacity-90 flex items-center justify-center gap-2"
+          >
+            <Save className="w-4 h-4" /> Speichern
+          </button>
+        </div>
+      </div>
+
       <div className="glass rounded-3xl p-6 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div>
