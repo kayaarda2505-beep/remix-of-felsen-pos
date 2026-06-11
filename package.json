@@ -9,7 +9,9 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "build:electron": "vite build --config vite.electron.config.ts",
     "preview": "vite preview",
+    "preview:electron": "vite preview --config vite.electron.config.ts --outDir dist-electron",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
