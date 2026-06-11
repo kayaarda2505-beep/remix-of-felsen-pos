@@ -1,10 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Printer, Wifi, MonitorSmartphone, Globe, Search, Loader2 } from "lucide-react";
+import { Plus, Trash2, Printer, Wifi, MonitorSmartphone, Globe, Search, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { SettingsPage } from "@/components/SettingsPage";
 import { supabase } from "@/integrations/supabase/client";
-import { isDesktopApp, testPrinter, discoverPrintersOnNetwork } from "@/lib/printer-bridge";
+import {
+  isPrintAgentConfigured,
+  getPrintAgentUrl,
+  setPrintAgentUrl,
+  pingPrintAgent,
+  testPrinter,
+  discoverPrintersOnNetwork,
+} from "@/lib/printer-bridge";
 
 export const Route = createFileRoute("/settings/printers")({
   component: PrintersPage,
