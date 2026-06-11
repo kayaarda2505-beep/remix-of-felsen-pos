@@ -71,7 +71,9 @@ export default defineConfig({
     },
   },
   define: {
-    // serverFn-Module greifen teils auf process.env zu — im Browser nicht da.
     "process.env.NODE_ENV": JSON.stringify("production"),
   },
+  // Nach dem Build electron.html → index.html umbenennen, damit Electron
+  // einfach win.loadFile('dist-electron/index.html') aufrufen kann.
+  // (Vite/Rollup behält per Default den Input-Dateinamen bei.)
 });
