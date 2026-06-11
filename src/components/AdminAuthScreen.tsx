@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { motion } from "motion/react";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SaintsLogo } from "./SaintsLogo";
@@ -31,7 +30,6 @@ export function AdminAuthScreen() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unbekannter Fehler";
-      // Friendlier translations
       if (msg.includes("Invalid login")) setError("E-Mail oder Passwort falsch.");
       else if (msg.includes("already registered")) setError("Diese E-Mail ist bereits registriert. Wechsle zu Anmelden.");
       else if (msg.includes("Password should be")) setError("Passwort muss mindestens 6 Zeichen haben.");
@@ -43,11 +41,7 @@ export function AdminAuthScreen() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
+      <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <SaintsLogo size={72} />
         </div>
@@ -61,30 +55,35 @@ export function AdminAuthScreen() {
 
         <form onSubmit={submit} className="glass-strong rounded-3xl p-6 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">
+            <label htmlFor="admin-email" className="text-xs uppercase tracking-wider text-muted-foreground">
               E-Mail
             </label>
             <div className="glass rounded-xl flex items-center gap-2 px-3 py-3">
               <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
               <input
+                id="admin-email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@saints.bar"
                 className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
-                autoComplete="email"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">
+            <label htmlFor="admin-password" className="text-xs uppercase tracking-wider text-muted-foreground">
               Passwort
             </label>
             <div className="glass rounded-xl flex items-center gap-2 px-3 py-3">
               <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
               <input
+                id="admin-password"
                 type="password"
                 required
                 minLength={6}
@@ -92,26 +91,24 @@ export function AdminAuthScreen() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
             </div>
           </div>
 
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2"
-            >
+            <div className="text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
               {error}
-            </motion.div>
+            </div>
           )}
 
-          <motion.button
+          <button
             type="submit"
-            whileTap={{ scale: 0.98 }}
             disabled={loading}
-            className="w-full rounded-2xl py-3.5 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full rounded-2xl py-3.5 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] transition-transform"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -121,7 +118,7 @@ export function AdminAuthScreen() {
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
-          </motion.button>
+          </button>
 
           <button
             type="button"
@@ -142,7 +139,7 @@ export function AdminAuthScreen() {
           <br />
           Service & Bar nutzen einen PIN.
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 }
