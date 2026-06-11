@@ -23,6 +23,29 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      // Serverseitige Module durch Stubs ersetzen — Code wird im Bundle
+      // referenziert (z. B. via auth-middleware in *.functions.ts), aber
+      // im Browser nie ausgeführt, weil fetch alle Server-Calls umleitet.
+      "@tanstack/react-start/server": path.resolve(
+        __dirname,
+        "src/electron-stub.ts",
+      ),
+      "@tanstack/start-server-core": path.resolve(
+        __dirname,
+        "src/electron-stub.ts",
+      ),
+      "@/integrations/supabase/auth-middleware": path.resolve(
+        __dirname,
+        "src/electron-stub.ts",
+      ),
+      "@/integrations/supabase/auth-attacher": path.resolve(
+        __dirname,
+        "src/electron-stub.ts",
+      ),
+      "@/integrations/supabase/client.server": path.resolve(
+        __dirname,
+        "src/electron-stub.ts",
+      ),
     },
   },
   build: {
