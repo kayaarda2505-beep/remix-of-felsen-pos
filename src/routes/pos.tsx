@@ -471,7 +471,7 @@ function POS() {
         </div>
 
         {/* Cart */}
-        <aside className="glass-strong rounded-3xl p-5 flex flex-col min-h-0">
+        <aside className="glass-strong rounded-3xl p-4 flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold">{isTab ? `Tab Tisch ${activeOrder?.dining_tables?.name ?? ""}` : "Bestellung"}</h3>
