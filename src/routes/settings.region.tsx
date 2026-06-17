@@ -64,6 +64,7 @@ function RegionPage() {
       .eq("id", 1);
     setSaving(false);
     if (error) return toast.error(error.message);
+    clearReceiptSettingsCache();
     toast.success("Gespeichert");
   };
 
