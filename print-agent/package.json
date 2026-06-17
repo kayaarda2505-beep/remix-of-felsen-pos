@@ -6,11 +6,10 @@
   "main": "dist/agent.cjs",
   "scripts": {
     "dev": "node --import tsx src/agent.ts",
-    "build": "esbuild src/agent.ts --bundle --platform=node --target=node20 --format=cjs --external:@thiagoelg/node-printer --outfile=dist/agent.cjs",
+    "build": "esbuild src/agent.ts --bundle --platform=node --target=node16 --format=cjs --alias:canvas=./src/canvas-stub.cjs --outfile=dist/agent.cjs",
     "start": "node dist/agent.cjs"
   },
   "dependencies": {
-    "@thiagoelg/node-printer": "^0.6.2",
     "esc-pos-encoder": "^2.1.0",
     "fastify": "^4.28.1",
     "@fastify/cors": "^9.0.1"

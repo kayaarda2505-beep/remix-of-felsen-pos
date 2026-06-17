@@ -9,6 +9,7 @@ import {
   getPrintAgentUrl,
   setPrintAgentUrl,
   pingPrintAgent,
+  getAgentPrinters,
   testPrinter,
   discoverPrintersOnNetwork,
 } from "@/lib/printer-bridge";
@@ -33,9 +34,11 @@ function PrintersPage() {
   const [form, setForm] = useState({ name: "", type: "bon", ip_address: "", port: 9100 });
   const [scanning, setScanning] = useState(false);
   const [found, setFound] = useState<Array<{ ip_address: string; port: number }>>([]);
+  const [agentPrinters, setAgentPrinters] = useState<Array<{ name: string; isDefault: boolean; status?: string }>>([]);
   const [agentUrl, setAgentUrl] = useState<string>(getPrintAgentUrl() ?? "");
   const [agentOnline, setAgentOnline] = useState<boolean | null>(null);
   const [pinging, setPinging] = useState(false);
+  const [loadingAgentPrinters, setLoadingAgentPrinters] = useState(false);
 
   const load = async () => {
     const { data } = await supabase.from("printers").select("*").order("created_at");
@@ -121,8 +124,40 @@ function PrintersPage() {
     load();
   };
 
+  const loadAgentPrinters = async () => {
+    if (!isPrintAgentConfigured()) {
+      return toast.error("Bitte zuerst Print-Agent-URL konfigurieren");
+    }
+    setLoadingAgentPrinters(true);
+    try {
+      const r = await getAgentPrinters();
+      if (!r.ok) throw new Error(r.error ?? "Drucker konnten nicht geladen werden");
+      const existing = new Set(items.map((p) => p.name));
+      const fresh = (r.printers ?? []).filter((p) => !existing.has(p.name));
+      setAgentPrinters(fresh);
+      if (fresh.length === 0) toast.message("Keine neuen Windows-Drucker gefunden");
+      else toast.success(`${fresh.length} Windows-Drucker gefunden`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Drucker konnten nicht geladen werden");
+    } finally {
+      setLoadingAgentPrinters(false);
+    }
+  };
+
+  const addAgentPrinter = async (name: string) => {
+    const { error } = await supabase.from("printers").insert({
+      name,
+      type: "bon",
+      ip_address: null,
+      port: 9100,
+    });
+    if (error) return toast.error(error.message);
+    toast.success(`${name} hinzugefügt`);
+    setAgentPrinters((list) => list.filter((p) => p.name !== name));
+    load();
+  };
+
   const testPrint = async (p: P) => {
-    if (!p.ip_address) return toast.error("Keine IP konfiguriert");
     if (!isPrintAgentConfigured()) {
       return toast.error("Bitte zuerst Print-Agent-URL konfigurieren");
     }
@@ -170,7 +205,7 @@ function PrintersPage() {
           </div>
           <div className="text-xs text-muted-foreground">
             {online
-              ? "Bons werden über den lokalen Agent an die Netzwerk-Drucker gesendet."
+              ? "Bons werden über den lokalen Agent an die Windows-Drucker gesendet."
               : configured
               ? "Agent-URL ist gesetzt, aber der Agent antwortet nicht. Läuft das Programm im lokalen Netz?"
               : "Druck erst aktiv, wenn unten eine Agent-URL hinterlegt und der Agent erreichbar ist."}
@@ -188,7 +223,7 @@ function PrintersPage() {
       <div className="glass rounded-3xl p-6 mb-4">
         <div className="text-sm font-medium mb-1">Print-Agent URL</div>
         <div className="text-xs text-muted-foreground mb-3">
-          Adresse des lokalen Hilfsprogramms (z.B. <code>http://192.168.1.10:9110</code>). Wird nur in diesem Browser gespeichert.
+          Auf dem Drucker-PC <code>http://localhost:9110</code>, vom Tablet <code>http://PC-IP:9110</code>. Wird nur in diesem Browser gespeichert.
         </div>
         <div className="flex flex-col md:flex-row gap-2">
           <input
@@ -204,6 +239,48 @@ function PrintersPage() {
             <Save className="w-4 h-4" /> Speichern
           </button>
         </div>
+      </div>
+
+      <div className="glass rounded-3xl p-6 mb-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <div className="text-sm font-medium">Windows-Drucker vom Print-Agent laden</div>
+            <div className="text-xs text-muted-foreground">
+              Für USB-Drucker wie EPSON TM-T20III Receipt: Windows-Druckername übernehmen, keine IP nötig.
+            </div>
+          </div>
+          <button
+            onClick={loadAgentPrinters}
+            disabled={loadingAgentPrinters || !configured}
+            className="rounded-xl bg-accent/20 hover:bg-accent/30 text-accent px-4 py-2 text-sm font-medium flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            title={configured ? "Windows-Drucker laden" : "Erst Print-Agent konfigurieren"}
+          >
+            {loadingAgentPrinters ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Lade…</>
+            ) : (
+              <><Printer className="w-4 h-4" /> Laden</>
+            )}
+          </button>
+        </div>
+        {agentPrinters.length > 0 && (
+          <div className="space-y-2 mt-2">
+            {agentPrinters.map((p) => (
+              <div key={p.name} className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2">
+                <Printer className="w-4 h-4 text-accent shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{p.name}</div>
+                  <div className="text-xs text-muted-foreground">{p.isDefault ? "Standarddrucker" : "Windows-Drucker"}</div>
+                </div>
+                <button
+                  onClick={() => addAgentPrinter(p.name)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-accent text-accent-foreground hover:opacity-90 flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> Hinzufügen
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="glass rounded-3xl p-6 mb-4">
@@ -246,7 +323,7 @@ function PrintersPage() {
       </div>
 
       <div className="glass rounded-3xl p-6 mb-6">
-        <div className="text-sm font-medium mb-4">Neuer Drucker</div>
+        <div className="text-sm font-medium mb-4">Drucker manuell hinzufügen</div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <input
             value={form.name}
@@ -275,7 +352,7 @@ function PrintersPage() {
           <input
             value={form.ip_address}
             onChange={(e) => setForm({ ...form, ip_address: e.target.value })}
-            placeholder="IP-Adresse (192.168.1.50)"
+            placeholder="IP-Adresse optional – bei USB/Windows leer lassen"
             className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm md:col-span-3"
           />
           <button
@@ -301,7 +378,7 @@ function PrintersPage() {
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{p.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {p.type} · {p.ip_address ?? "keine IP"}:{p.port}
+                  {p.type} · {p.ip_address ? `${p.ip_address}:${p.port}` : "Windows/USB über Print-Agent"}
                 </div>
               </div>
               <button

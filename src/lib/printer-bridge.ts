@@ -40,6 +40,7 @@ export type ReceiptPayload = {
 };
 
 type DiscoverResult = { ip_address: string; port: number };
+export type AgentPrinter = { name: string; isDefault: boolean; status?: string };
 
 const STORAGE_KEY = "print_agent_url";
 
@@ -113,6 +114,21 @@ export async function pingPrintAgent(): Promise<boolean> {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+export async function getAgentPrinters(): Promise<{ ok: boolean; printers?: AgentPrinter[]; error?: string }> {
+  const base = getPrintAgentUrl();
+  if (!base) return { ok: false, error: "Kein Print-Agent konfiguriert" };
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(`${base}/printers`, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!res.ok) return { ok: false, error: `Agent antwortete mit ${res.status}` };
+    return (await res.json()) as { ok: boolean; printers?: AgentPrinter[]; error?: string };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? "Print-Agent nicht erreichbar" };
   }
 }
 

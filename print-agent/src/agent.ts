@@ -18,8 +18,11 @@
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const printer = require("@thiagoelg/node-printer");
+import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const EscPosEncoder = require("esc-pos-encoder");
 
@@ -111,40 +114,164 @@ function buildPayload(payload: ReceiptPayload): Buffer {
 }
 
 // ---------------------------------------------------------------------------
-// Windows-Spooler senden
+// Windows-Spooler senden (ohne native Node-Module)
 // ---------------------------------------------------------------------------
 
-function listPrinters(): Array<{ name: string; isDefault: boolean; status?: string }> {
+type ListedPrinter = { name: string; isDefault: boolean; status?: string };
+
+const POWERSHELL = process.env.POWERSHELL_EXE || "powershell.exe";
+
+function runPowerShellFile(scriptPath: string, args: string[] = []): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      POWERSHELL,
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath, ...args],
+      { windowsHide: true, maxBuffer: 10 * 1024 * 1024 },
+      (error, stdout, stderr) => {
+        if (error) {
+          const msg = [error.message, stderr?.trim()].filter(Boolean).join("\n");
+          reject(new Error(msg));
+          return;
+        }
+        resolve({ stdout: stdout.toString(), stderr: stderr.toString() });
+      },
+    );
+    child.stdin?.end();
+  });
+}
+
+async function withTempScript(script: string, args: string[]) {
+  const dir = await mkdtemp(join(tmpdir(), "saints-print-"));
+  const scriptPath = join(dir, "run.ps1");
   try {
-    const all = printer.getPrinters() as Array<any>;
-    const def = (() => {
-      try { return printer.getDefaultPrinterName(); } catch { return null; }
-    })();
-    return all.map((p) => ({
-      name: p.name,
-      isDefault: p.name === def,
-      status: Array.isArray(p.status) ? p.status.join(",") : String(p.status ?? ""),
-    }));
+    await writeFile(scriptPath, script, "utf8");
+    return await runPowerShellFile(scriptPath, args);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function listPrinters(): Promise<ListedPrinter[]> {
+  if (process.platform !== "win32") return [];
+  try {
+    const script = `
+$ErrorActionPreference = 'Stop'
+$items = Get-CimInstance -ClassName Win32_Printer | ForEach-Object {
+  [pscustomobject]@{
+    name = [string]$_.Name
+    isDefault = [bool]$_.Default
+    status = [string]$_.PrinterStatus
+  }
+}
+$items | ConvertTo-Json -Compress
+`;
+    const { stdout } = await withTempScript(script, []);
+    const trimmed = stdout.trim();
+    if (!trimmed) return [];
+    const parsed = JSON.parse(trimmed);
+    const rows = Array.isArray(parsed) ? parsed : [parsed];
+    return rows.map((p) => ({
+      name: String(p.name ?? ""),
+      isDefault: Boolean(p.isDefault),
+      status: String(p.status ?? ""),
+    })).filter((p) => p.name);
   } catch (e) {
     console.error("listPrinters failed:", e);
     return [];
   }
 }
 
-function sendRaw(printerName: string, data: Buffer): Promise<void> {
-  return new Promise((resolve, reject) => {
-    try {
-      printer.printDirect({
-        data,
-        printer: printerName,
-        type: "RAW",
-        success: () => resolve(),
-        error: (err: any) => reject(err instanceof Error ? err : new Error(String(err))),
-      });
-    } catch (e) {
-      reject(e instanceof Error ? e : new Error(String(e)));
+async function sendRaw(printerName: string, data: Buffer): Promise<void> {
+  if (process.platform !== "win32") {
+    throw new Error("RAW-Druck ist nur unter Windows verfügbar");
+  }
+
+  const dir = await mkdtemp(join(tmpdir(), "saints-print-"));
+  const dataPath = join(dir, `${randomUUID()}.bin`);
+  const scriptPath = join(dir, "raw-print.ps1");
+  const script = `
+param(
+  [Parameter(Mandatory=$true)][string]$PrinterName,
+  [Parameter(Mandatory=$true)][string]$DataPath
+)
+$ErrorActionPreference = 'Stop'
+
+$signature = @"
+using System;
+using System.Runtime.InteropServices;
+
+public class SaintsRawPrinter {
+  [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
+  public class DOCINFOA {
+    [MarshalAs(UnmanagedType.LPStr)] public string pDocName;
+    [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
+    [MarshalAs(UnmanagedType.LPStr)] public string pDataType;
+  }
+
+  [DllImport("winspool.Drv", EntryPoint="OpenPrinterA", SetLastError=true, CharSet=CharSet.Ansi, ExactSpelling=true, CallingConvention=CallingConvention.StdCall)]
+  public static extern bool OpenPrinter(string szPrinter, out IntPtr hPrinter, IntPtr pd);
+
+  [DllImport("winspool.Drv", EntryPoint="ClosePrinter", SetLastError=true, ExactSpelling=true, CallingConvention=CallingConvention.StdCall)]
+  public static extern bool ClosePrinter(IntPtr hPrinter);
+
+  [DllImport("winspool.Drv", EntryPoint="StartDocPrinterA", SetLastError=true, CharSet=CharSet.Ansi, ExactSpelling=true, CallingConvention=CallingConvention.StdCall)]
+  public static extern bool StartDocPrinter(IntPtr hPrinter, Int32 level, [In, MarshalAs(UnmanagedType.LPStruct)] DOCINFOA di);
+
+  [DllImport("winspool.Drv", EntryPoint="EndDocPrinter", SetLastError=true, ExactSpelling=true, CallingConvention=CallingConvention.StdCall)]
+  public static extern bool EndDocPrinter(IntPtr hPrinter);
+
+  [DllImport("winspool.Drv", EntryPoint="StartPagePrinter", SetLastError=true, ExactSpelling=true, CallingConvention=CallingConvention.StdCall)]
+  public static extern bool StartPagePrinter(IntPtr hPrinter);
+
+  [DllImport("winspool.Drv", EntryPoint="EndPagePrinter", SetLastError=true, ExactSpelling=true, CallingConvention=CallingConvention.StdCall)]
+  public static extern bool EndPagePrinter(IntPtr hPrinter);
+
+  [DllImport("winspool.Drv", EntryPoint="WritePrinter", SetLastError=true, ExactSpelling=true, CallingConvention=CallingConvention.StdCall)]
+  public static extern bool WritePrinter(IntPtr hPrinter, byte[] pBytes, Int32 dwCount, out Int32 dwWritten);
+
+  public static void SendBytesToPrinter(string printerName, byte[] bytes) {
+    IntPtr hPrinter;
+    DOCINFOA di = new DOCINFOA();
+    di.pDocName = "SAINTS POS Bon";
+    di.pDataType = "RAW";
+
+    if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+      throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
     }
-  });
+
+    try {
+      if (!StartDocPrinter(hPrinter, 1, di)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+      try {
+        if (!StartPagePrinter(hPrinter)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        try {
+          int written;
+          if (!WritePrinter(hPrinter, bytes, bytes.Length, out written)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+          if (written != bytes.Length) throw new Exception("Nicht alle Bytes wurden geschrieben: " + written + "/" + bytes.Length);
+        } finally {
+          EndPagePrinter(hPrinter);
+        }
+      } finally {
+        EndDocPrinter(hPrinter);
+      }
+    } finally {
+      ClosePrinter(hPrinter);
+    }
+  }
+}
+"@
+
+Add-Type -TypeDefinition $signature -Language CSharp
+[byte[]]$bytes = [System.IO.File]::ReadAllBytes($DataPath)
+[SaintsRawPrinter]::SendBytesToPrinter($PrinterName, $bytes)
+`;
+
+  try {
+    await writeFile(dataPath, data);
+    await writeFile(scriptPath, script, "utf8");
+    await runPowerShellFile(scriptPath, [printerName, dataPath]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -162,10 +289,10 @@ async function main() {
   app.get("/health", async () => ({
     ok: true,
     version: VERSION,
-    printers: listPrinters(),
+    printers: await listPrinters(),
   }));
 
-  app.get("/printers", async () => ({ ok: true, printers: listPrinters() }));
+  app.get("/printers", async () => ({ ok: true, printers: await listPrinters() }));
 
   app.post("/discover", async () => ({ ok: true, results: [] }));
 
@@ -218,7 +345,7 @@ async function main() {
   await app.listen({ host: HOST, port: PORT });
 
   // Banner
-  const printers = listPrinters();
+  const printers = await listPrinters();
   console.log("");
   console.log("==========================================");
   console.log(`  SAINTS Print-Agent v${VERSION}`);
