@@ -25,6 +25,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const EscPosEncoder = require("esc-pos-encoder");
+import { LOGO_B64, LOGO_WIDTH, LOGO_HEIGHT } from "./logo";
 
 const VERSION = "1.0.0";
 const PORT = Number(process.env.PORT ?? 9110);
