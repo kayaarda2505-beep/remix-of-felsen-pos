@@ -2,9 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard } from "lucide-react";
+import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
+import { printDailyReport } from "@/lib/receipt";
+import { isDesktopApp } from "@/lib/printer-bridge";
+
 
 export const Route = createFileRoute("/reports")({
   head: () => ({ meta: [{ title: "Reports — SAINTS POS" }] }),
@@ -187,6 +191,60 @@ function Reports() {
     ? from.toLocaleDateString("de-CH", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
     : `${from.toLocaleDateString("de-CH")} – ${to.toLocaleDateString("de-CH")}`;
 
+  // Drucker für Tagesabschluss
+  const { data: printers = [] } = useQuery({
+    queryKey: ["printers", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("printers")
+        .select("id, name, type, ip_address, port")
+        .eq("active", true);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const [printing, setPrinting] = useState(false);
+  const printReport = async () => {
+    if (!isDesktopApp()) {
+      toast.error("Kein Print-Agent konfiguriert – siehe Einstellungen › Drucker");
+      return;
+    }
+    setPrinting(true);
+    const presetLabel =
+      preset === "today" ? "Heute" :
+      preset === "week" ? "Woche" :
+      preset === "month" ? "Monat" :
+      preset === "year" ? "Jahr" : "Zeitraum";
+    const err = await printDailyReport({
+      printers,
+      data: {
+        rangeLabel: `${presetLabel} · ${rangeLabel}`,
+        revenue,
+        expenseTotal,
+        feeTotal,
+        profit,
+        avgTicket,
+        closedOrdersCount: closedOrders.length,
+        byCategory,
+        feesByMethod: feesByMethod.map((f) => ({
+          label: f.label, sum: f.sum, count: f.count, volume: f.volume,
+        })),
+        expensesByCategory: [...new Map(
+          expenses.reduce<Array<[string, number]>>((acc, e) => {
+            const cur = acc.find((x) => x[0] === e.category);
+            if (cur) cur[1] += Number(e.amount);
+            else acc.push([e.category, Number(e.amount)]);
+            return acc;
+          }, []),
+        )].sort((a, b) => b[1] - a[1]),
+      },
+    });
+    setPrinting(false);
+    if (err) toast.error(`Druck: ${err}`);
+    else toast.success("Tagesabschluss gedruckt");
+  };
+
   return (
     <div className="p-4 lg:p-10 pb-28 md:pb-10 max-w-[1600px] mx-auto">
       <PageHeader
@@ -209,9 +267,19 @@ function Reports() {
               <input type="date" value={fmtISO(to)} onChange={(e) => { setPreset("custom"); setTo(new Date(e.target.value + "T00:00:00")); }}
                 className="bg-transparent text-xs px-2 h-9 outline-none tabular-nums" />
             </div>
+            <button
+              onClick={printReport}
+              disabled={printing}
+              className="glass rounded-xl px-3 h-9 text-xs flex items-center gap-2 hover:border-accent/40 disabled:opacity-50"
+              title="Tagesabschluss als Bon drucken"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              {printing ? "Drucke…" : "Tagesabschluss drucken"}
+            </button>
           </div>
         }
       />
+
 
       <div className="glass rounded-2xl px-4 py-3 mb-4 text-sm capitalize">
         <span className="font-medium">{rangeLabel}</span>

@@ -323,3 +323,114 @@ export async function printBill(opts: {
   const r = await printReceipt(billPrinter, buildBill({ ...opts, settings }));
   return r.ok ? null : r.error ?? "Druckfehler";
 }
+
+// ---------------------------------------------------------------------------
+// Tagesumsatz / Z-Report
+// ---------------------------------------------------------------------------
+
+export type DailyReportData = {
+  rangeLabel: string;            // "Heute · Mittwoch, 17.06.2026" o.ä.
+  revenue: number;
+  expenseTotal: number;
+  feeTotal: number;
+  profit: number;
+  avgTicket: number;
+  closedOrdersCount: number;
+  byCategory: [string, number][];
+  feesByMethod?: { label: string; sum: number; count: number; volume: number }[];
+  expensesByCategory?: [string, number][];
+};
+
+export function buildDailyReport(d: DailyReportData, s: ReceiptSettings): ReceiptPayload {
+  const cur = s.currency;
+  const lines: ReceiptPayload["lines"] = [];
+
+  lines.push({ text: s.businessName, align: "center", bold: true, size: "double-h" });
+  lines.push({ text: "Fegergasse 4", align: "center" });
+  lines.push({ text: "4300 Zofingen", align: "center" });
+  lines.push({ text: "" });
+  lines.push({ text: "TAGESABSCHLUSS", align: "center", bold: true });
+  lines.push({ text: d.rangeLabel, align: "center" });
+  lines.push({ text: `Gedruckt: ${nowStr()}`, align: "center" });
+  lines.push({ separator: true });
+
+  // Kern-Kennzahlen
+  lines.push({ cols: ["Umsatz brutto", `${cur} ${fmt(d.revenue)}`], bold: true });
+  lines.push({ cols: ["Abschlüsse", String(d.closedOrdersCount)] });
+  lines.push({ cols: ["Ø Bon", `${cur} ${fmt(d.avgTicket)}`] });
+  lines.push({ separator: true });
+
+  // Umsatz nach Kategorie
+  if (d.byCategory.length > 0) {
+    lines.push({ text: "Umsatz nach Kategorie", bold: true });
+    for (const [cat, sum] of d.byCategory) {
+      lines.push({ cols: [cat, `${cur} ${fmt(sum)}`] });
+    }
+    lines.push({ separator: true });
+  }
+
+  // Zahlungsgebühren
+  if (d.feesByMethod && d.feesByMethod.length > 0) {
+    lines.push({ text: "Zahlungsgebühren", bold: true });
+    for (const f of d.feesByMethod) {
+      lines.push({ cols: [`${f.label} (${f.count}x)`, `- ${cur} ${fmt(f.sum)}`] });
+    }
+    lines.push({ cols: ["Total Gebühren", `- ${cur} ${fmt(d.feeTotal)}`], bold: true });
+    lines.push({ separator: true });
+  }
+
+  // Ausgaben
+  if (d.expensesByCategory && d.expensesByCategory.length > 0) {
+    lines.push({ text: "Ausgaben", bold: true });
+    for (const [cat, sum] of d.expensesByCategory) {
+      lines.push({ cols: [cat, `- ${cur} ${fmt(sum)}`] });
+    }
+    lines.push({ cols: ["Total Ausgaben", `- ${cur} ${fmt(d.expenseTotal)}`], bold: true });
+    lines.push({ separator: true });
+  }
+
+  // Gewinn
+  lines.push({
+    cols: ["GEWINN", `${cur} ${fmt(d.profit)}`],
+    bold: true,
+    size: "double-h",
+  });
+
+  // MWST inkl. (auf Umsatz)
+  if (s.vatRate > 0 && s.vatIncluded && d.revenue > 0) {
+    const net = d.revenue / (1 + s.vatRate / 100);
+    const vat = d.revenue - net;
+    lines.push({ text: "" });
+    lines.push({ cols: [`MWST inkl. ${s.vatRate.toFixed(1)}%`, `${cur} ${fmt(vat)}`] });
+    lines.push({ cols: ["Umsatz netto", `${cur} ${fmt(net)}`] });
+  }
+
+  lines.push({ separator: true });
+  lines.push({ text: "— Ende Tagesabschluss —", align: "center" });
+  lines.push({ text: "" });
+  lines.push({ text: s.businessName, align: "center" });
+
+  return { lines, cut: true };
+}
+
+export async function printDailyReport(opts: {
+  printers: PrinterConfig[];
+  data: DailyReportData;
+}): Promise<string | null> {
+  let billPrinter: PrinterConfig | undefined =
+    opts.printers.find((p) => p.type === "rechnung") ??
+    opts.printers.find((p) => p.type === "bon") ??
+    opts.printers[0];
+
+  if (!billPrinter) {
+    const r = await getAgentPrinters();
+    const def = r.printers?.find((p) => p.isDefault) ?? r.printers?.[0];
+    if (!def) return "Kein Drucker konfiguriert – bitte unter Einstellungen › Drucker einen Drucker hinzufügen";
+    billPrinter = { id: "agent-default", name: def.name, type: "bon", ip_address: null, port: null };
+  }
+
+  const settings = await loadReceiptSettings();
+  const r = await printReceipt(billPrinter, buildDailyReport(opts.data, settings));
+  return r.ok ? null : r.error ?? "Druckfehler";
+}
+
