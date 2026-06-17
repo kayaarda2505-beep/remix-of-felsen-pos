@@ -4,8 +4,20 @@ import { X, Minus, Plus, Check } from "lucide-react";
 import type { ModifierGroup, Product } from "@/hooks/use-products";
 
 const DEFAULT_MODIFIER_GROUPS: ModifierGroup[] = [
-  { label: "Sonstiges", items: [{ label: "Zum Mitnehmen" }, { label: "Allergie!" }] },
+  {
+    label: "Eis",
+    items: [{ label: "mit Eis" }, { label: "ohne Eis" }],
+  },
+  {
+    label: "Zitrone",
+    items: [{ label: "mit Zitrone" }, { label: "ohne Zitrone" }],
+  },
+  {
+    label: "Sonstiges",
+    items: [{ label: "Zum Mitnehmen" }, { label: "Allergie!" }],
+  },
 ];
+
 
 export interface ProductCustomization {
   qty: number;
