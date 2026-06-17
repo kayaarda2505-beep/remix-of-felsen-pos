@@ -247,6 +247,16 @@ export function buildBill(opts: {
     align: "center",
     bold: !opts.interim,
   });
+
+  // Google-Bewertung als QR-Code (nur auf finaler Rechnung)
+  if (!opts.interim) {
+    lines.push({ text: "" });
+    lines.push({ text: "Bitte bewerten Sie uns auf Google", align: "center", bold: true });
+    lines.push({ text: "" });
+    lines.push({ qr: "https://share.google/r7ny129TOY9jlwj6E", size: 6 });
+    lines.push({ text: "" });
+  }
+
   lines.push({ text: "", align: "center" });
   lines.push({ text: s.businessName, align: "center" });
 

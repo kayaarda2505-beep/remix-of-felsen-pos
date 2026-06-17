@@ -40,6 +40,7 @@ type PrinterCfg = {
 
 type ReceiptLine =
   | { separator: true }
+  | { qr: string; size?: number }
   | {
       text?: string;
       cols?: [string, string];
@@ -84,7 +85,16 @@ function buildPayload(payload: ReceiptPayload): Buffer {
       enc.align("left").size("normal").bold(false).line("-".repeat(COLS));
       continue;
     }
-    const l = line as Exclude<ReceiptLine, { separator: true }>;
+    if ("qr" in line && line.qr) {
+      enc.align("center").size("normal").bold(false);
+      try {
+        enc.qrcode(line.qr, 1, line.size ?? 6, "m");
+      } catch (e) {
+        enc.line(line.qr);
+      }
+      continue;
+    }
+    const l = line as Exclude<ReceiptLine, { separator: true } | { qr: string; size?: number }>;
     enc.align(l.align ?? "left");
     enc.bold(!!l.bold);
     // esc-pos-encoder size: 'normal' default, otherwise width/height multiplier
