@@ -16,6 +16,8 @@ import {
   Loader2,
   CheckCircle2,
   X,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/AppShell";
