@@ -356,6 +356,7 @@ export function buildDailyReport(d: DailyReportData, s: ReceiptSettings): Receip
   const cur = s.currency;
   const lines: ReceiptPayload["lines"] = [];
 
+  lines.push({ logo: true });
   lines.push({ text: s.businessName, align: "center", bold: true, size: "double-h" });
   lines.push({ text: "Fegergasse 4", align: "center" });
   lines.push({ text: "4300 Zofingen", align: "center" });
