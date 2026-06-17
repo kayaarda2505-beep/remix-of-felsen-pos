@@ -388,7 +388,7 @@ function POS() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 lg:gap-6 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-3 lg:gap-4 flex-1 min-h-0">
         {/* Product grid */}
         <div className="flex flex-col min-h-0 gap-4">
           <div className="flex items-center gap-3">
