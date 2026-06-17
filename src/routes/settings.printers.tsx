@@ -216,7 +216,21 @@ function PrintersPage() {
           disabled={pinging || !configured}
           className="text-[10px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 disabled:opacity-40"
         >
-          {pinging ? "…" : "Prüfen"}
+          {pinging ? "…" : "Verbindung prüfen"}
+        </button>
+        <button
+          onClick={async () => {
+            const r = await getAgentPrinters();
+            const def = r.printers?.find((p) => p.isDefault) ?? r.printers?.[0];
+            if (!def) return toast.error("Kein Windows-Drucker am Agent gefunden");
+            const res = await testPrinter({ id: "test", name: def.name, type: "bon", ip_address: null, port: null });
+            if (res.ok) toast.success(`Testdruck an ${def.name} gesendet`);
+            else toast.error(res.error ?? "Druckfehler");
+          }}
+          disabled={!online}
+          className="text-[10px] px-2 py-1 rounded-md bg-accent text-accent-foreground hover:opacity-90 disabled:opacity-40"
+        >
+          Testdruck
         </button>
       </div>
 
