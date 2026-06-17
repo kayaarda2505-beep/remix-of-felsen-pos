@@ -489,7 +489,7 @@ function ServiceTablet() {
                 })}
             </div>
 
-            <div className="hidden md:block">
+            <div className="hidden md:block flex-1 min-h-0">
               <FloorPlan
                 tables={tables.filter((t) => areaFilter === "all" || t.area === areaFilter)}
                 orderByTable={orderByTable}
