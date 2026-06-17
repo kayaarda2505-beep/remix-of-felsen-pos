@@ -4,6 +4,7 @@ import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { SettingsPage } from "@/components/SettingsPage";
 import { supabase } from "@/integrations/supabase/client";
+import { clearReceiptSettingsCache } from "@/lib/receipt";
 
 export const Route = createFileRoute("/settings/region")({
   component: RegionPage,
