@@ -9,6 +9,7 @@ import {
   getPrintAgentUrl,
   setPrintAgentUrl,
   pingPrintAgent,
+  getAgentPrinters,
   testPrinter,
   discoverPrintersOnNetwork,
 } from "@/lib/printer-bridge";
@@ -33,9 +34,11 @@ function PrintersPage() {
   const [form, setForm] = useState({ name: "", type: "bon", ip_address: "", port: 9100 });
   const [scanning, setScanning] = useState(false);
   const [found, setFound] = useState<Array<{ ip_address: string; port: number }>>([]);
+  const [agentPrinters, setAgentPrinters] = useState<Array<{ name: string; isDefault: boolean; status?: string }>>([]);
   const [agentUrl, setAgentUrl] = useState<string>(getPrintAgentUrl() ?? "");
   const [agentOnline, setAgentOnline] = useState<boolean | null>(null);
   const [pinging, setPinging] = useState(false);
+  const [loadingAgentPrinters, setLoadingAgentPrinters] = useState(false);
 
   const load = async () => {
     const { data } = await supabase.from("printers").select("*").order("created_at");
@@ -121,8 +124,40 @@ function PrintersPage() {
     load();
   };
 
+  const loadAgentPrinters = async () => {
+    if (!isPrintAgentConfigured()) {
+      return toast.error("Bitte zuerst Print-Agent-URL konfigurieren");
+    }
+    setLoadingAgentPrinters(true);
+    try {
+      const r = await getAgentPrinters();
+      if (!r.ok) throw new Error(r.error ?? "Drucker konnten nicht geladen werden");
+      const existing = new Set(items.map((p) => p.name));
+      const fresh = (r.printers ?? []).filter((p) => !existing.has(p.name));
+      setAgentPrinters(fresh);
+      if (fresh.length === 0) toast.message("Keine neuen Windows-Drucker gefunden");
+      else toast.success(`${fresh.length} Windows-Drucker gefunden`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Drucker konnten nicht geladen werden");
+    } finally {
+      setLoadingAgentPrinters(false);
+    }
+  };
+
+  const addAgentPrinter = async (name: string) => {
+    const { error } = await supabase.from("printers").insert({
+      name,
+      type: "bon",
+      ip_address: null,
+      port: 9100,
+    });
+    if (error) return toast.error(error.message);
+    toast.success(`${name} hinzugefügt`);
+    setAgentPrinters((list) => list.filter((p) => p.name !== name));
+    load();
+  };
+
   const testPrint = async (p: P) => {
-    if (!p.ip_address) return toast.error("Keine IP konfiguriert");
     if (!isPrintAgentConfigured()) {
       return toast.error("Bitte zuerst Print-Agent-URL konfigurieren");
     }
