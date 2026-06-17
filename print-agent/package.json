@@ -6,7 +6,7 @@
   "main": "dist/agent.cjs",
   "scripts": {
     "dev": "node --import tsx src/agent.ts",
-    "build": "esbuild src/agent.ts --bundle --platform=node --target=node20 --format=cjs --alias:canvas=./src/canvas-stub.cjs --outfile=dist/agent.cjs",
+    "build": "esbuild src/agent.ts --bundle --platform=node --target=node16 --format=cjs --alias:canvas=./src/canvas-stub.cjs --outfile=dist/agent.cjs",
     "start": "node dist/agent.cjs"
   },
   "dependencies": {
