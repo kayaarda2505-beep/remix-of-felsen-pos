@@ -40,6 +40,7 @@ type PrinterCfg = {
 
 type ReceiptLine =
   | { separator: true }
+  | { qr: string; size?: number }
   | {
       text?: string;
       cols?: [string, string];
