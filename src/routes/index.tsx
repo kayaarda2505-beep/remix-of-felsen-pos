@@ -1301,11 +1301,10 @@ function FloorPlan({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onClick={() => setSelectedElId(null)}
-        className={`relative w-full rounded-3xl border border-white/[0.06] overflow-hidden select-none ${
+        className={`relative w-full flex-1 min-h-0 rounded-3xl border border-white/[0.06] overflow-hidden select-none ${
           editLayout ? "ring-2 ring-accent/30" : ""
         }`}
         style={{
-          aspectRatio: "16 / 10",
           background:
             "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.04), transparent 50%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.03), transparent 50%), repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 40px), #0a0a0a",
           touchAction: "none",
