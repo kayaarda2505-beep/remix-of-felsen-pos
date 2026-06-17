@@ -289,10 +289,10 @@ async function main() {
   app.get("/health", async () => ({
     ok: true,
     version: VERSION,
-    printers: listPrinters(),
+    printers: await listPrinters(),
   }));
 
-  app.get("/printers", async () => ({ ok: true, printers: listPrinters() }));
+  app.get("/printers", async () => ({ ok: true, printers: await listPrinters() }));
 
   app.post("/discover", async () => ({ ok: true, results: [] }));
 
@@ -345,7 +345,7 @@ async function main() {
   await app.listen({ host: HOST, port: PORT });
 
   // Banner
-  const printers = listPrinters();
+  const printers = await listPrinters();
   console.log("");
   console.log("==========================================");
   console.log(`  SAINTS Print-Agent v${VERSION}`);
