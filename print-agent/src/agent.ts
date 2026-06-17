@@ -25,6 +25,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const EscPosEncoder = require("esc-pos-encoder");
+import { LOGO_B64, LOGO_WIDTH, LOGO_HEIGHT } from "./logo";
 
 const VERSION = "1.0.0";
 const PORT = Number(process.env.PORT ?? 9110);
@@ -41,6 +42,7 @@ type PrinterCfg = {
 type ReceiptLine =
   | { separator: true }
   | { qr: string; size?: number }
+  | { logo: true }
   | {
       text?: string;
       cols?: [string, string];
@@ -94,7 +96,21 @@ function buildPayload(payload: ReceiptPayload): Buffer {
       }
       continue;
     }
-    const l = line as Exclude<ReceiptLine, { separator: true } | { qr: string; size?: number }>;
+    if ("logo" in line && line.logo) {
+      // ESC/POS GS v 0: print raster image. Centered via ESC a 1.
+      const bytes = Buffer.from(LOGO_B64, "base64");
+      const bytesPerRow = LOGO_WIDTH / 8;
+      enc.raw([0x1b, 0x61, 0x01]); // center
+      enc.raw([
+        0x1d, 0x76, 0x30, 0x00,
+        bytesPerRow & 0xff, (bytesPerRow >> 8) & 0xff,
+        LOGO_HEIGHT & 0xff, (LOGO_HEIGHT >> 8) & 0xff,
+      ]);
+      enc.raw(Array.from(bytes));
+      enc.raw([0x0a, 0x1b, 0x61, 0x00]); // newline + left
+      continue;
+    }
+    const l = line as Exclude<ReceiptLine, { separator: true } | { qr: string; size?: number } | { logo: true }>;
     enc.align(l.align ?? "left");
     enc.bold(!!l.bold);
     // esc-pos-encoder size: 'normal' default, otherwise width/height multiplier

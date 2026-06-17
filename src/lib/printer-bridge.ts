@@ -25,6 +25,7 @@ export type PrinterConfig = {
 export type ReceiptLine =
   | { separator: true }
   | { qr: string; size?: number }
+  | { logo: true }
   | {
       text?: string;
       cols?: [string, string];
