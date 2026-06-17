@@ -530,7 +530,7 @@ function ServiceTablet() {
             )}
 
             {/* Gäste-Auswahl-Hint */}
-            <div className="max-w-5xl mx-auto mt-6 glass rounded-2xl p-4 flex items-center gap-4">
+            <div className="max-w-5xl mx-auto mt-3 glass rounded-2xl p-3 flex items-center gap-4 shrink-0">
               <Users className="w-5 h-5 text-accent shrink-0" />
               <div className="flex-1">
                 <div className="text-sm font-medium">Anzahl Gäste</div>
