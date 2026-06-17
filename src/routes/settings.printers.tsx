@@ -205,7 +205,7 @@ function PrintersPage() {
           </div>
           <div className="text-xs text-muted-foreground">
             {online
-              ? "Bons werden über den lokalen Agent an die Netzwerk-Drucker gesendet."
+              ? "Bons werden über den lokalen Agent an die Windows-Drucker gesendet."
               : configured
               ? "Agent-URL ist gesetzt, aber der Agent antwortet nicht. Läuft das Programm im lokalen Netz?"
               : "Druck erst aktiv, wenn unten eine Agent-URL hinterlegt und der Agent erreichbar ist."}
@@ -223,7 +223,7 @@ function PrintersPage() {
       <div className="glass rounded-3xl p-6 mb-4">
         <div className="text-sm font-medium mb-1">Print-Agent URL</div>
         <div className="text-xs text-muted-foreground mb-3">
-          Adresse des lokalen Hilfsprogramms (z.B. <code>http://192.168.1.10:9110</code>). Wird nur in diesem Browser gespeichert.
+          Auf dem Drucker-PC <code>http://localhost:9110</code>, vom Tablet <code>http://PC-IP:9110</code>. Wird nur in diesem Browser gespeichert.
         </div>
         <div className="flex flex-col md:flex-row gap-2">
           <input
@@ -239,6 +239,48 @@ function PrintersPage() {
             <Save className="w-4 h-4" /> Speichern
           </button>
         </div>
+      </div>
+
+      <div className="glass rounded-3xl p-6 mb-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <div className="text-sm font-medium">Windows-Drucker vom Print-Agent laden</div>
+            <div className="text-xs text-muted-foreground">
+              Für USB-Drucker wie EPSON TM-T20III Receipt: Windows-Druckername übernehmen, keine IP nötig.
+            </div>
+          </div>
+          <button
+            onClick={loadAgentPrinters}
+            disabled={loadingAgentPrinters || !configured}
+            className="rounded-xl bg-accent/20 hover:bg-accent/30 text-accent px-4 py-2 text-sm font-medium flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            title={configured ? "Windows-Drucker laden" : "Erst Print-Agent konfigurieren"}
+          >
+            {loadingAgentPrinters ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Lade…</>
+            ) : (
+              <><Printer className="w-4 h-4" /> Laden</>
+            )}
+          </button>
+        </div>
+        {agentPrinters.length > 0 && (
+          <div className="space-y-2 mt-2">
+            {agentPrinters.map((p) => (
+              <div key={p.name} className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2">
+                <Printer className="w-4 h-4 text-accent shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{p.name}</div>
+                  <div className="text-xs text-muted-foreground">{p.isDefault ? "Standarddrucker" : "Windows-Drucker"}</div>
+                </div>
+                <button
+                  onClick={() => addAgentPrinter(p.name)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-accent text-accent-foreground hover:opacity-90 flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> Hinzufügen
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="glass rounded-3xl p-6 mb-4">
