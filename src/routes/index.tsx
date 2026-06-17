@@ -424,7 +424,7 @@ function ServiceTablet() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 min-h-0 overflow-hidden md:overflow-hidden flex flex-col p-4 md:p-6 pb-24 md:pb-6"
+            className="flex-1 min-h-0 overflow-hidden flex flex-col p-3 md:p-4 pb-24 md:pb-3"
           >
             <div className="max-w-5xl mx-auto mb-4 flex gap-2 flex-wrap items-center">
               <FilterChip active={areaFilter === "all"} onClick={() => setAreaFilter("all")} label={`Alle (${tables.length})`} />
