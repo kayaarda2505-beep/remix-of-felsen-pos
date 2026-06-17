@@ -424,7 +424,7 @@ function ServiceTablet() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 overflow-y-auto p-4 md:p-6 pb-24"
+            className="flex-1 min-h-0 overflow-hidden md:overflow-hidden flex flex-col p-4 md:p-6 pb-24 md:pb-6"
           >
             <div className="max-w-5xl mx-auto mb-4 flex gap-2 flex-wrap items-center">
               <FilterChip active={areaFilter === "all"} onClick={() => setAreaFilter("all")} label={`Alle (${tables.length})`} />
@@ -489,7 +489,7 @@ function ServiceTablet() {
                 })}
             </div>
 
-            <div className="hidden md:block">
+            <div className="hidden md:block flex-1 min-h-0">
               <FloorPlan
                 tables={tables.filter((t) => areaFilter === "all" || t.area === areaFilter)}
                 orderByTable={orderByTable}
@@ -1271,7 +1271,7 @@ function FloorPlan({
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto h-full flex flex-col min-h-0">
       {editLayout && (
         <div className="mb-3 flex flex-wrap gap-2 items-center">
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-2">Element hinzufügen</span>
@@ -1301,11 +1301,10 @@ function FloorPlan({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onClick={() => setSelectedElId(null)}
-        className={`relative w-full rounded-3xl border border-white/[0.06] overflow-hidden select-none ${
+        className={`relative w-full flex-1 min-h-0 rounded-3xl border border-white/[0.06] overflow-hidden select-none ${
           editLayout ? "ring-2 ring-accent/30" : ""
         }`}
         style={{
-          aspectRatio: "16 / 10",
           background:
             "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.04), transparent 50%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.03), transparent 50%), repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 40px), #0a0a0a",
           touchAction: "none",
