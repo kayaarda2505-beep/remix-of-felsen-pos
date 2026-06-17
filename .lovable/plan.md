@@ -1,37 +1,54 @@
-## Ziel
-- Web-Build (`npm run build`) bleibt 1:1 wie heute (TanStack Start + Cloudflare SSR).
-- Neuer Befehl `npm run build:electron` erzeugt ein reines statisches Bundle in `dist-electron/` mit `index.html`, das per `file://` läuft.
-- Server-Funktionen (`createServerFn`) und `/api/public/*`-Routen werden im Electron-Build via globalem `fetch`-Interceptor auf die veröffentlichte Lovable-URL umgeleitet.
+# SAINTS Print-Agent (Windows)
 
-## Was wird hinzugefügt (keine bestehenden Dateien werden ersetzt)
+Ein kleines Programm, das auf dem PC läuft, an dem der Epson TM-T20III per USB hängt. Es nimmt Druckaufträge von der Kasse (PC + Tablet im selben WLAN) entgegen und schickt sie direkt als ESC/POS an den Drucker.
 
-1. **`electron.html`** im Projekt-Root
-   - Minimaler SPA-Shell, `<div id="app">`, lädt `src/electron-entry.tsx`.
+## So funktioniert es
 
-2. **`src/electron-entry.tsx`**
-   - Liest `VITE_ELECTRON_API_BASE` (Default: gehostete Lovable-URL).
-   - Installiert globalen `fetch`-Proxy: jede relative URL, die mit `/api/`, `/_serverFn/`, `/_server` beginnt, wird mit der Basis-URL präfixiert; Supabase-Calls (absolute URLs) bleiben unverändert.
-   - Erstellt `createRouter` (ohne SSR), nutzt `HashHistory` (damit `file://` + Refresh funktioniert), mountet `<RouterProvider />` mit den bestehenden `QueryClientProvider` / `AuthProvider` / `AppShell`.
-   - Re-implementiert minimal das, was `__root.tsx`'s `RootComponent` macht, **ohne** `shellComponent` (das ist SSR-only).
+```text
+   Kasse PC ─┐
+             ├──► http://<PC-IP>:9110/print ──► Print-Agent ──► Windows-Druckwarteschlange ──► Epson TM-T20III (USB)
+   Tablet ───┘
+```
 
-3. **`src/routes/__root.tsx`** — kleine, abwärtskompatible Änderung
-   - `RootComponent`-Inhalt wird in eine eigene exportierte Komponente `RootApp` ausgelagert, damit Electron-Entry sie wiederverwenden kann. `Route`-Definition bleibt identisch (Web-Build unverändert).
+- Der Agent läuft als normales Fenster (oder im Hintergrund / Autostart).
+- Er nutzt den **bereits installierten Windows-Treiber** des Druckers und schickt rohe ESC/POS-Bytes an die Druckerwarteschlange. Das funktioniert mit jedem Drucker, der in *Drucker & Scanner* sichtbar ist — inkl. Kassenschublade-Befehl und Schneidekommando.
 
-4. **`vite.electron.config.ts`**
-   - Reines Vite + `@vitejs/plugin-react` + `@tanstack/router-plugin` (file-based routing, **ohne** TanStack Start / Cloudflare Plugin).
-   - `root: '.'`, `build.outDir: 'dist-electron'`, `build.rollupOptions.input: 'electron.html'`, `base: './'` (für `file://`).
-   - Alias `@ → src` wie im Hauptconfig.
+## Was gebaut wird
 
-5. **`package.json`**
-   - Neues Script: `"build:electron": "vite build --config vite.electron.config.ts"`.
-   - Optional `"preview:electron": "vite preview --config vite.electron.config.ts"` zum Testen im Browser.
+1. **Ordner `print-agent/`** im Projekt mit dem Quellcode des Agents (Node.js + TypeScript).
+2. **HTTP-Endpunkte** auf Port `9110`:
+   - `GET /health` → `{ ok: true, version, printers: [...] }`
+   - `POST /discover` → listet alle installierten Windows-Drucker
+   - `POST /test` → druckt einen Testbon
+   - `POST /print` → druckt einen echten Bon (Items, Total, MwSt, optional Kassenschublade auf)
+3. **CORS** offen für `https://felsens-pos-glow.lovable.app` und `http://localhost`.
+4. **Fertige `SAINTS-PrintAgent.exe`** für Windows (Single-File, kein Node nötig), gepackt mit `@yao-pkg/pkg`.
+5. **Setup-README** mit:
+   - Doppelklick auf `.exe` startet den Agent
+   - Autostart-Anleitung (Verknüpfung in `shell:startup`)
+   - Firewall-Regel für Port 9110 (damit das Tablet drauf zugreifen kann)
+   - Eintrag der Agent-URL in der Kasse:
+     - Auf dem PC selbst: `http://localhost:9110`
+     - Vom Tablet aus: `http://<PC-IP>:9110` (z. B. `http://192.168.1.50:9110`)
 
-## Wichtige Einschränkungen die der User wissen muss
-- Im Electron-Build muss das Gerät die Lovable-URL erreichen können (Online-Pflicht), sonst funktionieren Stripe-Checkout, AI-Rezepte, Spotify, QR-Bestellungen und Webhooks nicht.
-- CORS: damit der Browser von `file://` aus serverFns aufrufen darf, müssen die TanStack-Start-Routen auf der gehosteten Seite CORS für `Origin: null` (file://) bzw. `*` zulassen. Falls Lovable Hosting das nicht standardmäßig erlaubt, muss ich entweder einen CORS-Middleware-Eintrag in `src/start.ts` ergänzen oder Electron mit `webSecurity: false` (nicht empfohlen) starten. Ich ergänze die CORS-Header in `src/start.ts` als Teil dieses Plans.
-- TanStack-Router-File-Routing erzeugt `routeTree.gen.ts` – wird vom Vite-Router-Plugin in beiden Configs gleich genutzt, also keine Doppelpflege.
-- Routen die ausschließlich Server-Routes sind (`src/routes/api/public/*`) erscheinen im SPA-Bundle als leere Routen – Electron ruft sie ohnehin per `fetch` gegen den Hosted-Server auf, nicht als Page-Route.
+## Tech-Details (für später)
 
-## Was NICHT angefasst wird
-- `vite.config.ts`, `wrangler.jsonc`, `src/server.ts`, `src/start.ts` (außer optional CORS), `src/router.tsx`, alle Routes-Dateien außer `__root.tsx` (minimal-invasiv).
-- Keine neuen Abhängigkeiten nötig (alles vorhanden: `vite`, `@vitejs/plugin-react`, `@tanstack/router-plugin`, `@tanstack/react-router`).
+- **Sprache**: Node.js 20 + TypeScript, Fastify als HTTP-Server.
+- **Drucken**: Paket `@thiagoelg/node-printer` (hat vorgebaute Windows-Binaries für x64), sendet `RAW`-Datentyp an die Windows-Spooler-Queue.
+- **ESC/POS-Encoder**: Paket `esc-pos-encoder` baut den Byte-Buffer (Header, Items, Total, Footer, Schnitt, Kassenschublade-Puls).
+- **Bon-Format** ist 1:1 kompatibel mit dem bestehenden `printReceipt()`-Call der Kasse, der bereits `POST /print` mit `{ printer, payload }` schickt — keine Anpassung der App nötig.
+- **Packaging**: `bun run build` → `pkg . --targets node20-win-x64 --output SAINTS-PrintAgent.exe`. Ergebnis: einzelne `.exe` (~40 MB) + zwei `.node`-Dateien daneben für die Druck-Bindings.
+- **Auslieferung**: ZIP-Datei nach `/mnt/documents/SAINTS-PrintAgent-win-x64.zip` → User lädt sie aus dem Chat herunter, entpackt sie, startet die `.exe`.
+
+## Was du danach tust
+
+1. ZIP herunterladen, entpacken (z. B. nach `C:\SAINTS\PrintAgent\`).
+2. `SAINTS-PrintAgent.exe` doppelklicken → schwarzes Fenster mit „Listening on :9110" erscheint.
+3. Beim ersten Start fragt Windows nach Firewall-Freigabe → **„Privates Netzwerk" zulassen**.
+4. In der Kasse → Einstellungen → Drucker:
+   - Auf dem PC: URL = `http://localhost:9110`
+   - Auf dem Tablet: URL = `http://<IP-des-PCs>:9110`
+   - Drucker aus Liste wählen (`EPSON TM-T20III Receipt`)
+   - **Testdruck** klicken → Bon kommt raus.
+
+Wenn du einverstanden bist, baue ich Agent + .exe und lege den Download-Link bereit.
