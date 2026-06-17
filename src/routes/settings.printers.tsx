@@ -323,7 +323,7 @@ function PrintersPage() {
       </div>
 
       <div className="glass rounded-3xl p-6 mb-6">
-        <div className="text-sm font-medium mb-4">Neuer Drucker</div>
+        <div className="text-sm font-medium mb-4">Drucker manuell hinzufügen</div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <input
             value={form.name}
@@ -352,7 +352,7 @@ function PrintersPage() {
           <input
             value={form.ip_address}
             onChange={(e) => setForm({ ...form, ip_address: e.target.value })}
-            placeholder="IP-Adresse (192.168.1.50)"
+            placeholder="IP-Adresse optional – bei USB/Windows leer lassen"
             className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm md:col-span-3"
           />
           <button
@@ -378,7 +378,7 @@ function PrintersPage() {
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{p.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {p.type} · {p.ip_address ?? "keine IP"}:{p.port}
+                  {p.type} · {p.ip_address ? `${p.ip_address}:${p.port}` : "Windows/USB über Print-Agent"}
                 </div>
               </div>
               <button
