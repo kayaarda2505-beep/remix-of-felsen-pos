@@ -1,5 +1,5 @@
 import type { ReceiptPayload, PrinterConfig } from "./printer-bridge";
-import { printReceipt } from "./printer-bridge";
+import { printReceipt, getAgentPrinters } from "./printer-bridge";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ReceiptItem = {
