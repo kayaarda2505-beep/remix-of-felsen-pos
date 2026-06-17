@@ -646,8 +646,8 @@ function POS() {
             <motion.button
               whileTap={{ scale: 0.98 }}
               disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || payTab.isPending}
-              onClick={() => setPayMode("cash")}
-              className="w-full rounded-2xl py-4 mt-2 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              onClick={handlePay}
+              className="w-full rounded-2xl py-3 mt-2 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
               {payTab.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               Bezahlen • CHF {total.toFixed(2)}
