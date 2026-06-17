@@ -1,5 +1,5 @@
 import type { ReceiptPayload, PrinterConfig } from "./printer-bridge";
-import { printReceipt } from "./printer-bridge";
+import { printReceipt, getAgentPrinters } from "./printer-bridge";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ReceiptItem = {
@@ -298,11 +298,21 @@ export async function printBill(opts: {
   interim?: boolean;
   paymentMethod?: string | null;
 }): Promise<string | null> {
-  const billPrinter =
+  let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => p.type === "rechnung") ??
     opts.printers.find((p) => p.type === "bon") ??
     opts.printers[0];
-  if (!billPrinter) return "Kein Rechnungsdrucker konfiguriert";
+
+  // Fallback: kein Drucker in der DB konfiguriert → Standard-Windows-Drucker
+  // vom Print-Agent verwenden, damit der Bon trotzdem rauskommt.
+  if (!billPrinter) {
+    const r = await getAgentPrinters();
+    const def = r.printers?.find((p) => p.isDefault) ?? r.printers?.[0];
+    if (!def) {
+      return "Kein Drucker konfiguriert – bitte unter Einstellungen › Drucker einen Drucker hinzufügen";
+    }
+    billPrinter = { id: "agent-default", name: def.name, type: "bon", ip_address: null, port: null };
+  }
 
   const settings = await loadReceiptSettings();
   const r = await printReceipt(billPrinter, buildBill({ ...opts, settings }));
