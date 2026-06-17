@@ -346,7 +346,7 @@ function POS() {
   };
 
   return (
-    <div className="p-3 lg:p-4 pb-24 md:pb-3 h-screen flex flex-col max-w-[1800px] mx-auto">
+    <div className="p-3 lg:p-4 pb-24 md:pb-3 h-screen flex flex-col w-full max-w-[1800px] mx-auto overflow-hidden">
       <div className="flex items-start justify-between gap-2">
         <PageHeader title="Kasse" subtitle={isTab && activeOrder ? `Tisch ${activeOrder.dining_tables?.name ?? "?"} · offen` : "Theke / Walk-in"} />
         <button
