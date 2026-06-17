@@ -1271,7 +1271,7 @@ function FloorPlan({
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto h-full flex flex-col min-h-0">
       {editLayout && (
         <div className="mb-3 flex flex-wrap gap-2 items-center">
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-2">Element hinzufügen</span>
