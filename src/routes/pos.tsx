@@ -282,6 +282,60 @@ function POS() {
   const total = subtotal + tip;
   const showCart = isTab ? tabItems : walkInCart;
 
+  // Vollbild-Toggle (F11-Ersatz, blendet die Windows-Taskleiste aus)
+  const [isFullscreen, setIsFullscreen] = useState(
+    typeof document !== "undefined" && !!document.fullscreenElement,
+  );
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch {
+      /* ignored */
+    }
+  };
+
+  // Zwischenrechnung drucken (vor dem Bezahlen-Dialog)
+  const printInterim = async () => {
+    if (!isDesktopApp()) return;
+    const tableName = isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : "Theke";
+    const items: ReceiptItem[] = isTab
+      ? tabItems.map((it) => ({
+          product_name: it.product_name,
+          qty: it.qty,
+          unit_price: Number(it.unit_price),
+          modifiers: it.modifiers,
+        }))
+      : walkInCart.map((l) => ({
+          product_name: l.product.name,
+          qty: l.qty,
+          unit_price: l.product.price,
+          modifiers: l.modifiers,
+          note: l.note ?? null,
+        }));
+    if (items.length === 0) return;
+    const err = await printBill({
+      printers,
+      tableName,
+      items,
+      subtotal,
+      total,
+      tip,
+      interim: true,
+    });
+    if (err) toast.error(`Druck: ${err}`);
+  };
+
+  const handlePay = async () => {
+    await printInterim();
+    setPayMode("cash");
+  };
+
   const handleProductTap = (p: Product) => {
     const left = availability[p.id] ?? Infinity;
     if (left <= 0) {
@@ -292,8 +346,17 @@ function POS() {
   };
 
   return (
-    <div className="p-4 lg:p-6 pb-28 md:pb-6 h-screen flex flex-col max-w-[1800px] mx-auto">
-      <PageHeader title="Kasse" subtitle={isTab && activeOrder ? `Tisch ${activeOrder.dining_tables?.name ?? "?"} · offen` : "Theke / Walk-in"} />
+    <div className="p-3 lg:p-4 pb-24 md:pb-3 h-screen flex flex-col max-w-[1800px] mx-auto">
+      <div className="flex items-start justify-between gap-2">
+        <PageHeader title="Kasse" subtitle={isTab && activeOrder ? `Tisch ${activeOrder.dining_tables?.name ?? "?"} · offen` : "Theke / Walk-in"} />
+        <button
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Vollbild verlassen" : "Vollbild (Taskleiste ausblenden)"}
+          className="glass rounded-xl p-2 hover:border-accent/40 transition-colors shrink-0"
+        >
+          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        </button>
+      </div>
 
       {/* Open tabs row */}
       <div className="flex gap-2 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
