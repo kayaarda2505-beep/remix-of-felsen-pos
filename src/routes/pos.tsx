@@ -717,9 +717,7 @@ function POS() {
               if (isTab) {
                 payTab.mutate({ method });
               } else if (walkInCart.length > 0) {
-                toast.success(`Bezahlt mit ${method}`);
-                setWalkInCart([]);
-                setTip(0);
+                payWalkIn.mutate({ method });
               }
             }}
           />
