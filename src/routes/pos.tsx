@@ -275,6 +275,55 @@ function POS() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
 
+  const payWalkIn = useMutation({
+    mutationFn: async ({ method }: { method: string }) => {
+      if (walkInCart.length === 0) return;
+      const { data: order, error: oErr } = await supabase
+        .from("orders")
+        .insert({ status: "open", guests: 1 })
+        .select("id")
+        .single();
+      if (oErr || !order) throw oErr ?? new Error("order");
+      const rows = walkInCart.map((l) => ({
+        order_id: order.id,
+        product_id: l.product.id,
+        product_name: l.product.name,
+        category: l.product.category,
+        unit_price: l.product.price,
+        qty: l.qty,
+        modifiers: l.modifiers,
+        note: l.note ?? null,
+      }));
+      const { error: iErr } = await supabase.from("order_items").insert(rows);
+      if (iErr) throw iErr;
+      const totalAmt =
+        walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0) + tip;
+      const { error: uErr } = await supabase
+        .from("orders")
+        .update({ status: "paid", closed_at: new Date().toISOString(), total: totalAmt })
+        .eq("id", order.id);
+      if (uErr) throw uErr;
+      await supabase.from("payment_requests").insert({
+        order_id: order.id,
+        table_name: "Theke",
+        amount: totalAmt,
+        method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
+        status: "paid",
+        handled_at: new Date().toISOString(),
+        note: `Theke · ${method}`,
+      });
+      toast.success(`Bezahlt mit ${method}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders_range"] });
+      qc.invalidateQueries({ queryKey: ["items_range"] });
+      qc.invalidateQueries({ queryKey: ["payments_range"] });
+      setWalkInCart([]);
+      setTip(0);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
+  });
+
   const isTab = !!activeOrderId;
   const subtotal = isTab
     ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0)
