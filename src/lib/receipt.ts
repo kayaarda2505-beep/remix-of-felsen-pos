@@ -171,12 +171,16 @@ export function buildBill(opts: {
 
   // Kopf
   lines.push({ text: s.businessName, align: "center", bold: true, size: "double-h" });
+  lines.push({ text: "Fegergasse 4", align: "center" });
+  lines.push({ text: "4800 Zofingen", align: "center" });
+  lines.push({ text: "", align: "center" });
   lines.push({ text: opts.interim ? "ZWISCHENRECHNUNG" : "RECHNUNG", align: "center", bold: true });
   lines.push({ text: "", align: "center" });
   lines.push({ cols: ["Tisch", opts.tableName] });
   lines.push({ cols: ["Datum", nowStr()] });
   lines.push({ cols: ["Bon-Nr.", opts.orderNo ?? shortId()] });
   lines.push({ separator: true });
+
 
   // Spaltenkopf
   lines.push({ cols: ["Artikel", "Betrag"], bold: true });
