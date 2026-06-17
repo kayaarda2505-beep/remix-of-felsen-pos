@@ -26,6 +26,7 @@ import { join } from "node:path";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const EscPosEncoder = require("esc-pos-encoder");
 import { LOGO_B64, LOGO_WIDTH, LOGO_HEIGHT } from "./logo";
+import qrcode from "qrcode-generator";
 
 const VERSION = "1.0.0";
 const PORT = Number(process.env.PORT ?? 9110);
@@ -73,6 +74,44 @@ function padCols(left: string, right: string, width = COLS): string {
   return l + " ".repeat(width - l.length - r.length) + r;
 }
 
+function printRaster(enc: any, width: number, height: number, bytes: Buffer) {
+  const bytesPerRow = Math.ceil(width / 8);
+  enc.raw([0x1b, 0x61, 0x01]); // center
+  enc.raw([
+    0x1d, 0x76, 0x30, 0x00,
+    bytesPerRow & 0xff, (bytesPerRow >> 8) & 0xff,
+    height & 0xff, (height >> 8) & 0xff,
+  ]);
+  enc.raw(Array.from(bytes));
+  enc.raw([0x0a, 0x1b, 0x61, 0x00]); // newline + left
+}
+
+function qrRaster(value: string, scale = 6, margin = 4) {
+  const qr = qrcode(0, "M");
+  qr.addData(value, "Byte");
+  qr.make();
+
+  const modules = qr.getModuleCount();
+  const width = (modules + margin * 2) * scale;
+  const height = width;
+  const bytesPerRow = Math.ceil(width / 8);
+  const bytes = Buffer.alloc(bytesPerRow * height, 0);
+
+  for (let row = 0; row < height; row++) {
+    const moduleRow = Math.floor(row / scale) - margin;
+    for (let col = 0; col < width; col++) {
+      const moduleCol = Math.floor(col / scale) - margin;
+      const dark =
+        moduleRow >= 0 && moduleRow < modules &&
+        moduleCol >= 0 && moduleCol < modules &&
+        qr.isDark(moduleRow, moduleCol);
+      if (dark) bytes[row * bytesPerRow + (col >> 3)] |= 0x80 >> (col & 7);
+    }
+  }
+
+  return { width, height, bytes };
+}
+
 function buildPayload(payload: ReceiptPayload): Buffer {
   const enc = new EscPosEncoder();
   enc.initialize().codepage("cp858");
@@ -90,24 +129,16 @@ function buildPayload(payload: ReceiptPayload): Buffer {
     if ("qr" in line && line.qr) {
       enc.align("center").size("normal").bold(false);
       try {
-        enc.qrcode(line.qr, 1, line.size ?? 6, "m");
+        const qr = qrRaster(line.qr, line.size ?? 6);
+        printRaster(enc, qr.width, qr.height, qr.bytes);
       } catch (e) {
         enc.line(line.qr);
       }
       continue;
     }
     if ("logo" in line && line.logo) {
-      // ESC/POS GS v 0: print raster image. Centered via ESC a 1.
       const bytes = Buffer.from(LOGO_B64, "base64");
-      const bytesPerRow = LOGO_WIDTH / 8;
-      enc.raw([0x1b, 0x61, 0x01]); // center
-      enc.raw([
-        0x1d, 0x76, 0x30, 0x00,
-        bytesPerRow & 0xff, (bytesPerRow >> 8) & 0xff,
-        LOGO_HEIGHT & 0xff, (LOGO_HEIGHT >> 8) & 0xff,
-      ]);
-      enc.raw(Array.from(bytes));
-      enc.raw([0x0a, 0x1b, 0x61, 0x00]); // newline + left
+      printRaster(enc, LOGO_WIDTH, LOGO_HEIGHT, bytes);
       continue;
     }
     const l = line as Exclude<ReceiptLine, { separator: true } | { qr: string; size?: number } | { logo: true }>;
