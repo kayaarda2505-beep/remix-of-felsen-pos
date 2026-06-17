@@ -346,7 +346,7 @@ function POS() {
   };
 
   return (
-    <div className="p-3 lg:p-4 pb-24 md:pb-3 h-screen flex flex-col max-w-[1800px] mx-auto">
+    <div className="p-3 lg:p-4 pb-24 md:pb-3 h-screen flex flex-col w-full max-w-[1800px] mx-auto overflow-hidden">
       <div className="flex items-start justify-between gap-2">
         <PageHeader title="Kasse" subtitle={isTab && activeOrder ? `Tisch ${activeOrder.dining_tables?.name ?? "?"} · offen` : "Theke / Walk-in"} />
         <button
@@ -388,9 +388,10 @@ function POS() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-3 lg:gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-3 lg:gap-4 flex-1 min-h-0 min-w-0">
         {/* Product grid */}
-        <div className="flex flex-col min-h-0 gap-4">
+        <div className="flex flex-col min-h-0 min-w-0 gap-4">
+
           <div className="flex items-center gap-3">
             <div className="glass rounded-xl flex items-center gap-2 px-3 py-2 flex-1 max-w-xs">
               <Search className="w-4 h-4 text-muted-foreground" />
