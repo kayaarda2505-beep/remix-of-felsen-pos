@@ -295,8 +295,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <SpotifyBarSpeakerProvider>
-    <div className="min-h-screen flex w-full">
-      <aside className="hidden md:flex w-20 lg:w-60 flex-col p-3 lg:p-4 gap-1 border-r border-border/40 bg-sidebar/60 backdrop-blur-2xl">
+    <div className="h-screen flex w-full overflow-hidden">
+      <aside className="hidden md:flex w-20 lg:w-60 flex-col p-3 lg:p-4 gap-1 border-r border-border/40 bg-sidebar/60 backdrop-blur-2xl overflow-y-auto">
+
         <div className="px-2 py-4 mb-2">
           <SaintsLogo size={36} withWordmark />
         </div>
