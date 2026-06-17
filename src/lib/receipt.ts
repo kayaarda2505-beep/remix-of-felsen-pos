@@ -170,6 +170,7 @@ export function buildBill(opts: {
   const lines: ReceiptPayload["lines"] = [];
 
   // Kopf
+  lines.push({ logo: true });
   lines.push({ text: s.businessName, align: "center", bold: true, size: "double-h" });
   lines.push({ text: "Fegergasse 4", align: "center" });
   lines.push({ text: "4300 Zofingen", align: "center" });
