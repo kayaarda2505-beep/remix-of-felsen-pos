@@ -113,6 +113,11 @@ function isNoActiveDeviceError(error: unknown) {
   return String(error instanceof Error ? error.message : error).includes("No active device found");
 }
 
+function isVolumeControlDisallowedError(error: unknown) {
+  const msg = String(error instanceof Error ? error.message : error).toLowerCase();
+  return msg.includes("cannot control device volume") || msg.includes("volume_control_disallow");
+}
+
 // ---------- Auth ----------
 
 export const getSpotifyAuthUrl = createServerFn({ method: "POST" })
