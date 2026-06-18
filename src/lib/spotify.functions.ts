@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const SCOPES = [
   "user-read-playback-state",
@@ -23,6 +22,7 @@ function env() {
 }
 
 async function getValidToken(): Promise<string> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("spotify_auth")
     .select("*")
@@ -134,6 +134,7 @@ export const exchangeSpotifyCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ code: z.string().min(1), redirectUri: z.string().url() }))
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, secret } = env();
     const res = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
@@ -171,6 +172,7 @@ export const exchangeSpotifyCode = createServerFn({ method: "POST" })
 export const disconnectSpotify = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("spotify_auth").delete().eq("id", true);
     return { ok: true };
   });
@@ -178,6 +180,7 @@ export const disconnectSpotify = createServerFn({ method: "POST" })
 export const getSpotifyConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin
       .from("spotify_auth")
       .select("updated_at")
