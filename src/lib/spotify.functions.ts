@@ -326,6 +326,9 @@ export const spotifyVolume = createServerFn({ method: "POST" })
       await sp(`/me/player/volume?volume_percent=${volume}&device_id=${encodeURIComponent(deviceId)}`, { method: "PUT" });
     } catch (error) {
       if (isNoActiveDeviceError(error)) return { ok: false, error: noSpotifyDeviceMessage() };
+      if (isVolumeControlDisallowedError(error)) {
+        return { ok: false, error: "Dieses Gerät erlaubt keine Fernsteuerung der Lautstärke. Bitte direkt am Gerät regeln." };
+      }
       throw error;
     }
     return { ok: true };
