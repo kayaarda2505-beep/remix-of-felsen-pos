@@ -295,8 +295,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <SpotifyBarSpeakerProvider>
-      <div className="h-screen flex w-full overflow-hidden">
-        <main className="flex-1 min-w-0 min-h-0 overflow-auto">{children}</main>
+      <div className="min-h-screen w-full">
+        <main className="min-h-screen w-full">{children}</main>
       </div>
     </SpotifyBarSpeakerProvider>
   );
