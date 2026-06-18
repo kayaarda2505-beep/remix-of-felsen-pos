@@ -295,108 +295,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <SpotifyBarSpeakerProvider>
-    <div className="h-screen flex w-full overflow-hidden">
-      <aside className="hidden md:flex w-20 lg:w-60 flex-col p-3 lg:p-4 gap-1 border-r border-border/40 bg-sidebar/60 backdrop-blur-2xl overflow-y-auto">
-
-        <div className="px-2 py-4 mb-2">
-          <SaintsLogo size={36} withWordmark />
-        </div>
-
-        {visibleNav.map((item) => {
-          const Icon = item.icon;
-          const active = item.to === "/" ? path === "/" : path.startsWith(item.to);
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all tap-highlight-none ${
-                active
-                  ? "bg-white/10 text-foreground shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-              }`}
-            >
-              <Icon className="w-5 h-5 shrink-0" strokeWidth={1.75} />
-              <span className="hidden lg:block font-medium">{item.label}</span>
-              {active && (
-                <span className="hidden lg:block ml-auto w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px] shadow-accent" />
-              )}
-            </Link>
-          );
-        })}
-
-        <div className="mt-auto hidden lg:block space-y-2">
-          {operator && <SpotifyPlayer />}
-          {operator && (
-            <div className="glass rounded-2xl p-3 text-xs">
-              <div className="flex items-center gap-2 mb-2">
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold text-background shrink-0"
-                  style={{ background: operator.color }}
-                >
-                  {operator.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium truncate">{operator.name}</div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {roleLabel[operator.role] ?? operator.role}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setOperator(null)}
-                  className="flex-1 rounded-lg bg-white/5 hover:bg-white/10 py-1.5 text-[10px] transition-colors"
-                  title="Schicht beenden / Operator wechseln"
-                >
-                  Wechseln
-                </button>
-                <button
-                  onClick={signOut}
-                  className="rounded-lg bg-white/5 hover:bg-destructive/20 hover:text-destructive p-1.5 transition-colors"
-                  title="Admin abmelden"
-                >
-                  <LogOut className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          )}
-          <div className="flex items-center gap-2 px-2 text-[10px] text-muted-foreground">
-            <span className="w-1.5 h-1.5 rounded-full bg-success pulse-dot" />
-            System online
-          </div>
-        </div>
-      </aside>
-
-      <main className="flex-1 min-w-0 min-h-0 overflow-auto">{children}</main>
-
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 glass-strong border-t border-border/40">
-        <div
-          className="flex gap-1 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-x-auto snap-x"
-          style={{ scrollbarWidth: "none" }}
-        >
-          {visibleNav.map((item) => {
-            const Icon = item.icon;
-            const active = item.to === "/" ? path === "/" : path.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl text-[10px] min-w-[64px] shrink-0 snap-start transition-colors ${
-                  active ? "text-accent bg-white/5" : "text-muted-foreground"
-                }`}
-              >
-                <Icon className="w-5 h-5" strokeWidth={1.75} />
-                <span className="leading-none">{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    </div>
+      <div className="h-screen flex w-full overflow-hidden">
+        <main className="flex-1 min-w-0 min-h-0 overflow-auto">{children}</main>
+      </div>
     </SpotifyBarSpeakerProvider>
   );
 }
+
 
 export function PageHeader({
   title,
