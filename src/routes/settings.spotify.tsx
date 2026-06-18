@@ -25,10 +25,15 @@ function SpotifySettings() {
   const connect = useMutation({
     mutationFn: async () => {
       const redirectUri = `${window.location.origin}/spotify-callback`;
+      console.log("[Spotify] Connecting with redirectUri:", redirectUri);
       const { url } = await authUrlFn({ data: { redirectUri } });
+      console.log("[Spotify] Auth URL:", url);
       window.location.href = url;
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => {
+      console.error("[Spotify] Connect error:", e);
+      toast.error(e?.message || String(e) || "Unbekannter Fehler beim Verbinden");
+    },
   });
 
   const disconnect = useMutation({
