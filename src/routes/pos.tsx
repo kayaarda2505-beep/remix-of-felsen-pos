@@ -437,7 +437,7 @@ function POS() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-3 lg:gap-4 flex-1 min-h-0 min-w-0">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col">
         {/* Product grid */}
         <div className="flex flex-col min-h-0 min-w-0 gap-4">
 
@@ -469,7 +469,7 @@ function POS() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 overflow-y-auto pr-1 -mr-1 pb-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 overflow-y-auto pr-1 -mr-1 pb-2">
             <AnimatePresence mode="popLayout">
               {visible.map((p) => {
                 const left = availability[p.id] ?? Infinity;
@@ -519,6 +519,7 @@ function POS() {
             </AnimatePresence>
           </div>
         </div>
+
 
         {/* Cart */}
         <aside className="glass-strong rounded-3xl p-4 flex flex-col min-h-0">
