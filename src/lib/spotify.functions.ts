@@ -113,6 +113,11 @@ function isNoActiveDeviceError(error: unknown) {
   return String(error instanceof Error ? error.message : error).includes("No active device found");
 }
 
+function isVolumeControlDisallowedError(error: unknown) {
+  const msg = String(error instanceof Error ? error.message : error).toLowerCase();
+  return msg.includes("cannot control device volume") || msg.includes("volume_control_disallow");
+}
+
 // ---------- Auth ----------
 
 export const getSpotifyAuthUrl = createServerFn({ method: "POST" })
@@ -321,6 +326,9 @@ export const spotifyVolume = createServerFn({ method: "POST" })
       await sp(`/me/player/volume?volume_percent=${volume}&device_id=${encodeURIComponent(deviceId)}`, { method: "PUT" });
     } catch (error) {
       if (isNoActiveDeviceError(error)) return { ok: false, error: noSpotifyDeviceMessage() };
+      if (isVolumeControlDisallowedError(error)) {
+        return { ok: false, error: "Dieses Gerät erlaubt keine Fernsteuerung der Lautstärke. Bitte direkt am Gerät regeln." };
+      }
       throw error;
     }
     return { ok: true };
