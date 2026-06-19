@@ -8,7 +8,7 @@ import {
   Package,
   BarChart3,
   Settings,
-  LogOut,
+  
   CalendarDays,
   Music,
   Receipt,
@@ -159,7 +159,7 @@ const roleLabel: Record<string, string> = {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const { operator, setOperator, signOut } = useAuth();
+  const { operator, setOperator } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
   const mountedAt = useRef(Date.now());
   const handledServiceCallIds = useRef<Set<string>>(new Set());
@@ -519,13 +519,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                   aria-label="Theme umschalten"
                 >
                   {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
-                </button>
-                <button
-                  onClick={signOut}
-                  className="rounded-lg bg-white/5 hover:bg-destructive/20 hover:text-destructive p-1.5 transition-colors"
-                  title="Admin abmelden"
-                >
-                  <LogOut className="w-3 h-3" />
                 </button>
               </div>
             </div>
