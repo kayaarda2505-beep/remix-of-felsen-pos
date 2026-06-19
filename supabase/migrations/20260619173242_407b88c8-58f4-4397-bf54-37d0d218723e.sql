@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.report_category_totals(timestamptz, timestamptz) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.report_hourly_totals(timestamptz, timestamptz) FROM PUBLIC, anon;
