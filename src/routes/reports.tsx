@@ -405,8 +405,8 @@ function Reports() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1 glass rounded-xl p-1">
               {(["today","week","month","year"] as RangePreset[]).map(p => (
-                <button key={p} onClick={() => applyPreset(p)}
-                  className={`px-3 h-9 rounded-lg text-xs transition-colors ${preset===p ? "bg-accent/20 text-accent" : "hover:bg-white/10"}`}>
+                <button key={p} onClick={() => applyPreset(p)} disabled={isRangePending}
+                  className={`px-3 h-9 rounded-lg text-xs transition-colors disabled:opacity-60 ${preset===p ? "bg-accent/20 text-accent" : "hover:bg-white/10"}`}>
                   {p==="today"?"Heute":p==="week"?"Woche":p==="month"?"Monat":"Jahr"}
                 </button>
               ))}
