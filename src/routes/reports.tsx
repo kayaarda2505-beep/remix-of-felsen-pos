@@ -237,6 +237,17 @@ function Reports() {
   // Gebühren pro Methode berechnen
   const feesByMethod = useMemo(() => {
     const m = new Map<string, { sum: number; count: number; volume: number; label: string }>();
+    if (useAggregates) {
+      for (const p of paymentMethodAgg) {
+        const def = DEFAULT_FEES[p.method];
+        if (!def) continue;
+        const pct = feeMap.get(p.method) ?? def.pct;
+        const count = Number(p.payment_count ?? 0);
+        const volume = Number(p.volume ?? 0);
+        m.set(p.method, { sum: (volume * pct) / 100 + (def.fixed * count), count, volume, label: def.label });
+      }
+      return [...m.entries()].map(([method, v]) => ({ method, ...v }));
+    }
     for (const p of payments) {
       const def = DEFAULT_FEES[p.method as string];
       if (!def) continue; // Bar/Cash → keine Gebühren
@@ -247,13 +258,15 @@ function Reports() {
       m.set(p.method as string, cur);
     }
     return [...m.entries()].map(([method, v]) => ({ method, ...v }));
-  }, [payments, feeMap]);
+  }, [payments, paymentMethodAgg, feeMap, useAggregates]);
   const feeTotal = feesByMethod.reduce((s, f) => s + f.sum, 0);
 
   const revenue = useAggregates
     ? Number(ordersSummary?.revenue ?? 0)
     : orders.reduce((s, o) => s + Number(o.total ?? 0), 0);
-  const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const expenseTotal = useAggregates
+    ? Number(expenseSummary?.total ?? 0)
+    : expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
   const totalCosts = expenseTotal + feeTotal;
   const profit = revenue - totalCosts;
   const closedCount = useAggregates
@@ -277,11 +290,17 @@ function Reports() {
   }, [items, categoryAgg, useAggregates]);
 
   const expByCat = useMemo(() => {
+    if (useAggregates) {
+      const m = new Map<string, number>();
+      for (const e of expenseCategoryAgg) m.set(e.category, Number(e.total ?? 0));
+      for (const f of feesByMethod) m.set(`Gebühren ${f.label}`, (m.get(`Gebühren ${f.label}`) ?? 0) + f.sum);
+      return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    }
     const m = new Map<string, number>();
     for (const e of expenses) m.set(e.category, (m.get(e.category) ?? 0) + Number(e.amount));
     for (const f of feesByMethod) m.set(`Gebühren ${f.label}`, (m.get(`Gebühren ${f.label}`) ?? 0) + f.sum);
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [expenses, feesByMethod]);
+  }, [expenses, expenseCategoryAgg, feesByMethod, useAggregates]);
 
   // Umsatz pro Tag (bei mehrtägigem Bereich) oder pro Stunde (bei einem Tag)
   const trend = useMemo(() => {
