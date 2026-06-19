@@ -520,13 +520,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
                 </button>
-                <button
-                  onClick={signOut}
-                  className="rounded-lg bg-white/5 hover:bg-destructive/20 hover:text-destructive p-1.5 transition-colors"
-                  title="Admin abmelden"
-                >
-                  <LogOut className="w-3 h-3" />
-                </button>
               </div>
             </div>
           )}
