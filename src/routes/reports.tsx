@@ -267,6 +267,7 @@ function Reports() {
   const expenseTotal = useAggregates
     ? Number(expenseSummary?.total ?? 0)
     : expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const expenseCount = useAggregates ? Number(expenseSummary?.expense_count ?? 0) : expenses.length;
   const totalCosts = expenseTotal + feeTotal;
   const profit = revenue - totalCosts;
   const closedCount = useAggregates
@@ -530,10 +531,10 @@ function Reports() {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Ausgaben</div>
             <div className="text-xl font-semibold tabular-nums mt-0.5">{expenseTotal.toFixed(2)} CHF</div>
           </div>
-              <div className="text-xs text-muted-foreground">{useAggregates ? Number(expenseSummary?.expense_count ?? 0) : expenses.length} Belege</div>
+              <div className="text-xs text-muted-foreground">{expenseCount} Belege</div>
         </div>
 
-        {expenses.length === 0 && feesByMethod.length === 0 ? (
+        {expenseCount === 0 && feesByMethod.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground py-6 flex flex-col items-center gap-2">
             <Receipt className="w-8 h-8 opacity-40" />
             Keine Ausgaben erfasst
