@@ -439,7 +439,7 @@ function Reports() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <Kpi label="Umsatz" value={revenue} icon={<TrendingUp className="w-4 h-4" />} accent />
         <Kpi label="Ausgaben" value={expenseTotal} icon={<TrendingDown className="w-4 h-4 text-destructive" />} />
-        <Kpi label="Gebühren" value={feeTotal} icon={<CreditCard className="w-4 h-4 text-destructive/80" />} sub={`${payments.length} Online-Zahlungen`} />
+        <Kpi label="Gebühren" value={feeTotal} icon={<CreditCard className="w-4 h-4 text-destructive/80" />} sub={`${feesByMethod.reduce((s, f) => s + f.count, 0)} Online-Zahlungen`} />
         <Kpi label="Gewinn" value={profit} icon={<Wallet className="w-4 h-4" />} highlight={profit >= 0 ? "positive" : "negative"} />
         <Kpi label="Ø Bon" value={avgTicket} icon={<ShoppingCart className="w-4 h-4" />} sub={`${closedCount} Abschlüsse`} />
       </div>
@@ -530,7 +530,7 @@ function Reports() {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Ausgaben</div>
             <div className="text-xl font-semibold tabular-nums mt-0.5">{expenseTotal.toFixed(2)} CHF</div>
           </div>
-          <div className="text-xs text-muted-foreground">{expenses.length} Belege</div>
+              <div className="text-xs text-muted-foreground">{useAggregates ? Number(expenseSummary?.expense_count ?? 0) : expenses.length} Belege</div>
         </div>
 
         {expenses.length === 0 && feesByMethod.length === 0 ? (
@@ -548,7 +548,7 @@ function Reports() {
                 </div>
               ))}
             </div>
-            {expenses.length > 0 && (
+            {!useAggregates && expenses.length > 0 && (
               <div className="divide-y divide-border/30 -mx-2">
                 {expenses.map((e, i) => (
                   <div key={i} className="flex items-center gap-3 px-2 py-2">
