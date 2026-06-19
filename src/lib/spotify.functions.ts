@@ -387,3 +387,133 @@ export const spotifySearch = createServerFn({ method: "POST" })
         })) ?? [],
     };
   });
+
+// ---------- Library / Playlists ----------
+
+export const getMyPlaylists = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    try {
+      const r = await sp(`/me/playlists?limit=50`);
+      return {
+        playlists:
+          r?.items?.filter(Boolean).map((p: any) => ({
+            uri: p.uri,
+            id: p.id,
+            name: p.name,
+            owner: p.owner?.display_name ?? "",
+            image: p.images?.[0]?.url ?? null,
+            tracks: p.tracks?.total ?? 0,
+          })) ?? [],
+      };
+    } catch (e: any) {
+      return { playlists: [], error: String(e?.message ?? e) };
+    }
+  });
+
+export const getFeaturedPlaylists = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    try {
+      const r = await sp(`/browse/featured-playlists?limit=20`);
+      return {
+        playlists:
+          r?.playlists?.items?.filter(Boolean).map((p: any) => ({
+            uri: p.uri,
+            id: p.id,
+            name: p.name,
+            owner: p.owner?.display_name ?? "",
+            image: p.images?.[0]?.url ?? null,
+            tracks: p.tracks?.total ?? 0,
+          })) ?? [],
+      };
+    } catch (e: any) {
+      return { playlists: [], error: String(e?.message ?? e) };
+    }
+  });
+
+export const getPlaylistTracks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ playlistId: z.string().min(1) }))
+  .handler(async ({ data }) => {
+    const r = await sp(`/playlists/${encodeURIComponent(data.playlistId)}/tracks?limit=100`);
+    return {
+      tracks:
+        r?.items?.filter((i: any) => i?.track).map((i: any) => ({
+          uri: i.track.uri,
+          name: i.track.name,
+          artists: i.track.artists?.map((a: any) => a.name).join(", ") ?? "",
+          image: i.track.album?.images?.[2]?.url ?? i.track.album?.images?.[0]?.url ?? null,
+          duration_ms: i.track.duration_ms,
+        })) ?? [],
+    };
+  });
+
+export const getRecentlyPlayed = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    try {
+      const r = await sp(`/me/player/recently-played?limit=20`);
+      const seen = new Set<string>();
+      const tracks: any[] = [];
+      for (const it of r?.items ?? []) {
+        const t = it.track;
+        if (!t || seen.has(t.uri)) continue;
+        seen.add(t.uri);
+        tracks.push({
+          uri: t.uri,
+          name: t.name,
+          artists: t.artists?.map((a: any) => a.name).join(", ") ?? "",
+          image: t.album?.images?.[2]?.url ?? t.album?.images?.[0]?.url ?? null,
+        });
+      }
+      return { tracks };
+    } catch (e: any) {
+      return { tracks: [], error: String(e?.message ?? e) };
+    }
+  });
+
+export const spotifyShuffle = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ state: z.boolean() }))
+  .handler(async ({ data }) => {
+    const deviceId = await resolveSpotifyDeviceId();
+    if (!deviceId) return { ok: false, error: noSpotifyDeviceMessage() };
+    try {
+      await sp(`/me/player/shuffle?state=${data.state}&device_id=${encodeURIComponent(deviceId)}`, { method: "PUT" });
+    } catch (error) {
+      if (isNoActiveDeviceError(error)) return { ok: false, error: noSpotifyDeviceMessage() };
+      throw error;
+    }
+    return { ok: true };
+  });
+
+export const spotifyRepeat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ state: z.enum(["off", "context", "track"]) }))
+  .handler(async ({ data }) => {
+    const deviceId = await resolveSpotifyDeviceId();
+    if (!deviceId) return { ok: false, error: noSpotifyDeviceMessage() };
+    try {
+      await sp(`/me/player/repeat?state=${data.state}&device_id=${encodeURIComponent(deviceId)}`, { method: "PUT" });
+    } catch (error) {
+      if (isNoActiveDeviceError(error)) return { ok: false, error: noSpotifyDeviceMessage() };
+      throw error;
+    }
+    return { ok: true };
+  });
+
+export const spotifyQueue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ uri: z.string().min(1) }))
+  .handler(async ({ data }) => {
+    const deviceId = await resolveSpotifyDeviceId();
+    if (!deviceId) return { ok: false, error: noSpotifyDeviceMessage() };
+    try {
+      await sp(`/me/player/queue?uri=${encodeURIComponent(data.uri)}&device_id=${encodeURIComponent(deviceId)}`, { method: "POST" });
+    } catch (error) {
+      if (isNoActiveDeviceError(error)) return { ok: false, error: noSpotifyDeviceMessage() };
+      throw error;
+    }
+    return { ok: true };
+  });
