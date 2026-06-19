@@ -38,6 +38,18 @@ const sections = [
 ] as const;
 
 function SettingsIndex() {
+  const { operator, signOut } = useAuth();
+  const isManager = operator?.role === "manager";
+
+  const handleSignOut = async () => {
+    if (!isManager) {
+      toast.error("Nur Manager dürfen das Konto abmelden");
+      return;
+    }
+    if (!confirm("Wirklich vom Admin-Konto abmelden? Alle Operatoren müssen sich neu einloggen.")) return;
+    await signOut();
+  };
+
   return (
     <div className="p-4 md:p-6 lg:p-10 pb-28 md:pb-10 max-w-[1400px] mx-auto">
       <PageHeader title="Einstellungen" subtitle="System konfigurieren" />
@@ -63,6 +75,28 @@ function SettingsIndex() {
             </Link>
           </motion.div>
         ))}
+      </div>
+
+      <div className="mt-10 pt-6 border-t border-border/40">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Konto</div>
+        {isManager ? (
+          <button
+            onClick={handleSignOut}
+            className="w-full md:w-auto glass rounded-2xl px-5 py-4 flex items-center gap-3 hover:bg-destructive/15 hover:text-destructive transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+              <LogOut className="w-4 h-4" />
+            </div>
+            <div className="text-left">
+              <div className="font-medium text-sm">Admin abmelden</div>
+              <div className="text-xs text-muted-foreground">Komplett vom System abmelden</div>
+            </div>
+          </button>
+        ) : (
+          <div className="glass rounded-2xl px-5 py-4 text-sm text-muted-foreground">
+            Nur ein Manager kann das System-Konto abmelden.
+          </div>
+        )}
       </div>
     </div>
   );
