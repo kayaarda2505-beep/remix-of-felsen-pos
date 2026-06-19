@@ -408,12 +408,14 @@ function ServiceTablet() {
             {step === "sent" && "Bestellung gesendet"}
           </div>
         </div>
-        <Link
-          to="/pos"
-          className="hidden md:block text-xs text-muted-foreground hover:text-foreground"
-        >
-          Kasse →
-        </Link>
+        {(operator?.role === "manager" || operator?.role === "barkeeper") && (
+          <Link
+            to="/pos"
+            className="hidden md:block text-xs text-muted-foreground hover:text-foreground"
+          >
+            Kasse →
+          </Link>
+        )}
       </header>
 
       <AnimatePresence mode="wait">
