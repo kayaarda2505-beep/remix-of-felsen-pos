@@ -132,7 +132,7 @@ function MitarbeiterPage() {
             ))}
           </div>
 
-          {selected && <MemberPanel member={selected} />}
+          {selected && <MemberPanel member={selected} isManager={isManager} />}
         </div>
       )}
     </div>
