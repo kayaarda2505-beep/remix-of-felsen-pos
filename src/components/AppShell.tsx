@@ -14,10 +14,13 @@ import {
   Receipt,
   Wallet,
   Banknote,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/hooks/use-theme";
 import { SaintsLogo } from "./SaintsLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
 import { supabase } from "@/integrations/supabase/client";
@@ -157,6 +160,7 @@ const roleLabel: Record<string, string> = {
 export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { operator, setOperator, signOut } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const mountedAt = useRef(Date.now());
   const handledServiceCallIds = useRef<Set<string>>(new Set());
   const handledSongRequestIds = useRef<Set<string>>(new Set());
@@ -507,6 +511,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                   title="Schicht beenden / Operator wechseln"
                 >
                   Wechseln
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="rounded-lg bg-white/5 hover:bg-white/10 p-1.5 transition-colors"
+                  title={theme === "dark" ? "Helles Design" : "Dunkles Design"}
+                  aria-label="Theme umschalten"
+                >
+                  {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
                 </button>
                 <button
                   onClick={signOut}
