@@ -119,6 +119,31 @@ function MusikPage() {
     queryFn: () => playlistTracksFn({ data: { playlistId: activePlaylist!.id } }),
     enabled: !!activePlaylist,
   });
+  const openWishes = useQuery({
+    queryKey: ["song_requests_open_count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("song_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new");
+      return count ?? 0;
+    },
+    refetchInterval: 10000,
+  });
+  useEffect(() => {
+    const ch = supabase
+      .channel(`musik_song_requests_${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "song_requests" },
+        () => qc.invalidateQueries({ queryKey: ["song_requests_open_count"] }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [qc]);
+  const openWishCount = openWishes.data ?? 0;
 
   const invalidateNow = () => qc.invalidateQueries({ queryKey: ["spotify-now"] });
 
