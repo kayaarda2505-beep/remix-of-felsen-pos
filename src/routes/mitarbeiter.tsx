@@ -139,9 +139,10 @@ function MitarbeiterPage() {
   );
 }
 
-function MemberPanel({ member }: { member: Member }) {
+function MemberPanel({ member, isManager }: { member: Member; isManager: boolean }) {
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(lastOfMonth());
+  const [editing, setEditing] = useState(false);
 
   const { data: entries = [], refetch: refetchEntries } = useQuery<TimeEntry[]>({
     queryKey: ["time_entries", member.id, from, to],
@@ -189,24 +190,37 @@ function MemberPanel({ member }: { member: Member }) {
         <div className="flex items-center gap-3 mb-4">
           <UserIcon className="w-4 h-4 text-accent" />
           <h2 className="font-semibold">Stammdaten</h2>
+          {isManager && !editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="ml-auto text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10"
+            >
+              Bearbeiten
+            </button>
+          )}
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
-          <Info label="Name" value={member.name} />
-          <Info label="Rolle" value={member.role} />
-          <Info label="Konto-Nr." value={member.account_number?.toString() ?? "—"} />
-          <Info label="E-Mail" value={member.email ?? "—"} />
-          <Info label="Telefon" value={member.phone ?? "—"} />
-          <Info label="Geburtsdatum" value={member.birthdate ?? "—"} />
-          <Info label="Adresse" value={member.address ?? "—"} />
-          <Info label="AHV-Nr." value={member.ahv_number ?? "—"} />
-          <Info label="IBAN" value={member.iban ?? "—"} />
-          <Info label="Stundenlohn" value={`CHF ${Number(member.hourly_wage).toFixed(2)}`} />
-          <Info
-            label="Quellensteuer"
-            value={member.withholding_tax ? `Ja · ${Number(member.withholding_tax_rate).toFixed(2)}%` : "Nein"}
-          />
-        </div>
+        {editing ? (
+          <MemberEditForm member={member} onClose={() => setEditing(false)} />
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+            <Info label="Name" value={member.name} />
+            <Info label="Rolle" value={member.role} />
+            <Info label="Konto-Nr." value={member.account_number?.toString() ?? "—"} />
+            <Info label="E-Mail" value={member.email ?? "—"} />
+            <Info label="Telefon" value={member.phone ?? "—"} />
+            <Info label="Geburtsdatum" value={member.birthdate ?? "—"} />
+            <Info label="Adresse" value={member.address ?? "—"} />
+            <Info label="AHV-Nr." value={member.ahv_number ?? "—"} />
+            <Info label="IBAN" value={member.iban ?? "—"} />
+            <Info label="Stundenlohn" value={`CHF ${Number(member.hourly_wage).toFixed(2)}`} />
+            <Info
+              label="Quellensteuer"
+              value={member.withholding_tax ? `Ja · ${Number(member.withholding_tax_rate).toFixed(2)}%` : "Nein"}
+            />
+          </div>
+        )}
       </div>
+
 
       {/* Zeitraum + Stunden */}
       <div className="glass rounded-3xl p-6">
