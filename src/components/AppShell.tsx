@@ -160,6 +160,7 @@ const roleLabel: Record<string, string> = {
 export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { operator, setOperator, signOut } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const mountedAt = useRef(Date.now());
   const handledServiceCallIds = useRef<Set<string>>(new Set());
   const handledSongRequestIds = useRef<Set<string>>(new Set());
