@@ -1290,9 +1290,6 @@ function FloorPlan({
           <button onClick={() => addElement("entrance")} className="rounded-lg px-3 py-1.5 text-xs glass border border-white/15 text-muted-foreground hover:text-foreground flex items-center gap-1.5">
             <Plus className="w-3 h-3" /> Eingang
           </button>
-          <button onClick={() => addElement("terrace")} className="rounded-lg px-3 py-1.5 text-xs glass border border-emerald-300/30 text-emerald-200 hover:bg-emerald-200/10 flex items-center gap-1.5">
-            <Plus className="w-3 h-3" /> Terrasse
-          </button>
         </div>
       )}
       <div
