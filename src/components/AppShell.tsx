@@ -15,13 +15,13 @@ import {
   Wallet,
   Banknote,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { SaintsLogo } from "./SaintsLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
 import { supabase } from "@/integrations/supabase/client";
-import { isDesktopApp, printReceipt } from "@/lib/printer-bridge";
+import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
 import { printBill } from "@/lib/receipt";
 
 async function autoPrintServiceCall(r: any) {
@@ -31,16 +31,27 @@ async function autoPrintServiceCall(r: any) {
       .from("printers")
       .select("id, name, type, ip_address, port")
       .eq("active", true);
-    if (!printers?.length) return;
-    const printer =
-      printers.find((p: any) => p.type === "bon") ??
-      printers.find((p: any) => p.type === "bar") ??
-      printers[0];
+
+    let printer: PrinterConfig | undefined =
+      printers?.find((p: any) => p.type === "bon") ??
+      printers?.find((p: any) => p.type === "bar") ??
+      printers?.[0];
+
+    if (!printer) {
+      const agentPrinters = await getAgentPrinters();
+      const def = agentPrinters.printers?.find((p) => p.isDefault) ?? agentPrinters.printers?.[0];
+      if (!def) {
+        toast.error("Service-Bon nicht gedruckt", { description: "Kein Drucker im Print-Agent gefunden" });
+        return;
+      }
+      printer = { id: "agent-default", name: def.name, type: "bon", ip_address: null, port: null };
+    }
+
     const when = new Date(r.created_at ?? Date.now()).toLocaleTimeString("de-CH", {
       hour: "2-digit",
       minute: "2-digit",
     });
-    await printReceipt(printer as any, {
+    const result = await printReceipt(printer, {
       title: "SERVICE-RUF",
       lines: [
         { text: when, align: "center" },
@@ -55,8 +66,11 @@ async function autoPrintServiceCall(r: any) {
       ],
       cut: true,
     });
-  } catch {
-    /* ignore */
+    if (!result.ok) {
+      toast.error("Service-Bon nicht gedruckt", { description: result.error ?? "Druckfehler" });
+    }
+  } catch (e: any) {
+    toast.error("Service-Bon nicht gedruckt", { description: e?.message ?? "Druckfehler" });
   }
 }
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
