@@ -15,14 +15,15 @@ import {
   Wallet,
   Banknote,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { SaintsLogo } from "./SaintsLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
 import { supabase } from "@/integrations/supabase/client";
-import { isDesktopApp, printReceipt } from "@/lib/printer-bridge";
+import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
 import { printBill } from "@/lib/receipt";
+import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 
 async function autoPrintServiceCall(r: any) {
   if (!isDesktopApp()) return;
@@ -31,16 +32,27 @@ async function autoPrintServiceCall(r: any) {
       .from("printers")
       .select("id, name, type, ip_address, port")
       .eq("active", true);
-    if (!printers?.length) return;
-    const printer =
-      printers.find((p: any) => p.type === "bon") ??
-      printers.find((p: any) => p.type === "bar") ??
-      printers[0];
+
+    let printer: PrinterConfig | undefined =
+      printers?.find((p: any) => p.type === "bon") ??
+      printers?.find((p: any) => p.type === "bar") ??
+      printers?.[0];
+
+    if (!printer) {
+      const agentPrinters = await getAgentPrinters();
+      const def = agentPrinters.printers?.find((p) => p.isDefault) ?? agentPrinters.printers?.[0];
+      if (!def) {
+        toast.error("Service-Bon nicht gedruckt", { description: "Kein Drucker im Print-Agent gefunden" });
+        return;
+      }
+      printer = { id: "agent-default", name: def.name, type: "bon", ip_address: null, port: null };
+    }
+
     const when = new Date(r.created_at ?? Date.now()).toLocaleTimeString("de-CH", {
       hour: "2-digit",
       minute: "2-digit",
     });
-    await printReceipt(printer as any, {
+    const result = await printReceipt(printer, {
       title: "SERVICE-RUF",
       lines: [
         { text: when, align: "center" },
@@ -55,11 +67,13 @@ async function autoPrintServiceCall(r: any) {
       ],
       cut: true,
     });
-  } catch {
-    /* ignore */
+    if (!result.ok) {
+      toast.error("Service-Bon nicht gedruckt", { description: result.error ?? "Druckfehler" });
+    }
+  } catch (e: any) {
+    toast.error("Service-Bon nicht gedruckt", { description: e?.message ?? "Druckfehler" });
   }
 }
-import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 
 async function autoPrintPaidBill(r: any) {
   if (!isDesktopApp()) return;
@@ -143,35 +157,138 @@ export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { operator, setOperator, signOut } = useAuth();
   const mountedAt = useRef(Date.now());
+  const handledServiceCallIds = useRef<Set<string>>(new Set());
+  const handledSongRequestIds = useRef<Set<string>>(new Set());
+  const [openSongCount, setOpenSongCount] = useState(0);
+
+  const songBadge = openSongCount > 99 ? "99+" : openSongCount > 0 ? String(openSongCount) : null;
+
+  const refreshOpenSongCount = useCallback(async () => {
+    const { count } = await supabase
+      .from("song_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new");
+    setOpenSongCount(count ?? 0);
+  }, []);
+
+  const playSongAlert = useCallback(() => {
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const play = (freq: number, start: number, dur = 0.22) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "square";
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+        g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + start + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(ctx.currentTime + start);
+        o.stop(ctx.currentTime + start + dur + 0.02);
+      };
+      play(659, 0);
+      play(880, 0.24);
+      play(1175, 0.48, 0.3);
+      setTimeout(() => ctx.close(), 1200);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const playServiceDing = useCallback(() => {
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const play = (freq: number, start: number, dur = 0.2) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "triangle";
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+        g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + start + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(ctx.currentTime + start);
+        o.stop(ctx.currentTime + start + dur + 0.02);
+      };
+      play(1320, 0, 0.25);
+      play(990, 0.28, 0.3);
+      play(1320, 0.6, 0.35);
+      setTimeout(() => ctx.close(), 1400);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleSongRequest = useCallback((r: any) => {
+    if (!r?.id || handledSongRequestIds.current.has(r.id)) return;
+    handledSongRequestIds.current.add(r.id);
+    playSongAlert();
+    toast(`🎶 Neuer Song-Wunsch${r.table_name ? ` · Tisch ${r.table_name}` : ""}`, {
+      description: `${r.title}${r.artist ? ` — ${r.artist}` : ""}`,
+      position: "bottom-right",
+      duration: 8000,
+      action: {
+        label: "Öffnen",
+        onClick: () => {
+          window.location.href = "/songs";
+        },
+      },
+    });
+  }, [playSongAlert]);
+
+  useEffect(() => {
+    void refreshOpenSongCount();
+    const interval = window.setInterval(() => {
+      void refreshOpenSongCount();
+    }, 10000);
+    return () => window.clearInterval(interval);
+  }, [refreshOpenSongCount]);
 
   useEffect(() => {
     const ch = supabase
       .channel(`song_requests_notify_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "song_requests" },
+        { event: "*", schema: "public", table: "song_requests" },
         (payload: any) => {
+          void refreshOpenSongCount();
+          if (payload.eventType !== "INSERT") return;
           const r = payload.new;
           // ignore historical/stale events that may fire on (re)subscribe
           if (new Date(r.created_at).getTime() < mountedAt.current - 5000) return;
-          toast(`🎶 Neuer Song-Wunsch${r.table_name ? ` · Tisch ${r.table_name}` : ""}`, {
-            description: `${r.title}${r.artist ? ` — ${r.artist}` : ""}`,
-            position: "bottom-right",
-            duration: 8000,
-            action: {
-              label: "Öffnen",
-              onClick: () => {
-                window.location.href = "/songs";
-              },
-            },
-          });
+          handleSongRequest(r);
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, []);
+  }, [handleSongRequest, refreshOpenSongCount]);
+
+  useEffect(() => {
+    const pollSongRequests = async () => {
+      const { data } = await supabase
+        .from("song_requests")
+        .select("id, table_name, title, artist, created_at")
+        .eq("status", "new")
+        .gte("created_at", new Date(mountedAt.current - 5000).toISOString())
+        .order("created_at", { ascending: true })
+        .limit(20);
+      for (const r of data ?? []) handleSongRequest(r);
+    };
+
+    const interval = window.setInterval(() => {
+      void pollSongRequests();
+    }, 4000);
+    void pollSongRequests();
+    return () => window.clearInterval(interval);
+  }, [handleSongRequest]);
 
   useEffect(() => {
     const beep = () => {
@@ -271,34 +388,19 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useEffect(() => {
-    const ding = () => {
-      try {
-        const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
-        if (!Ctx) return;
-        const ctx = new Ctx();
-        const play = (freq: number, start: number, dur = 0.2) => {
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = "triangle";
-          o.frequency.value = freq;
-          g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
-          g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + start + 0.02);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
-          o.connect(g);
-          g.connect(ctx.destination);
-          o.start(ctx.currentTime + start);
-          o.stop(ctx.currentTime + start + dur + 0.02);
-        };
-        play(1320, 0, 0.25);
-        play(990, 0.28, 0.3);
-        play(1320, 0.6, 0.35);
-        setTimeout(() => ctx.close(), 1400);
-      } catch {
-        // ignore
-      }
-    };
+  const handleServiceCall = useCallback((r: any) => {
+    if (!r?.id || handledServiceCallIds.current.has(r.id)) return;
+    handledServiceCallIds.current.add(r.id);
+    playServiceDing();
+    toast(`🔔 Tisch ${r.table_name ?? "?"} ruft den Service`, {
+      description: r.note ? `„${r.note}"` : "Bitte zum Tisch kommen",
+      position: "bottom-right",
+      duration: 15000,
+    });
+    void autoPrintServiceCall(r);
+  }, [playServiceDing]);
 
+  useEffect(() => {
     const ch = supabase
       .channel(`service_calls_notify_${Math.random().toString(36).slice(2)}`)
       .on(
@@ -307,20 +409,33 @@ export function AppShell({ children }: { children: ReactNode }) {
         (payload: any) => {
           const r = payload.new;
           if (new Date(r.created_at).getTime() < mountedAt.current - 5000) return;
-          ding();
-          toast(`🔔 Tisch ${r.table_name ?? "?"} ruft den Service`, {
-            description: r.note ? `„${r.note}"` : "Bitte zum Tisch kommen",
-            position: "bottom-right",
-            duration: 15000,
-          });
-          autoPrintServiceCall(r);
+          handleServiceCall(r);
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, []);
+  }, [handleServiceCall]);
+
+  useEffect(() => {
+    const pollServiceCalls = async () => {
+      const { data } = await supabase
+        .from("service_calls")
+        .select("id, table_name, note, created_at")
+        .eq("status", "new")
+        .gte("created_at", new Date(mountedAt.current - 5000).toISOString())
+        .order("created_at", { ascending: true })
+        .limit(20);
+      for (const r of data ?? []) handleServiceCall(r);
+    };
+
+    const interval = window.setInterval(() => {
+      void pollServiceCalls();
+    }, 4000);
+    void pollServiceCalls();
+    return () => window.clearInterval(interval);
+  }, [handleServiceCall]);
 
 
 
@@ -354,8 +469,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <Icon className="w-5 h-5 shrink-0" strokeWidth={1.75} />
               <span className="hidden lg:block font-medium">{item.label}</span>
+              {item.to === "/songs" && songBadge && (
+                <span className="ml-auto min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center leading-none">
+                  {songBadge}
+                </span>
+              )}
               {active && (
-                <span className="hidden lg:block ml-auto w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px] shadow-accent" />
+                <span className={`hidden lg:block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px] shadow-accent ${item.to === "/songs" && songBadge ? "" : "ml-auto"}`} />
               )}
             </Link>
           );
@@ -419,11 +539,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl text-[10px] min-w-[64px] shrink-0 snap-start transition-colors ${
+                className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl text-[10px] min-w-[64px] shrink-0 snap-start transition-colors ${
                   active ? "text-accent bg-white/5" : "text-muted-foreground"
                 }`}
               >
                 <Icon className="w-5 h-5" strokeWidth={1.75} />
+                {item.to === "/songs" && songBadge && (
+                  <span className="absolute mt-[-1.625rem] ml-7 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center leading-none">
+                    {songBadge}
+                  </span>
+                )}
                 <span className="leading-none">{item.label}</span>
               </Link>
             );
