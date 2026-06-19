@@ -181,6 +181,11 @@ function Reports() {
   const avgTicket = closedOrders.length ? revenue / closedOrders.length : 0;
 
   const byCategory = useMemo(() => {
+    if (useAggregates) {
+      return categoryAgg
+        .map((c) => [c.category, Number(c.total)] as [string, number])
+        .sort((a, b) => b[1] - a[1]);
+    }
     const m = new Map<string, number>();
     for (const i of items) {
       const v = Number(i.unit_price ?? 0) * Number(i.qty ?? 0);
@@ -188,7 +193,7 @@ function Reports() {
       m.set(c, (m.get(c) ?? 0) + v);
     }
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [items]);
+  }, [items, categoryAgg, useAggregates]);
 
   const expByCat = useMemo(() => {
     const m = new Map<string, number>();
