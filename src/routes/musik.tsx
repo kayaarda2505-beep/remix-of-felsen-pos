@@ -18,8 +18,10 @@ import {
   ListMusic,
   Clock,
   Sparkles,
+  Bell,
 } from "lucide-react";
 import { PageHeader } from "@/components/AppShell";
+import { SongRequestsPanel } from "@/components/SongRequestsPanel";
 import {
   getNowPlaying,
   getSpotifyDevices,
@@ -40,12 +42,14 @@ import {
   getRecentlyPlayed,
 } from "@/lib/spotify.functions";
 import { toast } from "sonner";
+import { useQuery as useQueryCount } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/musik")({
   component: MusikPage,
 });
 
-type Tab = "now" | "playlists" | "search" | "devices";
+type Tab = "now" | "playlists" | "search" | "devices" | "wuensche";
 
 function MusikPage() {
   const qc = useQueryClient();
