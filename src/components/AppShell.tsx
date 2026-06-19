@@ -513,6 +513,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                   Wechseln
                 </button>
                 <button
+                  onClick={toggleTheme}
+                  className="rounded-lg bg-white/5 hover:bg-white/10 p-1.5 transition-colors"
+                  title={theme === "dark" ? "Helles Design" : "Dunkles Design"}
+                  aria-label="Theme umschalten"
+                >
+                  {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
+                </button>
+                <button
                   onClick={signOut}
                   className="rounded-lg bg-white/5 hover:bg-destructive/20 hover:text-destructive p-1.5 transition-colors"
                   title="Admin abmelden"
