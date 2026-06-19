@@ -59,17 +59,48 @@ function Reports() {
   const useAggregates = rangeDays > 14;
   const singleDay = isoFrom === fmtISO(to);
 
+  // Rohe Orders nur bei kurzen Zeiträumen
   const { data: orders = [] } = useQuery({
-    queryKey: ["orders_range", isoFrom, isoToNext],
+    queryKey: ["orders_range", isoFrom, isoToNext, useAggregates],
+    enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
         .select("id, total, status, guests, created_at, closed_at")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
-        .limit(50000);
+        .limit(10000);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  // Aggregierter KPI-Summen-Server-Aufruf bei langen Zeiträumen
+  const { data: ordersSummary } = useQuery({
+    queryKey: ["report_orders_summary", isoFrom, isoToNext, useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_orders_summary", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      const row = (data ?? [])[0] as { revenue: number; order_count: number; closed_count: number } | undefined;
+      return row ?? { revenue: 0, order_count: 0, closed_count: 0 };
+    },
+  });
+
+  // Tagesumsätze (für Trend-Chart) bei mehrtägigem Bereich
+  const { data: dailyAgg = [] } = useQuery({
+    queryKey: ["report_daily_totals", isoFrom, isoToNext, useAggregates, singleDay],
+    enabled: useAggregates && !singleDay,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_daily_totals", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ day: string; total: number }>;
     },
   });
 
