@@ -257,6 +257,14 @@ function MusikPage() {
         <TabBtn active={tab === "playlists"} onClick={() => setTab("playlists")} icon={<ListMusic className="w-4 h-4" />}>Playlists</TabBtn>
         <TabBtn active={tab === "search"} onClick={() => setTab("search")} icon={<Search className="w-4 h-4" />}>Suche</TabBtn>
         <TabBtn active={tab === "devices"} onClick={() => setTab("devices")} icon={<Speaker className="w-4 h-4" />}>Geräte</TabBtn>
+        <TabBtn
+          active={tab === "wuensche"}
+          onClick={() => setTab("wuensche")}
+          icon={<Bell className="w-4 h-4" />}
+          badge={openWishCount > 0 ? (openWishCount > 99 ? "99+" : String(openWishCount)) : null}
+        >
+          Wünsche
+        </TabBtn>
       </div>
 
       {tab === "now" && (
