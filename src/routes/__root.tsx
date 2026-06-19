@@ -78,6 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/eb16b3f4-06f0-4ef3-b7a8-8d6f936d963a/id-preview-8971f7c1--f212b137-89e0-4643-a3f9-8e9610390f92.lovable.app-1779364056265.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/eb16b3f4-06f0-4ef3-b7a8-8d6f936d963a/id-preview-8971f7c1--f212b137-89e0-4643-a3f9-8e9610390f92.lovable.app-1779364056265.png" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "SAINTS POS" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
