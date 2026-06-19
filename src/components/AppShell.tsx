@@ -21,8 +21,44 @@ import { useAuth } from "@/hooks/use-auth";
 import { SaintsLogo } from "./SaintsLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
 import { supabase } from "@/integrations/supabase/client";
-import { isDesktopApp } from "@/lib/printer-bridge";
+import { isDesktopApp, printReceipt } from "@/lib/printer-bridge";
 import { printBill } from "@/lib/receipt";
+
+async function autoPrintServiceCall(r: any) {
+  if (!isDesktopApp()) return;
+  try {
+    const { data: printers } = await supabase
+      .from("printers")
+      .select("id, name, type, ip_address, port")
+      .eq("active", true);
+    if (!printers?.length) return;
+    const printer =
+      printers.find((p: any) => p.type === "bon") ??
+      printers.find((p: any) => p.type === "bar") ??
+      printers[0];
+    const when = new Date(r.created_at ?? Date.now()).toLocaleTimeString("de-CH", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    await printReceipt(printer as any, {
+      title: "SERVICE-RUF",
+      lines: [
+        { text: when, align: "center" },
+        { separator: true },
+        { text: `Tisch ${r.table_name ?? "?"}`, align: "center", size: "large", bold: true },
+        { text: "braucht etwas", align: "center", size: "double-h" },
+        { separator: true },
+        ...(r.note
+          ? [{ text: `Notiz: ${r.note}`, align: "center" as const }, { separator: true as const }]
+          : []),
+        { text: "Bitte zum Tisch gehen", align: "center" },
+      ],
+      cut: true,
+    });
+  } catch {
+    /* ignore */
+  }
+}
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 
 async function autoPrintPaidBill(r: any) {
@@ -277,6 +313,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             position: "bottom-right",
             duration: 15000,
           });
+          autoPrintServiceCall(r);
         },
       )
       .subscribe();
