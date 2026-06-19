@@ -322,10 +322,9 @@ function Inventory() {
     const { data: printers } = await supabase
       .from("printers")
       .select("id, name, type, ip_address, port")
-      .eq("active", true);
-    const p = (printers ?? []).find((x) => x.type === "bon") ??
-              (printers ?? []).find((x) => x.type === "rechnung") ??
-              (printers ?? [])[0];
+      .eq("active", true)
+      .order("created_at", { ascending: true });
+    const p = (printers ?? [])[0];
     if (!p) return toast.error("Kein Drucker konfiguriert");
     const lines: ReceiptPayload["lines"] = [];
     lines.push({ text: "EINKAUFSLISTE", align: "center", bold: true, size: "large" });
