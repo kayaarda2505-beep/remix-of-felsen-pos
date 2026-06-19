@@ -323,3 +323,35 @@
   .rounded-2xl { border-radius: 0.875rem !important; }
 }
 
+
+/* On-screen keyboard theme */
+.osk-root .hg-theme-default {
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+}
+.osk-root .hg-button {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(0,0,0,0.4);
+  border-radius: 10px;
+  height: 48px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset;
+  font-size: 1rem;
+}
+.osk-root .hg-button:active,
+.osk-root .hg-button.hg-activeButton {
+  background: rgba(212,175,55,0.85);
+  color: #111;
+}
+.osk-root .hg-row { margin-bottom: 6px; }
+.osk-root .hg-button-space { max-width: none; flex-grow: 6; }
+.osk-root .hg-button-enter,
+.osk-root .hg-button-bksp,
+.osk-root .hg-button-shift,
+.osk-root .hg-button-lock,
+.osk-root .hg-button-hide {
+  background: rgba(255,255,255,0.14);
+  font-size: 0.85rem;
+}
