@@ -14,6 +14,8 @@ import {
   Receipt,
   Wallet,
   Banknote,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
