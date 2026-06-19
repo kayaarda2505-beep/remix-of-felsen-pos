@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
   Building2,
-  
   Bell,
   Printer,
   Globe,
@@ -13,8 +12,11 @@ import {
   Speaker,
   FlaskConical,
   Wine,
+  LogOut,
 } from "lucide-react";
 import { PageHeader } from "@/components/AppShell";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings/")({
   component: SettingsIndex,
