@@ -320,11 +320,22 @@ function Reports() {
       }
       return arr.map((v, h) => ({ label: `${h}`, value: v }));
     }
-    const days: { label: string; value: number; key: string }[] = [];
-    for (let d = new Date(from); d <= to; d = addDays(d, 1)) {
-      days.push({ key: fmtISO(d), label: d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" }), value: 0 });
+    const bucket = compactTrend ? 7 : 1;
+    const days: { label: string; value: number; keys: string[] }[] = [];
+    for (let d = new Date(deferredFrom), i = 0; d <= deferredTo; d = addDays(d, bucket), i += bucket) {
+      const end = addDays(d, bucket - 1);
+      const clampedEnd = end > deferredTo ? deferredTo : end;
+      const keys: string[] = [];
+      for (let k = new Date(d); k <= clampedEnd; k = addDays(k, 1)) keys.push(fmtISO(k));
+      days.push({
+        keys,
+        label: compactTrend
+          ? `KW ${Math.ceil((i + 1) / 7)}`
+          : d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" }),
+        value: 0,
+      });
     }
-    const map = new Map(days.map((d, i) => [d.key, i]));
+    const map = new Map(days.flatMap((d, i) => d.keys.map((key) => [key, i] as const)));
     if (useAggregates) {
       for (const row of dailyAgg) {
         const idx = map.get(row.day);
@@ -338,12 +349,12 @@ function Reports() {
       }
     }
     return days;
-  }, [items, orders, from, to, singleDay, useAggregates, hourlyAgg, dailyAgg]);
+  }, [items, orders, deferredFrom, deferredTo, singleDay, useAggregates, hourlyAgg, dailyAgg, compactTrend]);
   const trendMax = Math.max(1, ...trend.map(t => t.value));
 
   const rangeLabel = singleDay
-    ? from.toLocaleDateString("de-CH", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
-    : `${from.toLocaleDateString("de-CH")} – ${to.toLocaleDateString("de-CH")}`;
+    ? deferredFrom.toLocaleDateString("de-CH", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
+    : `${deferredFrom.toLocaleDateString("de-CH")} – ${deferredTo.toLocaleDateString("de-CH")}`;
 
   // Drucker für Tagesabschluss
   const { data: printers = [] } = useQuery({
