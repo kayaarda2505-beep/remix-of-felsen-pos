@@ -347,7 +347,7 @@ function MusikPage() {
               </button>
             ))}
           </div>
-          <Link to="/settings/spotify-player" className="block mt-4 text-xs text-emerald-400 hover:text-emerald-300">
+          <Link to="/spotify-player" className="block mt-4 text-xs text-emerald-400 hover:text-emerald-300">
             → PC-Lautsprecher Einstellungen
           </Link>
         </div>
