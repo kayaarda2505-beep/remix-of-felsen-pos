@@ -1316,6 +1316,20 @@ export type Database = {
           read_ct: number
         }[]
       }
+      report_category_totals: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          category: string
+          total: number
+        }[]
+      }
+      report_hourly_totals: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          hour: number
+          total: number
+        }[]
+      }
       verify_team_pin: {
         Args: { _account_number: number; _pin: string }
         Returns: {

@@ -55,9 +55,9 @@ function Reports() {
   const isoFrom = fmtISO(from);
   const isoToNext = fmtISO(addDays(to, 1));
   const rangeDays = Math.max(1, Math.round((to.getTime() - from.getTime()) / 86400000) + 1);
-  // Bei langen Zeiträumen (>31 Tage) Item-Aggregation überspringen,
-  // sonst lädt der Browser zehntausende Zeilen und friert ein.
-  const skipItems = rangeDays > 31;
+  // Bei langen Zeiträumen aggregiert die Datenbank — sonst friert der Browser ein.
+  const useAggregates = rangeDays > 14;
+  const singleDay = isoFrom === fmtISO(to);
 
   const { data: orders = [] } = useQuery({
     queryKey: ["orders_range", isoFrom, isoToNext],
@@ -73,9 +73,10 @@ function Reports() {
     },
   });
 
+  // Rohe Items nur bei kurzen Zeiträumen laden
   const { data: items = [] } = useQuery({
-    queryKey: ["items_range", isoFrom, isoToNext, skipItems],
-    enabled: !skipItems,
+    queryKey: ["items_range", isoFrom, isoToNext, useAggregates],
+    enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_items")
@@ -85,6 +86,33 @@ function Reports() {
         .limit(20000);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  // Server-Aggregation bei langen Zeiträumen
+  const { data: categoryAgg = [] } = useQuery({
+    queryKey: ["report_category_totals", isoFrom, isoToNext, useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_category_totals", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ category: string; total: number }>;
+    },
+  });
+
+  const { data: hourlyAgg = [] } = useQuery({
+    queryKey: ["report_hourly_totals", isoFrom, isoToNext, useAggregates, singleDay],
+    enabled: useAggregates && singleDay,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_hourly_totals", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ hour: number; total: number }>;
     },
   });
 
@@ -153,6 +181,11 @@ function Reports() {
   const avgTicket = closedOrders.length ? revenue / closedOrders.length : 0;
 
   const byCategory = useMemo(() => {
+    if (useAggregates) {
+      return categoryAgg
+        .map((c) => [c.category, Number(c.total)] as [string, number])
+        .sort((a, b) => b[1] - a[1]);
+    }
     const m = new Map<string, number>();
     for (const i of items) {
       const v = Number(i.unit_price ?? 0) * Number(i.qty ?? 0);
@@ -160,7 +193,7 @@ function Reports() {
       m.set(c, (m.get(c) ?? 0) + v);
     }
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [items]);
+  }, [items, categoryAgg, useAggregates]);
 
   const expByCat = useMemo(() => {
     const m = new Map<string, number>();
@@ -170,13 +203,16 @@ function Reports() {
   }, [expenses, feesByMethod]);
 
   // Umsatz pro Tag (bei mehrtägigem Bereich) oder pro Stunde (bei einem Tag)
-  const singleDay = isoFrom === fmtISO(to);
   const trend = useMemo(() => {
     if (singleDay) {
       const arr = new Array(24).fill(0);
-      for (const i of items) {
-        const h = new Date(i.sent_at as string).getHours();
-        arr[h] += Number(i.unit_price ?? 0) * Number(i.qty ?? 0);
+      if (useAggregates) {
+        for (const h of hourlyAgg) arr[h.hour] = Number(h.total);
+      } else {
+        for (const i of items) {
+          const h = new Date(i.sent_at as string).getHours();
+          arr[h] += Number(i.unit_price ?? 0) * Number(i.qty ?? 0);
+        }
       }
       return arr.map((v, h) => ({ label: `${h}`, value: v }));
     }
@@ -191,7 +227,7 @@ function Reports() {
       if (idx !== undefined) days[idx].value += Number(o.total ?? 0);
     }
     return days;
-  }, [items, orders, from, to, singleDay]);
+  }, [items, orders, from, to, singleDay, useAggregates, hourlyAgg]);
   const trendMax = Math.max(1, ...trend.map(t => t.value));
 
   const rangeLabel = singleDay
@@ -327,11 +363,7 @@ function Reports() {
         {/* Revenue by category */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="glass rounded-3xl p-5">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-4">Umsatz nach Kategorie</div>
-          {skipItems ? (
-            <div className="text-center text-sm text-muted-foreground py-8">
-              Bei Zeiträumen über 31 Tagen wird die Kategorie-Aufschlüsselung übersprungen, um die Seite schnell zu halten.
-            </div>
-          ) : byCategory.length === 0 ? (
+          {byCategory.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-8">—</div>
           ) : (
             <div className="space-y-2">
