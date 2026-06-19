@@ -66,21 +66,16 @@ function KitchenView() {
     return () => clearInterval(t);
   }, []);
 
-  // Offene Orders + ihre Items
+  // Items der letzten Stunden — unabhängig vom Order-Status,
+  // damit auch Theke/Walk-in (sofort 'paid') in Küche/Bar erscheint.
   const { data: rawItems = [] } = useQuery<RawItem[]>({
-    queryKey: ["kitchen", "open-items"],
+    queryKey: ["kitchen", "recent-items"],
     queryFn: async () => {
-      const { data: orders, error: oErr } = await supabase
-        .from("orders")
-        .select("id")
-        .eq("status", "open");
-      if (oErr) throw oErr;
-      const ids = (orders ?? []).map((o) => o.id);
-      if (ids.length === 0) return [];
+      const since = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from("order_items")
         .select("id, order_id, product_id, product_name, qty, note, modifiers, category, sent_at")
-        .in("order_id", ids)
+        .gte("sent_at", since)
         .order("sent_at");
       if (error) throw error;
       return (data ?? []) as RawItem[];
