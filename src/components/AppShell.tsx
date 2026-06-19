@@ -237,7 +237,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       action: {
         label: "Öffnen",
         onClick: () => {
-          window.location.href = "/musik";
+          window.location.href = "/musik?tab=wuensche";
         },
       },
     });
