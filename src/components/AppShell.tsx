@@ -158,6 +158,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { operator, setOperator, signOut } = useAuth();
   const mountedAt = useRef(Date.now());
   const handledServiceCallIds = useRef<Set<string>>(new Set());
+  const handledSongRequestIds = useRef<Set<string>>(new Set());
   const [openSongCount, setOpenSongCount] = useState(0);
 
   const songBadge = openSongCount > 99 ? "99+" : openSongCount > 0 ? String(openSongCount) : null;
@@ -224,8 +225,29 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const handleSongRequest = useCallback((r: any) => {
+    if (!r?.id || handledSongRequestIds.current.has(r.id)) return;
+    handledSongRequestIds.current.add(r.id);
+    playSongAlert();
+    toast(`🎶 Neuer Song-Wunsch${r.table_name ? ` · Tisch ${r.table_name}` : ""}`, {
+      description: `${r.title}${r.artist ? ` — ${r.artist}` : ""}`,
+      position: "bottom-right",
+      duration: 8000,
+      action: {
+        label: "Öffnen",
+        onClick: () => {
+          window.location.href = "/songs";
+        },
+      },
+    });
+  }, [playSongAlert]);
+
   useEffect(() => {
     void refreshOpenSongCount();
+    const interval = window.setInterval(() => {
+      void refreshOpenSongCount();
+    }, 10000);
+    return () => window.clearInterval(interval);
   }, [refreshOpenSongCount]);
 
   useEffect(() => {
@@ -240,25 +262,33 @@ export function AppShell({ children }: { children: ReactNode }) {
           const r = payload.new;
           // ignore historical/stale events that may fire on (re)subscribe
           if (new Date(r.created_at).getTime() < mountedAt.current - 5000) return;
-          playSongAlert();
-          toast(`🎶 Neuer Song-Wunsch${r.table_name ? ` · Tisch ${r.table_name}` : ""}`, {
-            description: `${r.title}${r.artist ? ` — ${r.artist}` : ""}`,
-            position: "bottom-right",
-            duration: 8000,
-            action: {
-              label: "Öffnen",
-              onClick: () => {
-                window.location.href = "/songs";
-              },
-            },
-          });
+          handleSongRequest(r);
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [playSongAlert, refreshOpenSongCount]);
+  }, [handleSongRequest, refreshOpenSongCount]);
+
+  useEffect(() => {
+    const pollSongRequests = async () => {
+      const { data } = await supabase
+        .from("song_requests")
+        .select("id, table_name, title, artist, created_at")
+        .eq("status", "new")
+        .gte("created_at", new Date(mountedAt.current - 5000).toISOString())
+        .order("created_at", { ascending: true })
+        .limit(20);
+      for (const r of data ?? []) handleSongRequest(r);
+    };
+
+    const interval = window.setInterval(() => {
+      void pollSongRequests();
+    }, 4000);
+    void pollSongRequests();
+    return () => window.clearInterval(interval);
+  }, [handleSongRequest]);
 
   useEffect(() => {
     const beep = () => {
