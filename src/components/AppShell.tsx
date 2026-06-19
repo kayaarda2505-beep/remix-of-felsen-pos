@@ -358,34 +358,19 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useEffect(() => {
-    const ding = () => {
-      try {
-        const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
-        if (!Ctx) return;
-        const ctx = new Ctx();
-        const play = (freq: number, start: number, dur = 0.2) => {
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = "triangle";
-          o.frequency.value = freq;
-          g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
-          g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + start + 0.02);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
-          o.connect(g);
-          g.connect(ctx.destination);
-          o.start(ctx.currentTime + start);
-          o.stop(ctx.currentTime + start + dur + 0.02);
-        };
-        play(1320, 0, 0.25);
-        play(990, 0.28, 0.3);
-        play(1320, 0.6, 0.35);
-        setTimeout(() => ctx.close(), 1400);
-      } catch {
-        // ignore
-      }
-    };
+  const handleServiceCall = useCallback((r: any) => {
+    if (!r?.id || handledServiceCallIds.current.has(r.id)) return;
+    handledServiceCallIds.current.add(r.id);
+    playServiceDing();
+    toast(`🔔 Tisch ${r.table_name ?? "?"} ruft den Service`, {
+      description: r.note ? `„${r.note}"` : "Bitte zum Tisch kommen",
+      position: "bottom-right",
+      duration: 15000,
+    });
+    void autoPrintServiceCall(r);
+  }, [playServiceDing]);
 
+  useEffect(() => {
     const ch = supabase
       .channel(`service_calls_notify_${Math.random().toString(36).slice(2)}`)
       .on(
@@ -394,20 +379,33 @@ export function AppShell({ children }: { children: ReactNode }) {
         (payload: any) => {
           const r = payload.new;
           if (new Date(r.created_at).getTime() < mountedAt.current - 5000) return;
-          ding();
-          toast(`🔔 Tisch ${r.table_name ?? "?"} ruft den Service`, {
-            description: r.note ? `„${r.note}"` : "Bitte zum Tisch kommen",
-            position: "bottom-right",
-            duration: 15000,
-          });
-          autoPrintServiceCall(r);
+          handleServiceCall(r);
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, []);
+  }, [handleServiceCall]);
+
+  useEffect(() => {
+    const pollServiceCalls = async () => {
+      const { data } = await supabase
+        .from("service_calls")
+        .select("id, table_name, note, created_at")
+        .eq("status", "new")
+        .gte("created_at", new Date(mountedAt.current - 5000).toISOString())
+        .order("created_at", { ascending: true })
+        .limit(20);
+      for (const r of data ?? []) handleServiceCall(r);
+    };
+
+    const interval = window.setInterval(() => {
+      void pollServiceCalls();
+    }, 4000);
+    void pollServiceCalls();
+    return () => window.clearInterval(interval);
+  }, [handleServiceCall]);
 
 
 
