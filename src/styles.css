@@ -325,33 +325,35 @@
 
 
 /* On-screen keyboard theme */
-.osk-root .hg-theme-default {
-  background: transparent;
-  padding: 0;
+.osk-root .hg-theme-default,
+.osk-root .hg-theme-default.hg-layout-default {
+  background: transparent !important;
+  padding: 0 !important;
   font-family: inherit;
 }
-.osk-root .hg-button {
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-bottom: 1px solid rgba(0,0,0,0.4);
-  border-radius: 10px;
-  height: 48px;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset;
-  font-size: 1rem;
+.osk-root .hg-theme-default .hg-button {
+  background: rgba(255,255,255,0.08) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.4) !important;
+  border-radius: 10px !important;
+  height: 48px !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset !important;
+  font-size: 1rem !important;
 }
-.osk-root .hg-button:active,
-.osk-root .hg-button.hg-activeButton {
-  background: rgba(212,175,55,0.85);
-  color: #111;
+.osk-root .hg-theme-default .hg-button:active,
+.osk-root .hg-theme-default .hg-button.hg-activeButton {
+  background: rgba(212,175,55,0.85) !important;
+  color: #111 !important;
 }
-.osk-root .hg-row { margin-bottom: 6px; }
-.osk-root .hg-button-space { max-width: none; flex-grow: 6; }
-.osk-root .hg-button-enter,
-.osk-root .hg-button-bksp,
-.osk-root .hg-button-shift,
-.osk-root .hg-button-lock,
-.osk-root .hg-button-hide {
-  background: rgba(255,255,255,0.14);
-  font-size: 0.85rem;
+.osk-root .hg-theme-default .hg-row { margin-bottom: 6px !important; }
+.osk-root .hg-theme-default .hg-button-space { max-width: none !important; flex-grow: 6 !important; }
+.osk-root .hg-theme-default .hg-button-enter,
+.osk-root .hg-theme-default .hg-button-bksp,
+.osk-root .hg-theme-default .hg-button-shift,
+.osk-root .hg-theme-default .hg-button-lock,
+.osk-root .hg-theme-default .hg-button-hide {
+  background: rgba(255,255,255,0.18) !important;
+  font-size: 0.85rem !important;
 }
+
