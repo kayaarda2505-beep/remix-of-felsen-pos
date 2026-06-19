@@ -157,17 +157,90 @@ export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { operator, setOperator, signOut } = useAuth();
   const mountedAt = useRef(Date.now());
+  const handledServiceCallIds = useRef<Set<string>>(new Set());
+  const [openSongCount, setOpenSongCount] = useState(0);
+
+  const songBadge = openSongCount > 99 ? "99+" : openSongCount > 0 ? String(openSongCount) : null;
+
+  const refreshOpenSongCount = useCallback(async () => {
+    const { count } = await supabase
+      .from("song_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new");
+    setOpenSongCount(count ?? 0);
+  }, []);
+
+  const playSongAlert = useCallback(() => {
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const play = (freq: number, start: number, dur = 0.22) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "square";
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+        g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + start + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(ctx.currentTime + start);
+        o.stop(ctx.currentTime + start + dur + 0.02);
+      };
+      play(659, 0);
+      play(880, 0.24);
+      play(1175, 0.48, 0.3);
+      setTimeout(() => ctx.close(), 1200);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const playServiceDing = useCallback(() => {
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const play = (freq: number, start: number, dur = 0.2) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "triangle";
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+        g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + start + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(ctx.currentTime + start);
+        o.stop(ctx.currentTime + start + dur + 0.02);
+      };
+      play(1320, 0, 0.25);
+      play(990, 0.28, 0.3);
+      play(1320, 0.6, 0.35);
+      setTimeout(() => ctx.close(), 1400);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshOpenSongCount();
+  }, [refreshOpenSongCount]);
 
   useEffect(() => {
     const ch = supabase
       .channel(`song_requests_notify_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "song_requests" },
+        { event: "*", schema: "public", table: "song_requests" },
         (payload: any) => {
+          void refreshOpenSongCount();
+          if (payload.eventType !== "INSERT") return;
           const r = payload.new;
           // ignore historical/stale events that may fire on (re)subscribe
           if (new Date(r.created_at).getTime() < mountedAt.current - 5000) return;
+          playSongAlert();
           toast(`🎶 Neuer Song-Wunsch${r.table_name ? ` · Tisch ${r.table_name}` : ""}`, {
             description: `${r.title}${r.artist ? ` — ${r.artist}` : ""}`,
             position: "bottom-right",
@@ -185,7 +258,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, []);
+  }, [playSongAlert, refreshOpenSongCount]);
 
   useEffect(() => {
     const beep = () => {
