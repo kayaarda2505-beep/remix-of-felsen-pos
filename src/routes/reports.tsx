@@ -204,12 +204,16 @@ function Reports() {
   }, [payments, feeMap]);
   const feeTotal = feesByMethod.reduce((s, f) => s + f.sum, 0);
 
-  const revenue = orders.reduce((s, o) => s + Number(o.total ?? 0), 0);
+  const revenue = useAggregates
+    ? Number(ordersSummary?.revenue ?? 0)
+    : orders.reduce((s, o) => s + Number(o.total ?? 0), 0);
   const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
   const totalCosts = expenseTotal + feeTotal;
   const profit = revenue - totalCosts;
-  const closedOrders = orders.filter((o) => o.status === "paid");
-  const avgTicket = closedOrders.length ? revenue / closedOrders.length : 0;
+  const closedCount = useAggregates
+    ? Number(ordersSummary?.closed_count ?? 0)
+    : orders.filter((o) => o.status === "paid").length;
+  const avgTicket = closedCount ? revenue / closedCount : 0;
 
   const byCategory = useMemo(() => {
     if (useAggregates) {
