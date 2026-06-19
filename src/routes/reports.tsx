@@ -198,13 +198,16 @@ function Reports() {
   }, [expenses, feesByMethod]);
 
   // Umsatz pro Tag (bei mehrtägigem Bereich) oder pro Stunde (bei einem Tag)
-  const singleDay = isoFrom === fmtISO(to);
   const trend = useMemo(() => {
     if (singleDay) {
       const arr = new Array(24).fill(0);
-      for (const i of items) {
-        const h = new Date(i.sent_at as string).getHours();
-        arr[h] += Number(i.unit_price ?? 0) * Number(i.qty ?? 0);
+      if (useAggregates) {
+        for (const h of hourlyAgg) arr[h.hour] = Number(h.total);
+      } else {
+        for (const i of items) {
+          const h = new Date(i.sent_at as string).getHours();
+          arr[h] += Number(i.unit_price ?? 0) * Number(i.qty ?? 0);
+        }
       }
       return arr.map((v, h) => ({ label: `${h}`, value: v }));
     }
@@ -219,7 +222,7 @@ function Reports() {
       if (idx !== undefined) days[idx].value += Number(o.total ?? 0);
     }
     return days;
-  }, [items, orders, from, to, singleDay]);
+  }, [items, orders, from, to, singleDay, useAggregates, hourlyAgg]);
   const trendMax = Math.max(1, ...trend.map(t => t.value));
 
   const rangeLabel = singleDay
