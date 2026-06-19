@@ -445,7 +445,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </span>
               )}
               {active && (
-                <span className="hidden lg:block ml-auto w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px] shadow-accent" />
+                <span className={`hidden lg:block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px] shadow-accent ${item.to === "/songs" && songBadge ? "" : "ml-auto"}`} />
               )}
             </Link>
           );
@@ -509,7 +509,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl text-[10px] min-w-[64px] shrink-0 snap-start transition-colors ${
+                className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl text-[10px] min-w-[64px] shrink-0 snap-start transition-colors ${
                   active ? "text-accent bg-white/5" : "text-muted-foreground"
                 }`}
               >
