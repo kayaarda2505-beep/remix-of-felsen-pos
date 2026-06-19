@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { toast } from "sonner";
-import { printReceipt, isDesktopApp, type PrinterConfig, type ReceiptPayload } from "@/lib/printer-bridge";
+import { printReceipt, isDesktopApp, getAgentPrinters, type PrinterConfig, type ReceiptPayload } from "@/lib/printer-bridge";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/inventory")({
