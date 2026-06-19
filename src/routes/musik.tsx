@@ -42,10 +42,13 @@ import {
   getRecentlyPlayed,
 } from "@/lib/spotify.functions";
 import { toast } from "sonner";
-import { useQuery as useQueryCount } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/musik")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    tab: (s.tab as Tab) ?? undefined,
+  }),
   component: MusikPage,
 });
 
@@ -53,7 +56,8 @@ type Tab = "now" | "playlists" | "search" | "devices" | "wuensche";
 
 function MusikPage() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>("now");
+  const initialTab = (Route.useSearch() as any).tab as Tab | undefined;
+  const [tab, setTab] = useState<Tab>(initialTab ?? "now");
   const [query, setQuery] = useState("");
   const [activePlaylist, setActivePlaylist] = useState<{ id: string; uri: string; name: string } | null>(null);
 
