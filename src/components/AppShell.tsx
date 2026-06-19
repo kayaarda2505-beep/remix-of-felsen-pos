@@ -313,6 +313,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             position: "bottom-right",
             duration: 15000,
           });
+          autoPrintServiceCall(r);
         },
       )
       .subscribe();
