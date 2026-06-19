@@ -439,6 +439,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <Icon className="w-5 h-5 shrink-0" strokeWidth={1.75} />
               <span className="hidden lg:block font-medium">{item.label}</span>
+              {item.to === "/songs" && songBadge && (
+                <span className="ml-auto min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center leading-none">
+                  {songBadge}
+                </span>
+              )}
               {active && (
                 <span className="hidden lg:block ml-auto w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px] shadow-accent" />
               )}
@@ -509,6 +514,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 }`}
               >
                 <Icon className="w-5 h-5" strokeWidth={1.75} />
+                {item.to === "/songs" && songBadge && (
+                  <span className="absolute mt-[-1.625rem] ml-7 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center leading-none">
+                    {songBadge}
+                  </span>
+                )}
                 <span className="leading-none">{item.label}</span>
               </Link>
             );
