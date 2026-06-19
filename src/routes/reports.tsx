@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer } from "lucide-react";
@@ -42,14 +42,16 @@ function Reports() {
   const [preset, setPreset] = useState<RangePreset>("today");
   const [from, setFrom] = useState<Date>(today);
   const [to, setTo] = useState<Date>(today);
+  const [isRangePending, startRangeTransition] = useTransition();
 
   const applyPreset = (p: RangePreset) => {
-    setPreset(p);
     const now = new Date(); now.setHours(0,0,0,0);
-    if (p === "today") { setFrom(now); setTo(now); }
-    else if (p === "week") { setFrom(startOfWeek(now)); setTo(now); }
-    else if (p === "month") { setFrom(startOfMonth(now)); setTo(now); }
-    else if (p === "year") { setFrom(startOfYear(now)); setTo(now); }
+    const nextFrom = p === "today" ? now : p === "week" ? startOfWeek(now) : p === "month" ? startOfMonth(now) : startOfYear(now);
+    startRangeTransition(() => {
+      setPreset(p);
+      setFrom(nextFrom);
+      setTo(now);
+    });
   };
 
   const isoFrom = fmtISO(from);
@@ -148,29 +150,73 @@ function Reports() {
   });
 
   const { data: expenses = [] } = useQuery({
-    queryKey: ["expenses_range", isoFrom, fmtISO(to)],
+    queryKey: ["expenses_range", isoFrom, fmtISO(to), useAggregates],
+    enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("amount, category, vendor, description, payment_method, expense_date")
         .gte("expense_date", isoFrom)
-        .lte("expense_date", fmtISO(to));
+        .lte("expense_date", fmtISO(to))
+        .limit(5000);
       if (error) throw error;
       return data ?? [];
     },
   });
 
+  const { data: expenseSummary } = useQuery({
+    queryKey: ["report_expenses_summary", isoFrom, fmtISO(to), useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_expenses_summary", {
+        p_from: isoFrom,
+        p_to: fmtISO(to),
+      });
+      if (error) throw error;
+      const row = (data ?? [])[0] as { total: number; expense_count: number } | undefined;
+      return row ?? { total: 0, expense_count: 0 };
+    },
+  });
+
+  const { data: expenseCategoryAgg = [] } = useQuery({
+    queryKey: ["report_expenses_by_category", isoFrom, fmtISO(to), useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_expenses_by_category", {
+        p_from: isoFrom,
+        p_to: fmtISO(to),
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ category: string; total: number }>;
+    },
+  });
+
   const { data: payments = [] } = useQuery({
-    queryKey: ["payments_range", isoFrom, isoToNext],
+    queryKey: ["payments_range", isoFrom, isoToNext, useAggregates],
+    enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payment_requests")
         .select("amount, method, status, created_at, handled_at")
         .eq("status", "paid")
         .gte("created_at", `${isoFrom}T00:00:00`)
-        .lt("created_at", `${isoToNext}T00:00:00`);
+        .lt("created_at", `${isoToNext}T00:00:00`)
+        .limit(5000);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  const { data: paymentMethodAgg = [] } = useQuery({
+    queryKey: ["report_payment_method_totals", isoFrom, isoToNext, useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_payment_method_totals", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ method: string; payment_count: number; volume: number }>;
     },
   });
 
@@ -191,6 +237,17 @@ function Reports() {
   // Gebühren pro Methode berechnen
   const feesByMethod = useMemo(() => {
     const m = new Map<string, { sum: number; count: number; volume: number; label: string }>();
+    if (useAggregates) {
+      for (const p of paymentMethodAgg) {
+        const def = DEFAULT_FEES[p.method];
+        if (!def) continue;
+        const pct = feeMap.get(p.method) ?? def.pct;
+        const count = Number(p.payment_count ?? 0);
+        const volume = Number(p.volume ?? 0);
+        m.set(p.method, { sum: (volume * pct) / 100 + (def.fixed * count), count, volume, label: def.label });
+      }
+      return [...m.entries()].map(([method, v]) => ({ method, ...v }));
+    }
     for (const p of payments) {
       const def = DEFAULT_FEES[p.method as string];
       if (!def) continue; // Bar/Cash → keine Gebühren
@@ -201,13 +258,16 @@ function Reports() {
       m.set(p.method as string, cur);
     }
     return [...m.entries()].map(([method, v]) => ({ method, ...v }));
-  }, [payments, feeMap]);
+  }, [payments, paymentMethodAgg, feeMap, useAggregates]);
   const feeTotal = feesByMethod.reduce((s, f) => s + f.sum, 0);
 
   const revenue = useAggregates
     ? Number(ordersSummary?.revenue ?? 0)
     : orders.reduce((s, o) => s + Number(o.total ?? 0), 0);
-  const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const expenseTotal = useAggregates
+    ? Number(expenseSummary?.total ?? 0)
+    : expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const expenseCount = useAggregates ? Number(expenseSummary?.expense_count ?? 0) : expenses.length;
   const totalCosts = expenseTotal + feeTotal;
   const profit = revenue - totalCosts;
   const closedCount = useAggregates
@@ -231,11 +291,17 @@ function Reports() {
   }, [items, categoryAgg, useAggregates]);
 
   const expByCat = useMemo(() => {
+    if (useAggregates) {
+      const m = new Map<string, number>();
+      for (const e of expenseCategoryAgg) m.set(e.category, Number(e.total ?? 0));
+      for (const f of feesByMethod) m.set(`Gebühren ${f.label}`, (m.get(`Gebühren ${f.label}`) ?? 0) + f.sum);
+      return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    }
     const m = new Map<string, number>();
     for (const e of expenses) m.set(e.category, (m.get(e.category) ?? 0) + Number(e.amount));
     for (const f of feesByMethod) m.set(`Gebühren ${f.label}`, (m.get(`Gebühren ${f.label}`) ?? 0) + f.sum);
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [expenses, feesByMethod]);
+  }, [expenses, expenseCategoryAgg, feesByMethod, useAggregates]);
 
   // Umsatz pro Tag (bei mehrtägigem Bereich) oder pro Stunde (bei einem Tag)
   const trend = useMemo(() => {
@@ -339,8 +405,8 @@ function Reports() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1 glass rounded-xl p-1">
               {(["today","week","month","year"] as RangePreset[]).map(p => (
-                <button key={p} onClick={() => applyPreset(p)}
-                  className={`px-3 h-9 rounded-lg text-xs transition-colors ${preset===p ? "bg-accent/20 text-accent" : "hover:bg-white/10"}`}>
+                <button key={p} onClick={() => applyPreset(p)} disabled={isRangePending}
+                  className={`px-3 h-9 rounded-lg text-xs transition-colors disabled:opacity-60 ${preset===p ? "bg-accent/20 text-accent" : "hover:bg-white/10"}`}>
                   {p==="today"?"Heute":p==="week"?"Woche":p==="month"?"Monat":"Jahr"}
                 </button>
               ))}
@@ -374,7 +440,7 @@ function Reports() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <Kpi label="Umsatz" value={revenue} icon={<TrendingUp className="w-4 h-4" />} accent />
         <Kpi label="Ausgaben" value={expenseTotal} icon={<TrendingDown className="w-4 h-4 text-destructive" />} />
-        <Kpi label="Gebühren" value={feeTotal} icon={<CreditCard className="w-4 h-4 text-destructive/80" />} sub={`${payments.length} Online-Zahlungen`} />
+        <Kpi label="Gebühren" value={feeTotal} icon={<CreditCard className="w-4 h-4 text-destructive/80" />} sub={`${feesByMethod.reduce((s, f) => s + f.count, 0)} Online-Zahlungen`} />
         <Kpi label="Gewinn" value={profit} icon={<Wallet className="w-4 h-4" />} highlight={profit >= 0 ? "positive" : "negative"} />
         <Kpi label="Ø Bon" value={avgTicket} icon={<ShoppingCart className="w-4 h-4" />} sub={`${closedCount} Abschlüsse`} />
       </div>
@@ -465,10 +531,10 @@ function Reports() {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Ausgaben</div>
             <div className="text-xl font-semibold tabular-nums mt-0.5">{expenseTotal.toFixed(2)} CHF</div>
           </div>
-          <div className="text-xs text-muted-foreground">{expenses.length} Belege</div>
+              <div className="text-xs text-muted-foreground">{expenseCount} Belege</div>
         </div>
 
-        {expenses.length === 0 && feesByMethod.length === 0 ? (
+        {expenseCount === 0 && feesByMethod.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground py-6 flex flex-col items-center gap-2">
             <Receipt className="w-8 h-8 opacity-40" />
             Keine Ausgaben erfasst
@@ -483,7 +549,7 @@ function Reports() {
                 </div>
               ))}
             </div>
-            {expenses.length > 0 && (
+            {!useAggregates && expenses.length > 0 && (
               <div className="divide-y divide-border/30 -mx-2">
                 {expenses.map((e, i) => (
                   <div key={i} className="flex items-center gap-3 px-2 py-2">

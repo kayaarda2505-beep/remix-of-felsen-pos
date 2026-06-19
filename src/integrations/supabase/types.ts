@@ -1330,6 +1330,20 @@ export type Database = {
           total: number
         }[]
       }
+      report_expenses_by_category: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          category: string
+          total: number
+        }[]
+      }
+      report_expenses_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          expense_count: number
+          total: number
+        }[]
+      }
       report_hourly_totals: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -1343,6 +1357,14 @@ export type Database = {
           closed_count: number
           order_count: number
           revenue: number
+        }[]
+      }
+      report_payment_method_totals: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          method: string
+          payment_count: number
+          volume: number
         }[]
       }
       verify_team_pin: {
