@@ -363,11 +363,7 @@ function Reports() {
         {/* Revenue by category */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="glass rounded-3xl p-5">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-4">Umsatz nach Kategorie</div>
-          {skipItems ? (
-            <div className="text-center text-sm text-muted-foreground py-8">
-              Bei Zeiträumen über 31 Tagen wird die Kategorie-Aufschlüsselung übersprungen, um die Seite schnell zu halten.
-            </div>
-          ) : byCategory.length === 0 ? (
+          {byCategory.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-8">—</div>
           ) : (
             <div className="space-y-2">
