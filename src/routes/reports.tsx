@@ -303,7 +303,7 @@ function Reports() {
         feeTotal,
         profit,
         avgTicket,
-        closedOrdersCount: closedOrders.length,
+        closedOrdersCount: closedCount,
         byCategory,
         feesByMethod: feesByMethod.map((f) => ({
           label: f.label, sum: f.sum, count: f.count, volume: f.volume,
@@ -369,7 +369,7 @@ function Reports() {
         <Kpi label="Ausgaben" value={expenseTotal} icon={<TrendingDown className="w-4 h-4 text-destructive" />} />
         <Kpi label="Gebühren" value={feeTotal} icon={<CreditCard className="w-4 h-4 text-destructive/80" />} sub={`${payments.length} Online-Zahlungen`} />
         <Kpi label="Gewinn" value={profit} icon={<Wallet className="w-4 h-4" />} highlight={profit >= 0 ? "positive" : "negative"} />
-        <Kpi label="Ø Bon" value={avgTicket} icon={<ShoppingCart className="w-4 h-4" />} sub={`${closedOrders.length} Abschlüsse`} />
+        <Kpi label="Ø Bon" value={avgTicket} icon={<ShoppingCart className="w-4 h-4" />} sub={`${closedCount} Abschlüsse`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
