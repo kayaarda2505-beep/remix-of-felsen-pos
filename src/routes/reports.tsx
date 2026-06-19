@@ -55,9 +55,9 @@ function Reports() {
   const isoFrom = fmtISO(from);
   const isoToNext = fmtISO(addDays(to, 1));
   const rangeDays = Math.max(1, Math.round((to.getTime() - from.getTime()) / 86400000) + 1);
-  // Bei langen Zeiträumen (>31 Tage) Item-Aggregation überspringen,
-  // sonst lädt der Browser zehntausende Zeilen und friert ein.
-  const skipItems = rangeDays > 31;
+  // Bei langen Zeiträumen aggregiert die Datenbank — sonst friert der Browser ein.
+  const useAggregates = rangeDays > 14;
+  const singleDay = isoFrom === fmtISO(to);
 
   const { data: orders = [] } = useQuery({
     queryKey: ["orders_range", isoFrom, isoToNext],
@@ -73,9 +73,10 @@ function Reports() {
     },
   });
 
+  // Rohe Items nur bei kurzen Zeiträumen laden
   const { data: items = [] } = useQuery({
-    queryKey: ["items_range", isoFrom, isoToNext, skipItems],
-    enabled: !skipItems,
+    queryKey: ["items_range", isoFrom, isoToNext, useAggregates],
+    enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_items")
@@ -85,6 +86,33 @@ function Reports() {
         .limit(20000);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  // Server-Aggregation bei langen Zeiträumen
+  const { data: categoryAgg = [] } = useQuery({
+    queryKey: ["report_category_totals", isoFrom, isoToNext, useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_category_totals", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ category: string; total: number }>;
+    },
+  });
+
+  const { data: hourlyAgg = [] } = useQuery({
+    queryKey: ["report_hourly_totals", isoFrom, isoToNext, useAggregates, singleDay],
+    enabled: useAggregates && singleDay,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_hourly_totals", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ hour: number; total: number }>;
     },
   });
 
