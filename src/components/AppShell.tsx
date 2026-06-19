@@ -8,7 +8,7 @@ import {
   Package,
   BarChart3,
   Settings,
-  LogOut,
+  
   CalendarDays,
   Music,
   Receipt,
