@@ -54,6 +54,10 @@ function Reports() {
 
   const isoFrom = fmtISO(from);
   const isoToNext = fmtISO(addDays(to, 1));
+  const rangeDays = Math.max(1, Math.round((to.getTime() - from.getTime()) / 86400000) + 1);
+  // Bei langen Zeiträumen (>31 Tage) Item-Aggregation überspringen,
+  // sonst lädt der Browser zehntausende Zeilen und friert ein.
+  const skipItems = rangeDays > 31;
 
   const { data: orders = [] } = useQuery({
     queryKey: ["orders_range", isoFrom, isoToNext],
@@ -62,20 +66,23 @@ function Reports() {
         .from("orders")
         .select("id, total, status, guests, created_at, closed_at")
         .gte("created_at", `${isoFrom}T00:00:00`)
-        .lt("created_at", `${isoToNext}T00:00:00`);
+        .lt("created_at", `${isoToNext}T00:00:00`)
+        .limit(50000);
       if (error) throw error;
       return data ?? [];
     },
   });
 
   const { data: items = [] } = useQuery({
-    queryKey: ["items_range", isoFrom, isoToNext],
+    queryKey: ["items_range", isoFrom, isoToNext, skipItems],
+    enabled: !skipItems,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_items")
         .select("category, qty, unit_price, sent_at")
         .gte("sent_at", `${isoFrom}T00:00:00`)
-        .lt("sent_at", `${isoToNext}T00:00:00`);
+        .lt("sent_at", `${isoToNext}T00:00:00`)
+        .limit(20000);
       if (error) throw error;
       return data ?? [];
     },
@@ -320,7 +327,11 @@ function Reports() {
         {/* Revenue by category */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="glass rounded-3xl p-5">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-4">Umsatz nach Kategorie</div>
-          {byCategory.length === 0 ? (
+          {skipItems ? (
+            <div className="text-center text-sm text-muted-foreground py-8">
+              Bei Zeiträumen über 31 Tagen wird die Kategorie-Aufschlüsselung übersprungen, um die Seite schnell zu halten.
+            </div>
+          ) : byCategory.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-8">—</div>
           ) : (
             <div className="space-y-2">
