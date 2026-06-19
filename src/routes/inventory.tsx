@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { toast } from "sonner";
-import { printReceipt, isDesktopApp, type PrinterConfig, type ReceiptPayload } from "@/lib/printer-bridge";
+import { printReceipt, isDesktopApp, getAgentPrinters, type PrinterConfig, type ReceiptPayload } from "@/lib/printer-bridge";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/inventory")({
@@ -324,8 +324,14 @@ function Inventory() {
       .select("id, name, type, ip_address, port")
       .eq("active", true)
       .order("created_at", { ascending: true });
-    const p = (printers ?? [])[0];
-    if (!p) return toast.error("Kein Drucker konfiguriert");
+    let p: PrinterConfig | undefined = (printers ?? [])[0] as PrinterConfig | undefined;
+    if (!p) {
+      // Fallback: kein Drucker in DB → Standard-Windows-Drucker vom Print-Agent
+      const r = await getAgentPrinters();
+      const def = r.printers?.find((x) => x.isDefault) ?? r.printers?.[0];
+      if (!def) return toast.error("Kein Drucker konfiguriert – bitte unter Einstellungen › Drucker einen Drucker hinzufügen");
+      p = { id: "agent-default", name: def.name, type: "bon", ip_address: null, port: null };
+    }
     const lines: ReceiptPayload["lines"] = [];
     lines.push({ text: "EINKAUFSLISTE", align: "center", bold: true, size: "large" });
     lines.push({ text: "SAINTS", align: "center" });
