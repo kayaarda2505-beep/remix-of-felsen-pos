@@ -436,17 +436,31 @@ export const getPlaylistTracks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ playlistId: z.string().min(1) }))
   .handler(async ({ data }) => {
-    const r = await sp(`/playlists/${encodeURIComponent(data.playlistId)}/tracks?limit=100`);
-    return {
-      tracks:
-        r?.items?.filter((i: any) => i?.track).map((i: any) => ({
-          uri: i.track.uri,
-          name: i.track.name,
-          artists: i.track.artists?.map((a: any) => a.name).join(", ") ?? "",
-          image: i.track.album?.images?.[2]?.url ?? i.track.album?.images?.[0]?.url ?? null,
-          duration_ms: i.track.duration_ms,
-        })) ?? [],
-    };
+    try {
+      const r = await sp(`/playlists/${encodeURIComponent(data.playlistId)}/tracks?limit=100`);
+      return {
+        tracks:
+          r?.items?.filter((i: any) => i?.track).map((i: any) => ({
+            uri: i.track.uri,
+            name: i.track.name,
+            artists: i.track.artists?.map((a: any) => a.name).join(", ") ?? "",
+            image: i.track.album?.images?.[2]?.url ?? i.track.album?.images?.[0]?.url ?? null,
+            duration_ms: i.track.duration_ms,
+          })) ?? [],
+      };
+    } catch (e: any) {
+      const msg = String(e?.message ?? e);
+      // Spotify hat im November 2024 viele Endpoints für neue Apps gesperrt
+      // (Featured Playlists, Editorial Playlists wie "Top 50", etc.) → 403
+      if (msg.includes("403") || msg.toLowerCase().includes("forbidden")) {
+        return {
+          tracks: [],
+          error:
+            "Diese Playlist kann nicht geladen werden (Spotify hat den Zugriff auf redaktionelle Playlists eingeschränkt). Bitte eine eigene Playlist wählen.",
+        };
+      }
+      return { tracks: [], error: msg };
+    }
   });
 
 export const getRecentlyPlayed = createServerFn({ method: "POST" })
