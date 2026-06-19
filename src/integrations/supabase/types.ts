@@ -1323,11 +1323,26 @@ export type Database = {
           total: number
         }[]
       }
+      report_daily_totals: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          day: string
+          total: number
+        }[]
+      }
       report_hourly_totals: {
         Args: { p_from: string; p_to: string }
         Returns: {
           hour: number
           total: number
+        }[]
+      }
+      report_orders_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          closed_count: number
+          order_count: number
+          revenue: number
         }[]
       }
       verify_team_pin: {

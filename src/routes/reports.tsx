@@ -59,17 +59,48 @@ function Reports() {
   const useAggregates = rangeDays > 14;
   const singleDay = isoFrom === fmtISO(to);
 
+  // Rohe Orders nur bei kurzen Zeiträumen
   const { data: orders = [] } = useQuery({
-    queryKey: ["orders_range", isoFrom, isoToNext],
+    queryKey: ["orders_range", isoFrom, isoToNext, useAggregates],
+    enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
         .select("id, total, status, guests, created_at, closed_at")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
-        .limit(50000);
+        .limit(10000);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  // Aggregierter KPI-Summen-Server-Aufruf bei langen Zeiträumen
+  const { data: ordersSummary } = useQuery({
+    queryKey: ["report_orders_summary", isoFrom, isoToNext, useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_orders_summary", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      const row = (data ?? [])[0] as { revenue: number; order_count: number; closed_count: number } | undefined;
+      return row ?? { revenue: 0, order_count: 0, closed_count: 0 };
+    },
+  });
+
+  // Tagesumsätze (für Trend-Chart) bei mehrtägigem Bereich
+  const { data: dailyAgg = [] } = useQuery({
+    queryKey: ["report_daily_totals", isoFrom, isoToNext, useAggregates, singleDay],
+    enabled: useAggregates && !singleDay,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_daily_totals", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ day: string; total: number }>;
     },
   });
 
@@ -173,12 +204,16 @@ function Reports() {
   }, [payments, feeMap]);
   const feeTotal = feesByMethod.reduce((s, f) => s + f.sum, 0);
 
-  const revenue = orders.reduce((s, o) => s + Number(o.total ?? 0), 0);
+  const revenue = useAggregates
+    ? Number(ordersSummary?.revenue ?? 0)
+    : orders.reduce((s, o) => s + Number(o.total ?? 0), 0);
   const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
   const totalCosts = expenseTotal + feeTotal;
   const profit = revenue - totalCosts;
-  const closedOrders = orders.filter((o) => o.status === "paid");
-  const avgTicket = closedOrders.length ? revenue / closedOrders.length : 0;
+  const closedCount = useAggregates
+    ? Number(ordersSummary?.closed_count ?? 0)
+    : orders.filter((o) => o.status === "paid").length;
+  const avgTicket = closedCount ? revenue / closedCount : 0;
 
   const byCategory = useMemo(() => {
     if (useAggregates) {
@@ -221,13 +256,20 @@ function Reports() {
       days.push({ key: fmtISO(d), label: d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" }), value: 0 });
     }
     const map = new Map(days.map((d, i) => [d.key, i]));
-    for (const o of orders) {
-      const k = fmtISO(new Date(o.created_at as string));
-      const idx = map.get(k);
-      if (idx !== undefined) days[idx].value += Number(o.total ?? 0);
+    if (useAggregates) {
+      for (const row of dailyAgg) {
+        const idx = map.get(row.day);
+        if (idx !== undefined) days[idx].value = Number(row.total);
+      }
+    } else {
+      for (const o of orders) {
+        const k = fmtISO(new Date(o.created_at as string));
+        const idx = map.get(k);
+        if (idx !== undefined) days[idx].value += Number(o.total ?? 0);
+      }
     }
     return days;
-  }, [items, orders, from, to, singleDay, useAggregates, hourlyAgg]);
+  }, [items, orders, from, to, singleDay, useAggregates, hourlyAgg, dailyAgg]);
   const trendMax = Math.max(1, ...trend.map(t => t.value));
 
   const rangeLabel = singleDay
@@ -268,7 +310,7 @@ function Reports() {
         feeTotal,
         profit,
         avgTicket,
-        closedOrdersCount: closedOrders.length,
+        closedOrdersCount: closedCount,
         byCategory,
         feesByMethod: feesByMethod.map((f) => ({
           label: f.label, sum: f.sum, count: f.count, volume: f.volume,
@@ -334,7 +376,7 @@ function Reports() {
         <Kpi label="Ausgaben" value={expenseTotal} icon={<TrendingDown className="w-4 h-4 text-destructive" />} />
         <Kpi label="Gebühren" value={feeTotal} icon={<CreditCard className="w-4 h-4 text-destructive/80" />} sub={`${payments.length} Online-Zahlungen`} />
         <Kpi label="Gewinn" value={profit} icon={<Wallet className="w-4 h-4" />} highlight={profit >= 0 ? "positive" : "negative"} />
-        <Kpi label="Ø Bon" value={avgTicket} icon={<ShoppingCart className="w-4 h-4" />} sub={`${closedOrders.length} Abschlüsse`} />
+        <Kpi label="Ø Bon" value={avgTicket} icon={<ShoppingCart className="w-4 h-4" />} sub={`${closedCount} Abschlüsse`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
