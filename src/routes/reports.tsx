@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer } from "lucide-react";
@@ -42,14 +42,16 @@ function Reports() {
   const [preset, setPreset] = useState<RangePreset>("today");
   const [from, setFrom] = useState<Date>(today);
   const [to, setTo] = useState<Date>(today);
+  const [isRangePending, startRangeTransition] = useTransition();
 
   const applyPreset = (p: RangePreset) => {
-    setPreset(p);
     const now = new Date(); now.setHours(0,0,0,0);
-    if (p === "today") { setFrom(now); setTo(now); }
-    else if (p === "week") { setFrom(startOfWeek(now)); setTo(now); }
-    else if (p === "month") { setFrom(startOfMonth(now)); setTo(now); }
-    else if (p === "year") { setFrom(startOfYear(now)); setTo(now); }
+    const nextFrom = p === "today" ? now : p === "week" ? startOfWeek(now) : p === "month" ? startOfMonth(now) : startOfYear(now);
+    startRangeTransition(() => {
+      setPreset(p);
+      setFrom(nextFrom);
+      setTo(now);
+    });
   };
 
   const isoFrom = fmtISO(from);
@@ -148,29 +150,73 @@ function Reports() {
   });
 
   const { data: expenses = [] } = useQuery({
-    queryKey: ["expenses_range", isoFrom, fmtISO(to)],
+    queryKey: ["expenses_range", isoFrom, fmtISO(to), useAggregates],
+    enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("amount, category, vendor, description, payment_method, expense_date")
         .gte("expense_date", isoFrom)
-        .lte("expense_date", fmtISO(to));
+        .lte("expense_date", fmtISO(to))
+        .limit(5000);
       if (error) throw error;
       return data ?? [];
     },
   });
 
+  const { data: expenseSummary } = useQuery({
+    queryKey: ["report_expenses_summary", isoFrom, fmtISO(to), useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_expenses_summary", {
+        p_from: isoFrom,
+        p_to: fmtISO(to),
+      });
+      if (error) throw error;
+      const row = (data ?? [])[0] as { total: number; expense_count: number } | undefined;
+      return row ?? { total: 0, expense_count: 0 };
+    },
+  });
+
+  const { data: expenseCategoryAgg = [] } = useQuery({
+    queryKey: ["report_expenses_by_category", isoFrom, fmtISO(to), useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_expenses_by_category", {
+        p_from: isoFrom,
+        p_to: fmtISO(to),
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ category: string; total: number }>;
+    },
+  });
+
   const { data: payments = [] } = useQuery({
-    queryKey: ["payments_range", isoFrom, isoToNext],
+    queryKey: ["payments_range", isoFrom, isoToNext, useAggregates],
+    enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payment_requests")
         .select("amount, method, status, created_at, handled_at")
         .eq("status", "paid")
         .gte("created_at", `${isoFrom}T00:00:00`)
-        .lt("created_at", `${isoToNext}T00:00:00`);
+        .lt("created_at", `${isoToNext}T00:00:00`)
+        .limit(5000);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  const { data: paymentMethodAgg = [] } = useQuery({
+    queryKey: ["report_payment_method_totals", isoFrom, isoToNext, useAggregates],
+    enabled: useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("report_payment_method_totals", {
+        p_from: `${isoFrom}T00:00:00`,
+        p_to: `${isoToNext}T00:00:00`,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{ method: string; payment_count: number; volume: number }>;
     },
   });
 
