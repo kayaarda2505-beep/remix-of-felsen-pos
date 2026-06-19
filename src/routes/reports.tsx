@@ -256,13 +256,20 @@ function Reports() {
       days.push({ key: fmtISO(d), label: d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" }), value: 0 });
     }
     const map = new Map(days.map((d, i) => [d.key, i]));
-    for (const o of orders) {
-      const k = fmtISO(new Date(o.created_at as string));
-      const idx = map.get(k);
-      if (idx !== undefined) days[idx].value += Number(o.total ?? 0);
+    if (useAggregates) {
+      for (const row of dailyAgg) {
+        const idx = map.get(row.day);
+        if (idx !== undefined) days[idx].value = Number(row.total);
+      }
+    } else {
+      for (const o of orders) {
+        const k = fmtISO(new Date(o.created_at as string));
+        const idx = map.get(k);
+        if (idx !== undefined) days[idx].value += Number(o.total ?? 0);
+      }
     }
     return days;
-  }, [items, orders, from, to, singleDay, useAggregates, hourlyAgg]);
+  }, [items, orders, from, to, singleDay, useAggregates, hourlyAgg, dailyAgg]);
   const trendMax = Math.max(1, ...trend.map(t => t.value));
 
   const rangeLabel = singleDay
