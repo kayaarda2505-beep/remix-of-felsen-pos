@@ -393,20 +393,46 @@ function MusikPage() {
           </Link>
         </div>
       )}
+
+      {tab === "wuensche" && (
+        <div className="glass rounded-3xl p-6">
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <Bell className="w-4 h-4" /> Song-Wünsche
+          </h3>
+          <SongRequestsPanel />
+        </div>
+      )}
     </div>
   );
 }
 
-function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
+function TabBtn({
+  active,
+  onClick,
+  icon,
+  children,
+  badge,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  badge?: string | null;
+}) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition ${
+      className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition ${
         active ? "bg-emerald-500 text-black" : "bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground"
       }`}
     >
       {icon}
       {children}
+      {badge && (
+        <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold">
+          {badge}
+        </span>
+      )}
     </button>
   );
 }
