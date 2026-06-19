@@ -133,6 +133,7 @@ const BARKEEPER_ALLOWED = new Set<string>([
   "/inventory",
   "/expenses",
   "/songs",
+  "/musik",
   "/payments",
   "/settings",
 ]);
