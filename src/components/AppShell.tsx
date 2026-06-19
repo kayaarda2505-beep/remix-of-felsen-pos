@@ -23,6 +23,7 @@ import { SpotifyPlayer } from "./SpotifyPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
 import { printBill } from "@/lib/receipt";
+import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 
 async function autoPrintServiceCall(r: any) {
   if (!isDesktopApp()) return;
@@ -73,7 +74,6 @@ async function autoPrintServiceCall(r: any) {
     toast.error("Service-Bon nicht gedruckt", { description: e?.message ?? "Druckfehler" });
   }
 }
-import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 
 async function autoPrintPaidBill(r: any) {
   if (!isDesktopApp()) return;
