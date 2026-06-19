@@ -121,7 +121,6 @@ const nav = [
   { to: "/inventory", label: "Lager", icon: Package },
   { to: "/expenses", label: "Ausgaben", icon: Receipt },
   { to: "/reports", label: "Reports", icon: BarChart3 },
-  { to: "/songs", label: "Songs", icon: Music },
   { to: "/musik", label: "Musik", icon: Music },
   { to: "/payments", label: "Bezahlen", icon: Wallet },
   { to: "/settings", label: "Settings", icon: Settings },
