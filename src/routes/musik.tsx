@@ -18,8 +18,10 @@ import {
   ListMusic,
   Clock,
   Sparkles,
+  Bell,
 } from "lucide-react";
 import { PageHeader } from "@/components/AppShell";
+import { SongRequestsPanel } from "@/components/SongRequestsPanel";
 import {
   getNowPlaying,
   getSpotifyDevices,
@@ -40,16 +42,22 @@ import {
   getRecentlyPlayed,
 } from "@/lib/spotify.functions";
 import { toast } from "sonner";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/musik")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    tab: (s.tab as Tab) ?? undefined,
+  }),
   component: MusikPage,
 });
 
-type Tab = "now" | "playlists" | "search" | "devices";
+type Tab = "now" | "playlists" | "search" | "devices" | "wuensche";
 
 function MusikPage() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>("now");
+  const initialTab = (Route.useSearch() as any).tab as Tab | undefined;
+  const [tab, setTab] = useState<Tab>(initialTab ?? "now");
   const [query, setQuery] = useState("");
   const [activePlaylist, setActivePlaylist] = useState<{ id: string; uri: string; name: string } | null>(null);
 
@@ -111,6 +119,31 @@ function MusikPage() {
     queryFn: () => playlistTracksFn({ data: { playlistId: activePlaylist!.id } }),
     enabled: !!activePlaylist,
   });
+  const openWishes = useQuery({
+    queryKey: ["song_requests_open_count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("song_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new");
+      return count ?? 0;
+    },
+    refetchInterval: 10000,
+  });
+  useEffect(() => {
+    const ch = supabase
+      .channel(`musik_song_requests_${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "song_requests" },
+        () => qc.invalidateQueries({ queryKey: ["song_requests_open_count"] }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [qc]);
+  const openWishCount = openWishes.data ?? 0;
 
   const invalidateNow = () => qc.invalidateQueries({ queryKey: ["spotify-now"] });
 
@@ -224,6 +257,14 @@ function MusikPage() {
         <TabBtn active={tab === "playlists"} onClick={() => setTab("playlists")} icon={<ListMusic className="w-4 h-4" />}>Playlists</TabBtn>
         <TabBtn active={tab === "search"} onClick={() => setTab("search")} icon={<Search className="w-4 h-4" />}>Suche</TabBtn>
         <TabBtn active={tab === "devices"} onClick={() => setTab("devices")} icon={<Speaker className="w-4 h-4" />}>Geräte</TabBtn>
+        <TabBtn
+          active={tab === "wuensche"}
+          onClick={() => setTab("wuensche")}
+          icon={<Bell className="w-4 h-4" />}
+          badge={openWishCount > 0 ? (openWishCount > 99 ? "99+" : String(openWishCount)) : null}
+        >
+          Wünsche
+        </TabBtn>
       </div>
 
       {tab === "now" && (
@@ -352,20 +393,46 @@ function MusikPage() {
           </Link>
         </div>
       )}
+
+      {tab === "wuensche" && (
+        <div className="glass rounded-3xl p-6">
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <Bell className="w-4 h-4" /> Song-Wünsche
+          </h3>
+          <SongRequestsPanel />
+        </div>
+      )}
     </div>
   );
 }
 
-function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
+function TabBtn({
+  active,
+  onClick,
+  icon,
+  children,
+  badge,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  badge?: string | null;
+}) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition ${
+      className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition ${
         active ? "bg-emerald-500 text-black" : "bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground"
       }`}
     >
       {icon}
       {children}
+      {badge && (
+        <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold">
+          {badge}
+        </span>
+      )}
     </button>
   );
 }

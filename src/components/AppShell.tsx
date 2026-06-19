@@ -121,7 +121,6 @@ const nav = [
   { to: "/inventory", label: "Lager", icon: Package },
   { to: "/expenses", label: "Ausgaben", icon: Receipt },
   { to: "/reports", label: "Reports", icon: BarChart3 },
-  { to: "/songs", label: "Songs", icon: Music },
   { to: "/musik", label: "Musik", icon: Music },
   { to: "/payments", label: "Bezahlen", icon: Wallet },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -132,7 +131,7 @@ const BARKEEPER_ALLOWED = new Set<string>([
   "/mitarbeiter",
   "/inventory",
   "/expenses",
-  "/songs",
+  "/musik",
   "/musik",
   "/payments",
   "/settings",
@@ -143,7 +142,7 @@ const SERVICE_ALLOWED = new Set<string>([
   "/tables",
   "/mitarbeiter",
   "/inventory",
-  "/songs",
+  "/musik",
   "/payments",
   "/settings",
 ]);
@@ -238,7 +237,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       action: {
         label: "Öffnen",
         onClick: () => {
-          window.location.href = "/songs";
+          window.location.href = "/musik?tab=wuensche";
         },
       },
     });
@@ -471,13 +470,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <Icon className="w-5 h-5 shrink-0" strokeWidth={1.75} />
               <span className="hidden lg:block font-medium">{item.label}</span>
-              {item.to === "/songs" && songBadge && (
+              {item.to === "/musik" && songBadge && (
                 <span className="ml-auto min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center leading-none">
                   {songBadge}
                 </span>
               )}
               {active && (
-                <span className={`hidden lg:block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px] shadow-accent ${item.to === "/songs" && songBadge ? "" : "ml-auto"}`} />
+                <span className={`hidden lg:block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_10px] shadow-accent ${item.to === "/musik" && songBadge ? "" : "ml-auto"}`} />
               )}
             </Link>
           );
@@ -546,7 +545,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 }`}
               >
                 <Icon className="w-5 h-5" strokeWidth={1.75} />
-                {item.to === "/songs" && songBadge && (
+                {item.to === "/musik" && songBadge && (
                   <span className="absolute mt-[-1.625rem] ml-7 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center leading-none">
                     {songBadge}
                   </span>
