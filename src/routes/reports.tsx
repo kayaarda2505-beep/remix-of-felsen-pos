@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer } from "lucide-react";
@@ -43,6 +43,8 @@ function Reports() {
   const [from, setFrom] = useState<Date>(today);
   const [to, setTo] = useState<Date>(today);
   const [isRangePending, startRangeTransition] = useTransition();
+  const deferredFrom = useDeferredValue(from);
+  const deferredTo = useDeferredValue(to);
 
   const applyPreset = (p: RangePreset) => {
     const now = new Date(); now.setHours(0,0,0,0);
@@ -54,12 +56,13 @@ function Reports() {
     });
   };
 
-  const isoFrom = fmtISO(from);
-  const isoToNext = fmtISO(addDays(to, 1));
-  const rangeDays = Math.max(1, Math.round((to.getTime() - from.getTime()) / 86400000) + 1);
+  const isoFrom = fmtISO(deferredFrom);
+  const isoToNext = fmtISO(addDays(deferredTo, 1));
+  const rangeDays = Math.max(1, Math.round((deferredTo.getTime() - deferredFrom.getTime()) / 86400000) + 1);
   // Bei langen Zeiträumen aggregiert die Datenbank — sonst friert der Browser ein.
   const useAggregates = rangeDays > 14;
-  const singleDay = isoFrom === fmtISO(to);
+  const singleDay = isoFrom === fmtISO(deferredTo);
+  const compactTrend = useAggregates && rangeDays > 62;
 
   // Rohe Orders nur bei kurzen Zeiträumen
   const { data: orders = [] } = useQuery({
@@ -150,14 +153,14 @@ function Reports() {
   });
 
   const { data: expenses = [] } = useQuery({
-    queryKey: ["expenses_range", isoFrom, fmtISO(to), useAggregates],
+    queryKey: ["expenses_range", isoFrom, fmtISO(deferredTo), useAggregates],
     enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("amount, category, vendor, description, payment_method, expense_date")
         .gte("expense_date", isoFrom)
-        .lte("expense_date", fmtISO(to))
+        .lte("expense_date", fmtISO(deferredTo))
         .limit(5000);
       if (error) throw error;
       return data ?? [];
@@ -165,12 +168,12 @@ function Reports() {
   });
 
   const { data: expenseSummary } = useQuery({
-    queryKey: ["report_expenses_summary", isoFrom, fmtISO(to), useAggregates],
+    queryKey: ["report_expenses_summary", isoFrom, fmtISO(deferredTo), useAggregates],
     enabled: useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("report_expenses_summary", {
         p_from: isoFrom,
-        p_to: fmtISO(to),
+        p_to: fmtISO(deferredTo),
       });
       if (error) throw error;
       const row = (data ?? [])[0] as { total: number; expense_count: number } | undefined;
@@ -179,12 +182,12 @@ function Reports() {
   });
 
   const { data: expenseCategoryAgg = [] } = useQuery({
-    queryKey: ["report_expenses_by_category", isoFrom, fmtISO(to), useAggregates],
+    queryKey: ["report_expenses_by_category", isoFrom, fmtISO(deferredTo), useAggregates],
     enabled: useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("report_expenses_by_category", {
         p_from: isoFrom,
-        p_to: fmtISO(to),
+        p_to: fmtISO(deferredTo),
       });
       if (error) throw error;
       return (data ?? []) as Array<{ category: string; total: number }>;
@@ -317,11 +320,22 @@ function Reports() {
       }
       return arr.map((v, h) => ({ label: `${h}`, value: v }));
     }
-    const days: { label: string; value: number; key: string }[] = [];
-    for (let d = new Date(from); d <= to; d = addDays(d, 1)) {
-      days.push({ key: fmtISO(d), label: d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" }), value: 0 });
+    const bucket = compactTrend ? 7 : 1;
+    const days: { label: string; value: number; keys: string[] }[] = [];
+    for (let d = new Date(deferredFrom), i = 0; d <= deferredTo; d = addDays(d, bucket), i += bucket) {
+      const end = addDays(d, bucket - 1);
+      const clampedEnd = end > deferredTo ? deferredTo : end;
+      const keys: string[] = [];
+      for (let k = new Date(d); k <= clampedEnd; k = addDays(k, 1)) keys.push(fmtISO(k));
+      days.push({
+        keys,
+        label: compactTrend
+          ? `KW ${Math.ceil((i + 1) / 7)}`
+          : d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" }),
+        value: 0,
+      });
     }
-    const map = new Map(days.map((d, i) => [d.key, i]));
+    const map = new Map(days.flatMap((d, i) => d.keys.map((key) => [key, i] as const)));
     if (useAggregates) {
       for (const row of dailyAgg) {
         const idx = map.get(row.day);
@@ -335,12 +349,12 @@ function Reports() {
       }
     }
     return days;
-  }, [items, orders, from, to, singleDay, useAggregates, hourlyAgg, dailyAgg]);
+  }, [items, orders, deferredFrom, deferredTo, singleDay, useAggregates, hourlyAgg, dailyAgg, compactTrend]);
   const trendMax = Math.max(1, ...trend.map(t => t.value));
 
   const rangeLabel = singleDay
-    ? from.toLocaleDateString("de-CH", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
-    : `${from.toLocaleDateString("de-CH")} – ${to.toLocaleDateString("de-CH")}`;
+    ? deferredFrom.toLocaleDateString("de-CH", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
+    : `${deferredFrom.toLocaleDateString("de-CH")} – ${deferredTo.toLocaleDateString("de-CH")}`;
 
   // Drucker für Tagesabschluss
   const { data: printers = [] } = useQuery({
