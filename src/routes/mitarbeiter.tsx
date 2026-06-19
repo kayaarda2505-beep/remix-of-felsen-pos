@@ -132,16 +132,17 @@ function MitarbeiterPage() {
             ))}
           </div>
 
-          {selected && <MemberPanel member={selected} />}
+          {selected && <MemberPanel member={selected} isManager={isManager} />}
         </div>
       )}
     </div>
   );
 }
 
-function MemberPanel({ member }: { member: Member }) {
+function MemberPanel({ member, isManager }: { member: Member; isManager: boolean }) {
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(lastOfMonth());
+  const [editing, setEditing] = useState(false);
 
   const { data: entries = [], refetch: refetchEntries } = useQuery<TimeEntry[]>({
     queryKey: ["time_entries", member.id, from, to],
@@ -189,24 +190,37 @@ function MemberPanel({ member }: { member: Member }) {
         <div className="flex items-center gap-3 mb-4">
           <UserIcon className="w-4 h-4 text-accent" />
           <h2 className="font-semibold">Stammdaten</h2>
+          {isManager && !editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="ml-auto text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10"
+            >
+              Bearbeiten
+            </button>
+          )}
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
-          <Info label="Name" value={member.name} />
-          <Info label="Rolle" value={member.role} />
-          <Info label="Konto-Nr." value={member.account_number?.toString() ?? "—"} />
-          <Info label="E-Mail" value={member.email ?? "—"} />
-          <Info label="Telefon" value={member.phone ?? "—"} />
-          <Info label="Geburtsdatum" value={member.birthdate ?? "—"} />
-          <Info label="Adresse" value={member.address ?? "—"} />
-          <Info label="AHV-Nr." value={member.ahv_number ?? "—"} />
-          <Info label="IBAN" value={member.iban ?? "—"} />
-          <Info label="Stundenlohn" value={`CHF ${Number(member.hourly_wage).toFixed(2)}`} />
-          <Info
-            label="Quellensteuer"
-            value={member.withholding_tax ? `Ja · ${Number(member.withholding_tax_rate).toFixed(2)}%` : "Nein"}
-          />
-        </div>
+        {editing ? (
+          <MemberEditForm member={member} onClose={() => setEditing(false)} />
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+            <Info label="Name" value={member.name} />
+            <Info label="Rolle" value={member.role} />
+            <Info label="Konto-Nr." value={member.account_number?.toString() ?? "—"} />
+            <Info label="E-Mail" value={member.email ?? "—"} />
+            <Info label="Telefon" value={member.phone ?? "—"} />
+            <Info label="Geburtsdatum" value={member.birthdate ?? "—"} />
+            <Info label="Adresse" value={member.address ?? "—"} />
+            <Info label="AHV-Nr." value={member.ahv_number ?? "—"} />
+            <Info label="IBAN" value={member.iban ?? "—"} />
+            <Info label="Stundenlohn" value={`CHF ${Number(member.hourly_wage).toFixed(2)}`} />
+            <Info
+              label="Quellensteuer"
+              value={member.withholding_tax ? `Ja · ${Number(member.withholding_tax_rate).toFixed(2)}%` : "Nein"}
+            />
+          </div>
+        )}
       </div>
+
 
       {/* Zeitraum + Stunden */}
       <div className="glass rounded-3xl p-6">
@@ -277,6 +291,192 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+const TEAM_ROLES = ["manager", "barkeeper", "service", "kueche"] as const;
+
+function Field({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function MemberEditForm({ member, onClose }: { member: Member; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [f, setF] = useState({
+    name: member.name ?? "",
+    role: member.role ?? "service",
+    email: member.email ?? "",
+    phone: member.phone ?? "",
+    address: member.address ?? "",
+    birthdate: member.birthdate ?? "",
+    ahv_number: member.ahv_number ?? "",
+    iban: member.iban ?? "",
+    color: member.color ?? "#888888",
+    account_number: member.account_number?.toString() ?? "",
+    hourly_wage: Number(member.hourly_wage ?? 0).toString(),
+    withholding_tax: !!member.withholding_tax,
+    withholding_tax_rate: Number(member.withholding_tax_rate ?? 0).toString(),
+    active: member.active,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!f.name.trim()) return toast.error("Name fehlt");
+    setSaving(true);
+    const payload = {
+      name: f.name.trim(),
+      role: f.role as (typeof TEAM_ROLES)[number],
+      email: f.email.trim() || null,
+      phone: f.phone.trim() || null,
+      address: f.address.trim() || null,
+      birthdate: f.birthdate || null,
+      ahv_number: f.ahv_number.trim() || null,
+      iban: f.iban.trim() || null,
+      color: f.color || "#888888",
+      account_number: f.account_number ? Number(f.account_number) : null,
+      hourly_wage: Number(f.hourly_wage) || 0,
+      withholding_tax: f.withholding_tax,
+      withholding_tax_rate: Number(f.withholding_tax_rate) || 0,
+      active: f.active,
+    };
+    const { error } = await supabase.from("team_members").update(payload).eq("id", member.id);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Stammdaten gespeichert");
+    qc.invalidateQueries({ queryKey: ["mitarbeiter_full"] });
+    onClose();
+  };
+
+  const inputCls =
+    "w-full rounded-lg bg-white/5 border border-border/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40";
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <Field label="Name">
+        <input className={inputCls} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+      </Field>
+      <Field label="Rolle">
+        <select className={inputCls} value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
+          {TEAM_ROLES.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Konto-Nr.">
+        <input
+          type="number"
+          className={inputCls}
+          value={f.account_number}
+          onChange={(e) => setF({ ...f, account_number: e.target.value })}
+        />
+      </Field>
+      <Field label="E-Mail">
+        <input className={inputCls} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+      </Field>
+      <Field label="Telefon">
+        <input className={inputCls} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+      </Field>
+      <Field label="Geburtsdatum">
+        <input
+          type="date"
+          className={inputCls}
+          value={f.birthdate}
+          onChange={(e) => setF({ ...f, birthdate: e.target.value })}
+        />
+      </Field>
+      <Field label="Adresse" className="md:col-span-2">
+        <input className={inputCls} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+      </Field>
+      <Field label="Farbe">
+        <input
+          type="color"
+          className="w-full h-[38px] rounded-lg bg-white/5 border border-border/40 cursor-pointer"
+          value={f.color}
+          onChange={(e) => setF({ ...f, color: e.target.value })}
+        />
+      </Field>
+      <Field label="AHV-Nr.">
+        <input
+          className={inputCls}
+          value={f.ahv_number}
+          onChange={(e) => setF({ ...f, ahv_number: e.target.value })}
+        />
+      </Field>
+      <Field label="IBAN">
+        <input className={inputCls} value={f.iban} onChange={(e) => setF({ ...f, iban: e.target.value })} />
+      </Field>
+      <Field label="Stundenlohn (CHF)">
+        <input
+          type="number"
+          step="0.05"
+          className={inputCls}
+          value={f.hourly_wage}
+          onChange={(e) => setF({ ...f, hourly_wage: e.target.value })}
+        />
+      </Field>
+      <Field label="Quellensteuer">
+        <label className="flex items-center gap-2 h-[38px] px-3 rounded-lg bg-white/5 border border-border/40 cursor-pointer text-sm">
+          <input
+            type="checkbox"
+            checked={f.withholding_tax}
+            onChange={(e) => setF({ ...f, withholding_tax: e.target.checked })}
+          />
+          Aktiv
+        </label>
+      </Field>
+      <Field label="QSt-Satz (%)">
+        <input
+          type="number"
+          step="0.01"
+          disabled={!f.withholding_tax}
+          className={inputCls + (f.withholding_tax ? "" : " opacity-40")}
+          value={f.withholding_tax_rate}
+          onChange={(e) => setF({ ...f, withholding_tax_rate: e.target.value })}
+        />
+      </Field>
+      <Field label="Status">
+        <label className="flex items-center gap-2 h-[38px] px-3 rounded-lg bg-white/5 border border-border/40 cursor-pointer text-sm">
+          <input
+            type="checkbox"
+            checked={f.active}
+            onChange={(e) => setF({ ...f, active: e.target.checked })}
+          />
+          Aktiv (im Team sichtbar)
+        </label>
+      </Field>
+      <div className="md:col-span-3 flex justify-end gap-2 pt-2">
+        <button
+          onClick={onClose}
+          disabled={saving}
+          className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm"
+        >
+          Abbrechen
+        </button>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 disabled:opacity-40"
+        >
+          {saving ? "Speichern…" : "Speichern"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 function Stat({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
   return (
