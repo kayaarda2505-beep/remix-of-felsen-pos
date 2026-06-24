@@ -770,10 +770,6 @@ function PaymentDialog({
   const [cardMethod, setCardMethod] = useState<string>(CARD_METHODS[0]);
   const [receivedStr, setReceivedStr] = useState<string>(total.toFixed(2));
   const [diffType, setDiffType] = useState<"tip" | "change">(mode === "card" ? "tip" : "change");
-
-  const [cardMethod, setCardMethod] = useState<string>(CARD_METHODS[0]);
-  const [receivedStr, setReceivedStr] = useState<string>(total.toFixed(2));
-  const [diffType, setDiffType] = useState<"tip" | "change">(mode === "card" ? "tip" : "change");
   const [sumupPhase, setSumupPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
   const [sumupMsg, setSumupMsg] = useState<string>("");
   const sendToReader = useServerFn(sumupSendToReader);
