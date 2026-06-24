@@ -774,6 +774,22 @@ function PaymentDialog({
   const [sumupMsg, setSumupMsg] = useState<string>("");
   const sendToReader = useServerFn(sumupSendToReader);
   const getTxStatus = useServerFn(sumupGetTransactionStatus);
+  const listReaders = useServerFn(sumupListReaders);
+
+  const diagnose = async () => {
+    setSumupMsg("Lade Reader …");
+    try {
+      const r = await listReaders({ data: undefined as any });
+      if (!r.readers.length) {
+        setSumupMsg(`Merchant ${r.merchantCode}: keine Reader gefunden. Reader zuerst in SumUp-App paaren.`);
+      } else {
+        const list = r.readers.map((x) => `${x.name ?? "?"} → ${x.id} [${x.status ?? "?"}]`).join("  |  ");
+        setSumupMsg(`Verfügbare Reader: ${list}`);
+      }
+    } catch (e: any) {
+      setSumupMsg(e?.message ?? "Diagnose fehlgeschlagen");
+    }
+  };
 
   const runSumUp = async () => {
     setSumupPhase("sending");
