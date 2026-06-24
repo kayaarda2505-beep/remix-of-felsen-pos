@@ -981,9 +981,11 @@ function PayChoiceDialog({
   onClose: () => void;
   onPaid: () => void;
 }) {
-  const [mode, setMode] = useState<"choose" | "card">("choose");
+  const [mode, setMode] = useState<"choose" | "card" | "cash">("choose");
   const [phase, setPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
   const [msg, setMsg] = useState("");
+  const [givenStr, setGivenStr] = useState("");
+  const [tipStr, setTipStr] = useState("0");
   const sendToReader = useServerFn(sumupSendToReader);
   const getTxStatus = useServerFn(sumupGetTransactionStatus);
 
