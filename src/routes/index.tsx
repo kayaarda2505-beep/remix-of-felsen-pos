@@ -29,6 +29,8 @@ import {
   Trash2,
   Shapes,
   Move,
+  Banknote,
+  Smartphone,
 } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/use-products";
 import { supabase } from "@/integrations/supabase/client";
