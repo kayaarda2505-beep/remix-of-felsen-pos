@@ -887,7 +887,195 @@ function ServiceTablet() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showPayChoice && (
+          <PayChoiceDialog
+            total={Number(activeTableOrder?.total ?? 0)}
+            tableName={selectedTable?.name ?? "Tisch"}
+            printers={printers}
+            onClose={() => setShowPayChoice(false)}
+            onPaid={() => {
+              setShowPayChoice(false);
+              payTab.mutate();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function PayChoiceDialog({
+  total,
+  tableName,
+  printers,
+  onClose,
+  onPaid,
+}: {
+  total: number;
+  tableName: string;
+  printers: any[];
+  onClose: () => void;
+  onPaid: () => void;
+}) {
+  const [mode, setMode] = useState<"choose" | "card">("choose");
+  const [phase, setPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
+  const [msg, setMsg] = useState("");
+  const sendToReader = useServerFn(sumupSendToReader);
+  const getTxStatus = useServerFn(sumupGetTransactionStatus);
+
+  const runSumUp = async () => {
+    setPhase("sending");
+    setMsg("Sende an Terminal …");
+    try {
+      const { clientTransactionId } = await sendToReader({
+        data: { amount: total, description: `Tisch ${tableName}` },
+      });
+      setPhase("waiting");
+      setMsg("Am Terminal bezahlen …");
+      if (!clientTransactionId) return;
+      const started = Date.now();
+      while (Date.now() - started < 120_000) {
+        await new Promise((r) => setTimeout(r, 2500));
+        try {
+          const s = await getTxStatus({ data: { clientTransactionId } });
+          if (s.status === "SUCCESSFUL") {
+            setPhase("ok");
+            setMsg("Bezahlung erfolgreich");
+            if (isDesktopApp()) {
+              const err = await printCardReceipt({
+                printers,
+                info: {
+                  transactionId: s.transactionId,
+                  transactionCode: s.transactionCode,
+                  cardType: s.cardType,
+                  cardLast4: s.cardLast4,
+                  authCode: s.authCode,
+                  entryMode: s.entryMode,
+                  amount: total,
+                  currency: s.currency,
+                  timestamp: s.timestamp,
+                  merchantCode: s.merchantCode,
+                  tableName,
+                },
+              });
+              if (err) toast.error(`Karten-Beleg: ${err}`);
+            }
+            setTimeout(onPaid, 500);
+            return;
+          }
+          if (s.status === "FAILED" || s.status === "CANCELLED") {
+            setPhase("fail");
+            setMsg(s.status === "CANCELLED" ? "Am Terminal abgebrochen" : "Zahlung fehlgeschlagen");
+            return;
+          }
+        } catch {}
+      }
+      setPhase("fail");
+      setMsg("Zeitüberschreitung. Bitte am Terminal prüfen.");
+    } catch (e: any) {
+      setPhase("fail");
+      setMsg(e?.message ?? "Fehler beim Senden");
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 10 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.95, y: 10 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass-strong rounded-3xl p-6 w-full max-w-md"
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Tisch {tableName}
+            </div>
+            <h2 className="text-xl font-semibold tabular-nums">CHF {total.toFixed(2)}</h2>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-xl glass flex items-center justify-center">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {mode === "choose" && (
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={onPaid}
+              className="glass rounded-2xl py-6 flex flex-col items-center gap-2 hover:border-accent/40 transition-colors"
+            >
+              <Banknote className="w-6 h-6" />
+              <span className="font-semibold">Bar</span>
+            </button>
+            <button
+              onClick={() => {
+                setMode("card");
+                runSumUp();
+              }}
+              className="glass rounded-2xl py-6 flex flex-col items-center gap-2 hover:border-accent/40 transition-colors"
+            >
+              <CreditCard className="w-6 h-6" />
+              <span className="font-semibold">Karte</span>
+            </button>
+          </div>
+        )}
+
+        {mode === "card" && (
+          <div className="space-y-3">
+            <button
+              onClick={runSumUp}
+              disabled={phase === "sending" || phase === "waiting"}
+              className="w-full rounded-xl py-3 bg-accent/15 hover:bg-accent/25 border border-accent/40 text-accent font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {phase === "sending" || phase === "waiting" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Smartphone className="w-4 h-4" />
+              )}
+              {phase === "idle" && `An SumUp-Terminal senden · CHF ${total.toFixed(2)}`}
+              {phase === "sending" && "Sende …"}
+              {phase === "waiting" && "Warte auf Terminal …"}
+              {phase === "ok" && "Bezahlt ✓"}
+              {phase === "fail" && "Erneut senden"}
+            </button>
+            {msg && (
+              <div
+                className={`text-xs text-center ${
+                  phase === "fail"
+                    ? "text-destructive"
+                    : phase === "ok"
+                      ? "text-success"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {msg}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setMode("choose");
+                setPhase("idle");
+                setMsg("");
+              }}
+              disabled={phase === "sending" || phase === "waiting"}
+              className="w-full text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
+            >
+              ← Zurück
+            </button>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
   );
 }
 
