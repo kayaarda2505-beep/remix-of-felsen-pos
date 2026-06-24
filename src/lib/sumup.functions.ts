@@ -14,6 +14,33 @@ function getConfig() {
   return { apiKey, merchantCode, readerId };
 }
 
+export const sumupListReaders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const apiKey = process.env.SUMUP_API_KEY;
+    const merchantCode = process.env.SUMUP_MERCHANT_CODE;
+    if (!apiKey) throw new Error("SUMUP_API_KEY fehlt");
+    if (!merchantCode) throw new Error("SUMUP_MERCHANT_CODE fehlt");
+    const res = await fetch(
+      `${SUMUP_BASE}/v0.1/merchants/${merchantCode}/readers`,
+      { headers: { Authorization: `Bearer ${apiKey}` } },
+    );
+    const text = await res.text();
+    if (!res.ok) throw new Error(`SumUp ${res.status}: ${text.slice(0, 400)}`);
+    let json: any = {};
+    try { json = JSON.parse(text); } catch {}
+    const items = json?.items ?? json ?? [];
+    return {
+      merchantCode,
+      readers: (Array.isArray(items) ? items : []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        status: r.status,
+        device: r.device?.model ?? r.device?.identifier,
+      })),
+    };
+  });
+
 export const sumupSendToReader = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { amount: number; description?: string; currency?: string }) =>

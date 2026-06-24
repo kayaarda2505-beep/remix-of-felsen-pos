@@ -29,7 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProductModifierDialog, type ProductCustomization } from "@/components/ProductModifierDialog";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
 import { isDesktopApp } from "@/lib/printer-bridge";
-import { sumupSendToReader, sumupGetTransactionStatus } from "@/lib/sumup.functions";
+import { sumupSendToReader, sumupGetTransactionStatus, sumupListReaders } from "@/lib/sumup.functions";
 
 export const Route = createFileRoute("/pos")({
   head: () => ({ meta: [{ title: "Kasse — SAINTS POS" }] }),
@@ -774,6 +774,22 @@ function PaymentDialog({
   const [sumupMsg, setSumupMsg] = useState<string>("");
   const sendToReader = useServerFn(sumupSendToReader);
   const getTxStatus = useServerFn(sumupGetTransactionStatus);
+  const listReaders = useServerFn(sumupListReaders);
+
+  const diagnose = async () => {
+    setSumupMsg("Lade Reader …");
+    try {
+      const r = await listReaders({ data: undefined as any });
+      if (!r.readers.length) {
+        setSumupMsg(`Merchant ${r.merchantCode}: keine Reader gefunden. Reader zuerst in SumUp-App paaren.`);
+      } else {
+        const list = r.readers.map((x) => `${x.name ?? "?"} → ${x.id} [${x.status ?? "?"}]`).join("  |  ");
+        setSumupMsg(`Verfügbare Reader: ${list}`);
+      }
+    } catch (e: any) {
+      setSumupMsg(e?.message ?? "Diagnose fehlgeschlagen");
+    }
+  };
 
   const runSumUp = async () => {
     setSumupPhase("sending");
@@ -908,6 +924,13 @@ function PaymentDialog({
                 {sumupMsg}
               </div>
             )}
+            <button
+              type="button"
+              onClick={diagnose}
+              className="mt-1 w-full text-[11px] text-muted-foreground hover:text-accent underline"
+            >
+              Reader / Merchant prüfen
+            </button>
           </div>
         )}
 
