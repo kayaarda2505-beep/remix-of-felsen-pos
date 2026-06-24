@@ -227,6 +227,7 @@ function ServiceTablet() {
     else toast.success("Zwischenrechnung gedruckt");
   };
   const [showInterim, setShowInterim] = useState(false);
+  const [showPayChoice, setShowPayChoice] = useState(false);
 
 
   const sendOrder = useMutation({
