@@ -780,11 +780,15 @@ const CARD_METHODS = ["Visa", "Mastercard", "Maestro", "Amex", "TWINT", "Postcar
 function PaymentDialog({
   mode,
   total,
+  printers,
+  tableName,
   onClose,
   onConfirm,
 }: {
   mode: "cash" | "card";
   total: number;
+  printers: PrinterConfig[];
+  tableName: string;
   onClose: () => void;
   onConfirm: (method: string, received: number, diff: number, diffType: "tip" | "change") => void;
 }) {
