@@ -781,7 +781,10 @@ function PaymentDialog({
     try {
       const r = await listReaders({ data: undefined as any });
       if (!r.readers.length) {
-        setSumupMsg(`Merchant ${r.merchantCode}: keine Reader gefunden. Reader zuerst in SumUp-App paaren.`);
+        setSumupMsg(
+          `Merchant ${r.merchantCode}: keine Reader über API gefunden. ` +
+            `Der Reader muss im selben SumUp-Konto hängen wie der API-Key; die Seriennummer ist nicht die rdr_… Reader-ID.`,
+        );
       } else {
         const list = r.readers.map((x) => `${x.name ?? "?"} → ${x.id} [${x.status ?? "?"}]`).join("  |  ");
         setSumupMsg(`Verfügbare Reader: ${list}`);
@@ -929,7 +932,7 @@ function PaymentDialog({
               onClick={diagnose}
               className="mt-1 w-full text-[11px] text-muted-foreground hover:text-accent underline"
             >
-              Reader / Merchant prüfen
+              Reader-ID suchen
             </button>
           </div>
         )}
