@@ -78,7 +78,8 @@ export const sumupSendToReader = createServerFn({ method: "POST" })
       if (res.status === 404) {
         throw new Error(
           `Reader nicht gefunden (SUMUP_READER_ID=${readerId}). ` +
-            `Reader zuerst in der SumUp-App paaren, dann über „Reader / Merchant prüfen" die rdr_…-ID kopieren und als SUMUP_READER_ID setzen.`,
+            `Die Seriennummer ist nicht die Reader-ID; SumUp erwartet eine interne rdr_… ID. ` +
+            `Bitte in der Kasse „Reader-ID suchen" öffnen. Wenn dort 0 Reader erscheinen, sieht dieser API-Key den Reader nicht.`,
         );
       }
       throw new Error(`SumUp-Fehler (${res.status}): ${text.slice(0, 300)}`);
