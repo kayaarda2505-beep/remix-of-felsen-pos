@@ -771,6 +771,57 @@ function PaymentDialog({
   const [receivedStr, setReceivedStr] = useState<string>(total.toFixed(2));
   const [diffType, setDiffType] = useState<"tip" | "change">(mode === "card" ? "tip" : "change");
 
+  const [cardMethod, setCardMethod] = useState<string>(CARD_METHODS[0]);
+  const [receivedStr, setReceivedStr] = useState<string>(total.toFixed(2));
+  const [diffType, setDiffType] = useState<"tip" | "change">(mode === "card" ? "tip" : "change");
+  const [sumupPhase, setSumupPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
+  const [sumupMsg, setSumupMsg] = useState<string>("");
+  const sendToReader = useServerFn(sumupSendToReader);
+  const getTxStatus = useServerFn(sumupGetTransactionStatus);
+
+  const runSumUp = async () => {
+    setSumupPhase("sending");
+    setSumupMsg("Sende an Terminal …");
+    try {
+      const { clientTransactionId } = await sendToReader({
+        data: { amount: total, description: "Kasse" },
+      });
+      if (!clientTransactionId) {
+        // Kein Polling möglich — Mitarbeiter muss am Gerät bestätigen
+        setSumupPhase("waiting");
+        setSumupMsg("Am Terminal bezahlen …");
+        return;
+      }
+      setSumupPhase("waiting");
+      setSumupMsg("Am Terminal bezahlen …");
+      const started = Date.now();
+      while (Date.now() - started < 120_000) {
+        await new Promise((r) => setTimeout(r, 2500));
+        try {
+          const s = await getTxStatus({ data: { clientTransactionId } });
+          if (s.status === "SUCCESSFUL") {
+            setSumupPhase("ok");
+            setSumupMsg("Bezahlung erfolgreich");
+            setTimeout(() => onConfirm("SumUp Terminal", total, 0, "tip"), 500);
+            return;
+          }
+          if (s.status === "FAILED" || s.status === "CANCELLED") {
+            setSumupPhase("fail");
+            setSumupMsg(s.status === "CANCELLED" ? "Am Terminal abgebrochen" : "Zahlung fehlgeschlagen");
+            return;
+          }
+        } catch {
+          // weiter pollen
+        }
+      }
+      setSumupPhase("fail");
+      setSumupMsg("Zeitüberschreitung. Bitte am Terminal prüfen.");
+    } catch (e: any) {
+      setSumupPhase("fail");
+      setSumupMsg(e?.message ?? "Fehler beim Senden");
+    }
+  };
+
   const received = Number(receivedStr.replace(",", ".")) || 0;
   const diff = +(received - total).toFixed(2);
   const valid = received >= total;
