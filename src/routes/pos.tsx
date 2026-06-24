@@ -29,7 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProductModifierDialog, type ProductCustomization } from "@/components/ProductModifierDialog";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
 import { isDesktopApp } from "@/lib/printer-bridge";
-import { sumupSendToReader, sumupGetTransactionStatus } from "@/lib/sumup.functions";
+import { sumupSendToReader, sumupGetTransactionStatus, sumupListReaders } from "@/lib/sumup.functions";
 
 export const Route = createFileRoute("/pos")({
   head: () => ({ meta: [{ title: "Kasse — SAINTS POS" }] }),
