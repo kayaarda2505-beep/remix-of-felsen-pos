@@ -27,8 +27,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProducts, type Product } from "@/hooks/use-products";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductModifierDialog, type ProductCustomization } from "@/components/ProductModifierDialog";
-import { printBill, type ReceiptItem } from "@/lib/receipt";
-import { isDesktopApp } from "@/lib/printer-bridge";
+import { printBill, printCardReceipt, type ReceiptItem } from "@/lib/receipt";
+import { isDesktopApp, type PrinterConfig } from "@/lib/printer-bridge";
 import { sumupSendToReader, sumupGetTransactionStatus, sumupListReaders } from "@/lib/sumup.functions";
 
 export const Route = createFileRoute("/pos")({
@@ -306,6 +306,25 @@ function POS() {
         .update({ status: "paid", closed_at: new Date().toISOString(), total: totalAmt })
         .eq("id", order.id);
       if (uErr) throw uErr;
+      if (isDesktopApp()) {
+        const items: ReceiptItem[] = walkInCart.map((l) => ({
+          product_name: l.product.name,
+          qty: l.qty,
+          unit_price: l.product.price,
+          category: l.product.category,
+          modifiers: l.modifiers,
+          note: l.note ?? null,
+        }));
+        const err = await printBill({
+          printers,
+          tableName: "Theke",
+          items,
+          total: totalAmt,
+          tip,
+          paymentMethod: method,
+        });
+        if (err) toast.error(`Druck: ${err}`);
+      }
       await supabase.from("payment_requests").insert({
         order_id: order.id,
         table_name: "Theke",
@@ -727,6 +746,8 @@ function POS() {
           <PaymentDialog
             mode={payMode}
             total={total}
+            printers={printers}
+            tableName={isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : "Theke"}
             onClose={() => setPayMode(null)}
             onConfirm={(method, _received, _diff, _diffType) => {
               setPayMode(null);
@@ -759,11 +780,15 @@ const CARD_METHODS = ["Visa", "Mastercard", "Maestro", "Amex", "TWINT", "Postcar
 function PaymentDialog({
   mode,
   total,
+  printers,
+  tableName,
   onClose,
   onConfirm,
 }: {
   mode: "cash" | "card";
   total: number;
+  printers: PrinterConfig[];
+  tableName: string;
   onClose: () => void;
   onConfirm: (method: string, received: number, diff: number, diffType: "tip" | "change") => void;
 }) {
@@ -817,6 +842,25 @@ function PaymentDialog({
           if (s.status === "SUCCESSFUL") {
             setSumupPhase("ok");
             setSumupMsg("Bezahlung erfolgreich");
+            if (isDesktopApp()) {
+              const err = await printCardReceipt({
+                printers,
+                info: {
+                  transactionId: s.transactionId,
+                  transactionCode: s.transactionCode,
+                  cardType: s.cardType,
+                  cardLast4: s.cardLast4,
+                  authCode: s.authCode,
+                  entryMode: s.entryMode,
+                  amount: total,
+                  currency: s.currency,
+                  timestamp: s.timestamp,
+                  merchantCode: s.merchantCode,
+                  tableName,
+                },
+              });
+              if (err) toast.error(`Karten-Beleg: ${err}`);
+            }
             setTimeout(() => onConfirm("SumUp Terminal", total, 0, "tip"), 500);
             return;
           }

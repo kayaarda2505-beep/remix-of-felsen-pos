@@ -121,6 +121,14 @@ export const sumupGetTransactionStatus = createServerFn({ method: "POST" })
     return {
       status: status.toUpperCase() as "SUCCESSFUL" | "FAILED" | "CANCELLED" | "PENDING",
       transactionId: tx?.id as string | undefined,
-      cardType: tx?.card?.type as string | undefined,
+      transactionCode: (tx?.transaction_code ?? tx?.code) as string | undefined,
+      cardType: (tx?.card?.type ?? tx?.payment_type) as string | undefined,
+      cardLast4: (tx?.card?.last_4_digits ?? tx?.card?.last4) as string | undefined,
+      authCode: tx?.auth_code as string | undefined,
+      entryMode: tx?.entry_mode as string | undefined,
+      amount: (tx?.amount ?? tx?.total_amount?.value) as number | undefined,
+      currency: (tx?.currency ?? tx?.total_amount?.currency) as string | undefined,
+      timestamp: (tx?.timestamp ?? tx?.transaction_timestamp) as string | undefined,
+      merchantCode: (tx?.merchant_code ?? undefined) as string | undefined,
     };
   });
