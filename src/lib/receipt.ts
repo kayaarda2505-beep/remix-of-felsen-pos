@@ -268,7 +268,82 @@ export function buildBill(opts: {
 // High-Level Drucker
 // ---------------------------------------------------------------------------
 
-export async function printOrderToStations(opts: {
+// ---------------------------------------------------------------------------
+// Karten-Beleg (SumUp Terminal)
+// ---------------------------------------------------------------------------
+
+export type CardReceiptInfo = {
+  transactionId?: string;
+  transactionCode?: string;
+  cardType?: string;
+  cardLast4?: string;
+  authCode?: string;
+  entryMode?: string;
+  amount: number;
+  currency?: string;
+  timestamp?: string;
+  merchantCode?: string;
+  tableName?: string;
+};
+
+export function buildCardReceipt(info: CardReceiptInfo, s: ReceiptSettings): ReceiptPayload {
+  const cur = info.currency ?? s.currency;
+  const lines: ReceiptPayload["lines"] = [];
+
+  lines.push({ text: s.businessName, align: "center", bold: true, size: "double-h" });
+  lines.push({ text: "Fegergasse 4 · 4300 Zofingen", align: "center" });
+  lines.push({ text: "" });
+  lines.push({ text: "KARTEN-BELEG", align: "center", bold: true });
+  lines.push({ text: "Händlerbeleg", align: "center" });
+  lines.push({ separator: true });
+
+  lines.push({ cols: ["Datum", info.timestamp ? new Date(info.timestamp).toLocaleString("de-CH") : nowStr()] });
+  if (info.tableName) lines.push({ cols: ["Tisch", info.tableName] });
+  if (info.merchantCode) lines.push({ cols: ["Händler", info.merchantCode] });
+  if (info.transactionCode) lines.push({ cols: ["Beleg-Nr.", info.transactionCode] });
+  if (info.transactionId) lines.push({ cols: ["Trans-ID", info.transactionId.slice(-12)] });
+  if (info.cardType) lines.push({ cols: ["Karte", info.cardType] });
+  if (info.cardLast4) lines.push({ cols: ["PAN", `**** ${info.cardLast4}`] });
+  if (info.entryMode) lines.push({ cols: ["Eingabe", info.entryMode] });
+  if (info.authCode) lines.push({ cols: ["Auth-Code", info.authCode] });
+
+  lines.push({ separator: true });
+  lines.push({
+    cols: ["BETRAG", `${cur} ${fmt(info.amount)}`],
+    bold: true,
+    size: "double-h",
+  });
+  lines.push({ separator: true });
+  lines.push({ text: "Zahlung genehmigt", align: "center", bold: true });
+  lines.push({ text: "Vielen Dank!", align: "center" });
+  lines.push({ text: "" });
+  lines.push({ text: "Abgewickelt über SumUp", align: "center" });
+
+  return { lines, cut: true };
+}
+
+export async function printCardReceipt(opts: {
+  printers: PrinterConfig[];
+  info: CardReceiptInfo;
+}): Promise<string | null> {
+  let billPrinter: PrinterConfig | undefined =
+    opts.printers.find((p) => p.type === "rechnung") ??
+    opts.printers.find((p) => p.type === "bon") ??
+    opts.printers[0];
+
+  if (!billPrinter) {
+    const r = await getAgentPrinters();
+    const def = r.printers?.find((p) => p.isDefault) ?? r.printers?.[0];
+    if (!def) return "Kein Drucker konfiguriert";
+    billPrinter = { id: "agent-default", name: def.name, type: "bon", ip_address: null, port: null };
+  }
+
+  const settings = await loadReceiptSettings();
+  const r = await printReceipt(billPrinter, buildCardReceipt(opts.info, settings));
+  return r.ok ? null : r.error ?? "Druckfehler";
+}
+
+
   printers: PrinterConfig[];
   tableName: string;
   items: ReceiptItem[];
