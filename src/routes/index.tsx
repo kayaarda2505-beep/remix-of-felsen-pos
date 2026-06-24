@@ -1074,7 +1074,11 @@ function PayChoiceDialog({
         {mode === "choose" && (
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={onPaid}
+              onClick={() => {
+                setGivenStr(total.toFixed(2));
+                setTipStr("0");
+                setMode("cash");
+              }}
               className="glass rounded-2xl py-6 flex flex-col items-center gap-2 hover:border-accent/40 transition-colors"
             >
               <Banknote className="w-6 h-6" />
