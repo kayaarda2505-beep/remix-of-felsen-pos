@@ -1097,6 +1097,102 @@ function PayChoiceDialog({
           </div>
         )}
 
+        {mode === "cash" && (() => {
+          const given = Number(givenStr.replace(",", ".")) || 0;
+          const tip = Math.max(0, Number(tipStr.replace(",", ".")) || 0);
+          const diff = given - total;
+          const change = Math.max(0, diff - tip);
+          const quick = [
+            Math.ceil(total),
+            Math.ceil(total / 10) * 10,
+            Math.ceil(total / 20) * 20,
+            Math.ceil(total / 50) * 50,
+            Math.ceil(total / 100) * 100,
+          ].filter((v, i, arr) => v >= total && arr.indexOf(v) === i);
+          return (
+            <div className="space-y-4">
+              <div>
+                <label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Gegeben (CHF)
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.05"
+                  min={total}
+                  value={givenStr}
+                  onChange={(e) => setGivenStr(e.target.value)}
+                  className="w-full mt-1 bg-white/5 rounded-xl px-4 py-3 text-2xl font-semibold tabular-nums outline-none focus:ring-2 ring-accent/40"
+                  autoFocus
+                />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {quick.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setGivenStr(q.toFixed(2))}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs tabular-nums"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Trinkgeld
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.05"
+                    min={0}
+                    max={diff > 0 ? diff : 0}
+                    value={tipStr}
+                    onChange={(e) => setTipStr(e.target.value)}
+                    className="w-full mt-1 bg-white/5 rounded-xl px-3 py-2 text-lg tabular-nums outline-none focus:ring-2 ring-accent/40"
+                  />
+                  {diff > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setTipStr(diff.toFixed(2))}
+                      className="text-[10px] text-accent mt-1 hover:underline"
+                    >
+                      Rest als Trinkgeld
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Rückgeld
+                  </label>
+                  <div className="mt-1 px-3 py-2 rounded-xl bg-white/5 text-lg tabular-nums font-semibold">
+                    CHF {change.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                disabled={given < total}
+                onClick={onPaid}
+                className="w-full py-3 rounded-xl bg-success/20 text-success font-semibold hover:bg-success/30 disabled:opacity-40"
+              >
+                Bestätigen
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("choose")}
+                className="w-full py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                ← Zurück
+              </button>
+            </div>
+          );
+        })()}
+
+
         {mode === "card" && (
           <div className="space-y-3">
             <button
