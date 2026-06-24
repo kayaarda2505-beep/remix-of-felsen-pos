@@ -924,6 +924,13 @@ function PaymentDialog({
                 {sumupMsg}
               </div>
             )}
+            <button
+              type="button"
+              onClick={diagnose}
+              className="mt-1 w-full text-[11px] text-muted-foreground hover:text-accent underline"
+            >
+              Reader / Merchant prüfen
+            </button>
           </div>
         )}
 
