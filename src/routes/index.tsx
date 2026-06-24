@@ -167,21 +167,30 @@ function ServiceTablet() {
   });
 
 
+  const [pendingReceipt, setPendingReceipt] = useState<{
+    tableName: string;
+    items: ReceiptItem[];
+    total: number;
+  } | null>(null);
+
   const payTab = useMutation({
     mutationFn: async () => {
       if (!activeTableOrder || !selectedTable) throw new Error("Keine offene Rechnung");
+      const snapshot = {
+        tableName: selectedTable.name,
+        items: tabItems.map((it) => ({
+          product_name: it.product_name,
+          qty: it.qty,
+          unit_price: Number(it.unit_price),
+          modifiers: it.modifiers,
+        })) as ReceiptItem[],
+        total: Number(activeTableOrder.total),
+      };
       // Rechnung drucken (vor dem Schliessen, damit tabItems noch da sind)
       if (isDesktopApp()) {
         const err = await printBill({
           printers,
-          tableName: selectedTable.name,
-          items: tabItems.map((it) => ({
-            product_name: it.product_name,
-            qty: it.qty,
-            unit_price: Number(it.unit_price),
-            modifiers: it.modifiers,
-          })),
-          total: Number(activeTableOrder.total),
+          ...snapshot,
         });
         if (err) toast.error(`Druck: ${err}`);
       }
@@ -195,12 +204,14 @@ function ServiceTablet() {
         .update({ status: "free", opened_at: null, guests: null })
         .eq("id", selectedTable.id);
       if (tErr) throw tErr;
+      return snapshot;
     },
-    onSuccess: () => {
+    onSuccess: (snapshot) => {
       toast.success("Tisch abgeschlossen");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dining_tables"] });
       reset();
+      if (isDesktopApp()) setPendingReceipt(snapshot);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
@@ -900,6 +911,57 @@ function ServiceTablet() {
               payTab.mutate();
             }}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {pendingReceipt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+            onClick={() => setPendingReceipt(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-strong rounded-3xl p-6 w-full max-w-sm text-center"
+            >
+              <Receipt className="w-10 h-10 mx-auto mb-3 text-accent" />
+              <h2 className="text-lg font-semibold mb-1">Kundenquittung drucken?</h2>
+              <p className="text-sm text-muted-foreground mb-5">
+                Tisch {pendingReceipt.tableName} · CHF {pendingReceipt.total.toFixed(2)}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setPendingReceipt(null)}
+                  className="glass rounded-2xl py-3 font-semibold"
+                >
+                  Nein
+                </button>
+                <button
+                  onClick={async () => {
+                    const data = pendingReceipt;
+                    setPendingReceipt(null);
+                    const err = await printBill({
+                      printers,
+                      tableName: data.tableName,
+                      items: data.items,
+                      total: data.total,
+                    });
+                    if (err) toast.error(`Druck: ${err}`);
+                    else toast.success("Kundenquittung gedruckt");
+                  }}
+                  className="rounded-2xl py-3 font-semibold bg-accent text-accent-foreground"
+                >
+                  Ja, drucken
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
