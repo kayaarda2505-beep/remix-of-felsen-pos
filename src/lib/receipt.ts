@@ -343,7 +343,7 @@ export async function printCardReceipt(opts: {
   return r.ok ? null : r.error ?? "Druckfehler";
 }
 
-
+export async function printOrderToStations(opts: {
   printers: PrinterConfig[];
   tableName: string;
   items: ReceiptItem[];
