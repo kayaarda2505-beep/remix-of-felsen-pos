@@ -987,70 +987,75 @@ function PaymentDialog({
             <span className="text-xl font-semibold tabular-nums">CHF {total.toFixed(2)}</span>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Erhalten (CHF)</label>
-            <input
-              type="number"
-              step="0.05"
-              min={0}
-              value={receivedStr}
-              onChange={(e) => setReceivedStr(e.target.value)}
-              className="glass rounded-xl px-3 py-3 text-lg w-full outline-none bg-transparent tabular-nums font-semibold"
-            />
-            <div className="flex flex-wrap gap-2 pt-1">
-              {quick.map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setReceivedStr(v.toFixed(2))}
-                  className="rounded-lg px-2.5 py-1.5 text-xs glass hover:border-accent/40 tabular-nums"
-                >
-                  CHF {v.toFixed(2)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="glass rounded-xl p-3 space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Differenz</span>
-              <span className={`text-lg font-semibold tabular-nums ${diff < 0 ? "text-destructive" : ""}`}>
-                CHF {diff.toFixed(2)}
-              </span>
-            </div>
-            {diff > 0 && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDiffType("tip")}
-                  className={`flex-1 rounded-lg py-2 text-xs border-2 transition-all ${
-                    diffType === "tip" ? "border-success bg-success/10 text-success" : "border-transparent glass text-muted-foreground"
-                  }`}
-                >
-                  Trinkgeld
-                </button>
-                <button
-                  onClick={() => setDiffType("change")}
-                  className={`flex-1 rounded-lg py-2 text-xs border-2 transition-all ${
-                    diffType === "change" ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground"
-                  }`}
-                >
-                  Rückgeld
-                </button>
+          {mode === "cash" && (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-xs uppercase tracking-wider text-muted-foreground">Erhalten (CHF)</label>
+                <input
+                  type="number"
+                  step="0.05"
+                  min={0}
+                  value={receivedStr}
+                  onChange={(e) => setReceivedStr(e.target.value)}
+                  className="glass rounded-xl px-3 py-3 text-lg w-full outline-none bg-transparent tabular-nums font-semibold"
+                />
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {quick.map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setReceivedStr(v.toFixed(2))}
+                      className="rounded-lg px-2.5 py-1.5 text-xs glass hover:border-accent/40 tabular-nums"
+                    >
+                      CHF {v.toFixed(2)}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
-            {diff === 0 && <div className="text-xs text-muted-foreground">Passend bezahlt</div>}
-            {diff < 0 && <div className="text-xs text-destructive">Betrag zu niedrig</div>}
-          </div>
 
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            disabled={!valid}
-            onClick={() => onConfirm(method, received, diff, diffType)}
-            className="w-full rounded-2xl py-3.5 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] disabled:opacity-40 flex items-center justify-center gap-2"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Bestätigen
-          </motion.button>
+              <div className="glass rounded-xl p-3 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Differenz</span>
+                  <span className={`text-lg font-semibold tabular-nums ${diff < 0 ? "text-destructive" : ""}`}>
+                    CHF {diff.toFixed(2)}
+                  </span>
+                </div>
+                {diff > 0 && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setDiffType("tip")}
+                      className={`flex-1 rounded-lg py-2 text-xs border-2 transition-all ${
+                        diffType === "tip" ? "border-success bg-success/10 text-success" : "border-transparent glass text-muted-foreground"
+                      }`}
+                    >
+                      Trinkgeld
+                    </button>
+                    <button
+                      onClick={() => setDiffType("change")}
+                      className={`flex-1 rounded-lg py-2 text-xs border-2 transition-all ${
+                        diffType === "change" ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground"
+                      }`}
+                    >
+                      Rückgeld
+                    </button>
+                  </div>
+                )}
+                {diff === 0 && <div className="text-xs text-muted-foreground">Passend bezahlt</div>}
+                {diff < 0 && <div className="text-xs text-destructive">Betrag zu niedrig</div>}
+              </div>
+
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                disabled={!valid}
+                onClick={() => onConfirm(method, received, diff, diffType)}
+                className="w-full rounded-2xl py-3.5 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Bestätigen
+              </motion.button>
+            </>
+          )}
         </div>
+
       </motion.div>
     </motion.div>
   );
