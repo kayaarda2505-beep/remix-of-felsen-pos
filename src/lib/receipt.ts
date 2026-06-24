@@ -334,7 +334,7 @@ export async function printCardReceipt(opts: {
   if (!billPrinter) {
     const r = await getAgentPrinters();
     const def = r.printers?.find((p) => p.isDefault) ?? r.printers?.[0];
-    if (!def) return "Kein Drucker konfiguriert";
+    if (!def) return null; // kein Drucker → still überspringen, kein Fehler
     billPrinter = { id: "agent-default", name: def.name, type: "bon", ip_address: null, port: null };
   }
 
@@ -400,7 +400,7 @@ export async function printBill(opts: {
     const r = await getAgentPrinters();
     const def = r.printers?.find((p) => p.isDefault) ?? r.printers?.[0];
     if (!def) {
-      return "Kein Drucker konfiguriert – bitte unter Einstellungen › Drucker einen Drucker hinzufügen";
+      return null; // kein Drucker → stillschweigend überspringen
     }
     billPrinter = { id: "agent-default", name: def.name, type: "bon", ip_address: null, port: null };
   }
