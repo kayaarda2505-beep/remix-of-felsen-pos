@@ -306,6 +306,25 @@ function POS() {
         .update({ status: "paid", closed_at: new Date().toISOString(), total: totalAmt })
         .eq("id", order.id);
       if (uErr) throw uErr;
+      if (isDesktopApp()) {
+        const items: ReceiptItem[] = walkInCart.map((l) => ({
+          product_name: l.product.name,
+          qty: l.qty,
+          unit_price: l.product.price,
+          category: l.product.category,
+          modifiers: l.modifiers,
+          note: l.note ?? null,
+        }));
+        const err = await printBill({
+          printers,
+          tableName: "Theke",
+          items,
+          total: totalAmt,
+          tip,
+          paymentMethod: method,
+        });
+        if (err) toast.error(`Druck: ${err}`);
+      }
       await supabase.from("payment_requests").insert({
         order_id: order.id,
         table_name: "Theke",
