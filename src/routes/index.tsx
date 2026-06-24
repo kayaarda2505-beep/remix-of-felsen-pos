@@ -167,21 +167,30 @@ function ServiceTablet() {
   });
 
 
+  const [pendingReceipt, setPendingReceipt] = useState<{
+    tableName: string;
+    items: ReceiptItem[];
+    total: number;
+  } | null>(null);
+
   const payTab = useMutation({
     mutationFn: async () => {
       if (!activeTableOrder || !selectedTable) throw new Error("Keine offene Rechnung");
+      const snapshot = {
+        tableName: selectedTable.name,
+        items: tabItems.map((it) => ({
+          product_name: it.product_name,
+          qty: it.qty,
+          unit_price: Number(it.unit_price),
+          modifiers: it.modifiers,
+        })) as ReceiptItem[],
+        total: Number(activeTableOrder.total),
+      };
       // Rechnung drucken (vor dem Schliessen, damit tabItems noch da sind)
       if (isDesktopApp()) {
         const err = await printBill({
           printers,
-          tableName: selectedTable.name,
-          items: tabItems.map((it) => ({
-            product_name: it.product_name,
-            qty: it.qty,
-            unit_price: Number(it.unit_price),
-            modifiers: it.modifiers,
-          })),
-          total: Number(activeTableOrder.total),
+          ...snapshot,
         });
         if (err) toast.error(`Druck: ${err}`);
       }
@@ -195,12 +204,14 @@ function ServiceTablet() {
         .update({ status: "free", opened_at: null, guests: null })
         .eq("id", selectedTable.id);
       if (tErr) throw tErr;
+      return snapshot;
     },
-    onSuccess: () => {
+    onSuccess: (snapshot) => {
       toast.success("Tisch abgeschlossen");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dining_tables"] });
       reset();
+      if (isDesktopApp()) setPendingReceipt(snapshot);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
