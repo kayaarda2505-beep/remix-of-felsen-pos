@@ -35,7 +35,7 @@ import {
 import { useProducts, type Product } from "@/hooks/use-products";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductModifierDialog, type ProductCustomization } from "@/components/ProductModifierDialog";
-import { printOrderToStations, printBill, type ReceiptItem } from "@/lib/receipt";
+import { printOrderToStations, printBill, printCardReceipt, type ReceiptItem } from "@/lib/receipt";
 import { isDesktopApp } from "@/lib/printer-bridge";
 
 type Area = "indoor" | "outdoor" | "bar";
