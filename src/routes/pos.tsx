@@ -878,6 +878,36 @@ function PaymentDialog({
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={runSumUp}
+              disabled={sumupPhase === "sending" || sumupPhase === "waiting"}
+              className="mt-3 w-full rounded-xl py-3 bg-accent/15 hover:bg-accent/25 border border-accent/40 text-accent font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {sumupPhase === "sending" || sumupPhase === "waiting" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Smartphone className="w-4 h-4" />
+              )}
+              {sumupPhase === "idle" && `An SumUp-Terminal senden · CHF ${total.toFixed(2)}`}
+              {sumupPhase === "sending" && "Sende …"}
+              {sumupPhase === "waiting" && "Warte auf Terminal …"}
+              {sumupPhase === "ok" && "Bezahlt ✓"}
+              {sumupPhase === "fail" && "Erneut senden"}
+            </button>
+            {sumupMsg && (
+              <div
+                className={`text-xs mt-1.5 text-center ${
+                  sumupPhase === "fail"
+                    ? "text-destructive"
+                    : sumupPhase === "ok"
+                      ? "text-success"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {sumupMsg}
+              </div>
+            )}
           </div>
         )}
 
