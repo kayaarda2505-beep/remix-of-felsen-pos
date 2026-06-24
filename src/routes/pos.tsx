@@ -746,6 +746,8 @@ function POS() {
           <PaymentDialog
             mode={payMode}
             total={total}
+            printers={printers}
+            tableName={isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : "Theke"}
             onClose={() => setPayMode(null)}
             onConfirm={(method, _received, _diff, _diffType) => {
               setPayMode(null);
