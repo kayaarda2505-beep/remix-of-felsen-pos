@@ -18,8 +18,10 @@ import {
   X,
   Maximize2,
   Minimize2,
+  Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/hooks/use-auth";
 import { useProducts, type Product } from "@/hooks/use-products";
@@ -27,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProductModifierDialog, type ProductCustomization } from "@/components/ProductModifierDialog";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
 import { isDesktopApp } from "@/lib/printer-bridge";
+import { sumupSendToReader, sumupGetTransactionStatus } from "@/lib/sumup.functions";
 
 export const Route = createFileRoute("/pos")({
   head: () => ({ meta: [{ title: "Kasse — SAINTS POS" }] }),
@@ -767,6 +770,53 @@ function PaymentDialog({
   const [cardMethod, setCardMethod] = useState<string>(CARD_METHODS[0]);
   const [receivedStr, setReceivedStr] = useState<string>(total.toFixed(2));
   const [diffType, setDiffType] = useState<"tip" | "change">(mode === "card" ? "tip" : "change");
+  const [sumupPhase, setSumupPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
+  const [sumupMsg, setSumupMsg] = useState<string>("");
+  const sendToReader = useServerFn(sumupSendToReader);
+  const getTxStatus = useServerFn(sumupGetTransactionStatus);
+
+  const runSumUp = async () => {
+    setSumupPhase("sending");
+    setSumupMsg("Sende an Terminal …");
+    try {
+      const { clientTransactionId } = await sendToReader({
+        data: { amount: total, description: "Kasse" },
+      });
+      if (!clientTransactionId) {
+        // Kein Polling möglich — Mitarbeiter muss am Gerät bestätigen
+        setSumupPhase("waiting");
+        setSumupMsg("Am Terminal bezahlen …");
+        return;
+      }
+      setSumupPhase("waiting");
+      setSumupMsg("Am Terminal bezahlen …");
+      const started = Date.now();
+      while (Date.now() - started < 120_000) {
+        await new Promise((r) => setTimeout(r, 2500));
+        try {
+          const s = await getTxStatus({ data: { clientTransactionId } });
+          if (s.status === "SUCCESSFUL") {
+            setSumupPhase("ok");
+            setSumupMsg("Bezahlung erfolgreich");
+            setTimeout(() => onConfirm("SumUp Terminal", total, 0, "tip"), 500);
+            return;
+          }
+          if (s.status === "FAILED" || s.status === "CANCELLED") {
+            setSumupPhase("fail");
+            setSumupMsg(s.status === "CANCELLED" ? "Am Terminal abgebrochen" : "Zahlung fehlgeschlagen");
+            return;
+          }
+        } catch {
+          // weiter pollen
+        }
+      }
+      setSumupPhase("fail");
+      setSumupMsg("Zeitüberschreitung. Bitte am Terminal prüfen.");
+    } catch (e: any) {
+      setSumupPhase("fail");
+      setSumupMsg(e?.message ?? "Fehler beim Senden");
+    }
+  };
 
   const received = Number(receivedStr.replace(",", ".")) || 0;
   const diff = +(received - total).toFixed(2);
@@ -828,6 +878,36 @@ function PaymentDialog({
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={runSumUp}
+              disabled={sumupPhase === "sending" || sumupPhase === "waiting"}
+              className="mt-3 w-full rounded-xl py-3 bg-accent/15 hover:bg-accent/25 border border-accent/40 text-accent font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {sumupPhase === "sending" || sumupPhase === "waiting" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Smartphone className="w-4 h-4" />
+              )}
+              {sumupPhase === "idle" && `An SumUp-Terminal senden · CHF ${total.toFixed(2)}`}
+              {sumupPhase === "sending" && "Sende …"}
+              {sumupPhase === "waiting" && "Warte auf Terminal …"}
+              {sumupPhase === "ok" && "Bezahlt ✓"}
+              {sumupPhase === "fail" && "Erneut senden"}
+            </button>
+            {sumupMsg && (
+              <div
+                className={`text-xs mt-1.5 text-center ${
+                  sumupPhase === "fail"
+                    ? "text-destructive"
+                    : sumupPhase === "ok"
+                      ? "text-success"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {sumupMsg}
+              </div>
+            )}
           </div>
         )}
 
