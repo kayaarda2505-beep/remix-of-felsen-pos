@@ -842,6 +842,25 @@ function PaymentDialog({
           if (s.status === "SUCCESSFUL") {
             setSumupPhase("ok");
             setSumupMsg("Bezahlung erfolgreich");
+            if (isDesktopApp()) {
+              const err = await printCardReceipt({
+                printers,
+                info: {
+                  transactionId: s.transactionId,
+                  transactionCode: s.transactionCode,
+                  cardType: s.cardType,
+                  cardLast4: s.cardLast4,
+                  authCode: s.authCode,
+                  entryMode: s.entryMode,
+                  amount: total,
+                  currency: s.currency,
+                  timestamp: s.timestamp,
+                  merchantCode: s.merchantCode,
+                  tableName,
+                },
+              });
+              if (err) toast.error(`Karten-Beleg: ${err}`);
+            }
             setTimeout(() => onConfirm("SumUp Terminal", total, 0, "tip"), 500);
             return;
           }
