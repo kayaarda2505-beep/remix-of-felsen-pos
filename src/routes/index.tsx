@@ -913,6 +913,57 @@ function ServiceTablet() {
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {pendingReceipt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+            onClick={() => setPendingReceipt(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-strong rounded-3xl p-6 w-full max-w-sm text-center"
+            >
+              <Receipt className="w-10 h-10 mx-auto mb-3 text-accent" />
+              <h2 className="text-lg font-semibold mb-1">Kundenquittung drucken?</h2>
+              <p className="text-sm text-muted-foreground mb-5">
+                Tisch {pendingReceipt.tableName} · CHF {pendingReceipt.total.toFixed(2)}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setPendingReceipt(null)}
+                  className="glass rounded-2xl py-3 font-semibold"
+                >
+                  Nein
+                </button>
+                <button
+                  onClick={async () => {
+                    const data = pendingReceipt;
+                    setPendingReceipt(null);
+                    const err = await printBill({
+                      printers,
+                      tableName: data.tableName,
+                      items: data.items,
+                      total: data.total,
+                    });
+                    if (err) toast.error(`Druck: ${err}`);
+                    else toast.success("Kundenquittung gedruckt");
+                  }}
+                  className="rounded-2xl py-3 font-semibold bg-accent text-accent-foreground"
+                >
+                  Ja, drucken
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
