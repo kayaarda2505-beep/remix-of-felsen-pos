@@ -75,6 +75,12 @@ export const sumupSendToReader = createServerFn({ method: "POST" })
 
     const text = await res.text();
     if (!res.ok) {
+      if (res.status === 404) {
+        throw new Error(
+          `Reader nicht gefunden (SUMUP_READER_ID=${readerId}). ` +
+            `Reader zuerst in der SumUp-App paaren, dann über „Reader / Merchant prüfen" die rdr_…-ID kopieren und als SUMUP_READER_ID setzen.`,
+        );
+      }
       throw new Error(`SumUp-Fehler (${res.status}): ${text.slice(0, 300)}`);
     }
     let json: any = {};
