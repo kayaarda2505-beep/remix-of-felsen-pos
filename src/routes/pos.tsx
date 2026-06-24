@@ -925,22 +925,7 @@ function PaymentDialog({
 
         {mode === "card" && (
           <div className="space-y-1.5 mb-4">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Zahlungsart</label>
-            <div className="flex flex-wrap gap-2">
-              {CARD_METHODS.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setCardMethod(m)}
-                  className={`rounded-xl px-3 py-2 text-xs border-2 transition-all ${
-                    cardMethod === m
-                      ? "border-accent bg-accent/10 text-foreground"
-                      : "border-transparent glass text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
+
 
             <button
               onClick={runSumUp}
