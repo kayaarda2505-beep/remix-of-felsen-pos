@@ -645,7 +645,7 @@ function ServiceTablet() {
                   <Receipt className="w-4 h-4" /> Zwischenrechnung
                 </button>
                 <button
-                  onClick={() => payTab.mutate()}
+                  onClick={() => setShowPayChoice(true)}
                   disabled={payTab.isPending || tabItems.length === 0}
                   className="rounded-2xl py-4 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold tap-highlight-none active:scale-95 transition-transform flex items-center justify-center gap-2 shadow-[var(--shadow-gold)] disabled:opacity-60"
                 >
