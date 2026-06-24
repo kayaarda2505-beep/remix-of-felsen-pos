@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProducts, type Product } from "@/hooks/use-products";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductModifierDialog, type ProductCustomization } from "@/components/ProductModifierDialog";
-import { printBill, type ReceiptItem } from "@/lib/receipt";
+import { printBill, printCardReceipt, type ReceiptItem } from "@/lib/receipt";
 import { isDesktopApp } from "@/lib/printer-bridge";
 import { sumupSendToReader, sumupGetTransactionStatus, sumupListReaders } from "@/lib/sumup.functions";
 
