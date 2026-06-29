@@ -247,6 +247,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     });
   }, [playSongAlert]);
 
+  useEffect(() => { installAudioUnlock(); }, []);
+
   useEffect(() => {
     void refreshOpenSongCount();
     const interval = window.setInterval(() => {
