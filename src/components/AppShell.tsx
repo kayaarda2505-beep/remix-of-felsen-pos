@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
 import { printBill } from "@/lib/receipt";
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
+import { UrgentAlertOverlay, pushUrgentAlert } from "@/components/UrgentAlert";
 
 async function autoPrintServiceCall(r: any) {
   if (!isDesktopApp()) return;
