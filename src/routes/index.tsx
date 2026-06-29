@@ -826,7 +826,7 @@ function ServiceTablet() {
             animate={{ y: 0 }}
             exit={{ y: 100 }}
             transition={{ type: "spring", damping: 25, stiffness: 250 }}
-            className="absolute bottom-0 inset-x-0 z-40"
+            className="absolute bottom-16 md:bottom-0 inset-x-0 z-40"
           >
             <CartSheet
               cart={cart}
