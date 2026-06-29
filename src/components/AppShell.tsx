@@ -371,20 +371,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             return;
           }
 
-          // Klassische Bezahl-Anfrage (Bar / EC) → bisheriges Verhalten
+          // Klassische Bezahl-Anfrage (Bar / EC) → persistent Uber-style alert
           const methodTxt =
             r.method === "cash" ? "Bar" : r.method === "card_terminal" ? "EC-Gerät" : "Online";
           beep();
-          toast(`💰 Tisch ${r.table_name ?? "?"} möchte bezahlen`, {
+          pushUrgentAlert({
+            id: `payment-${r.id}`,
+            kind: "payment",
+            title: `Tisch ${r.table_name ?? "?"} möchte bezahlen`,
             description: `${methodTxt} · CHF ${Number(r.amount ?? 0).toFixed(2)}`,
-            position: "bottom-right",
-            duration: 12000,
-            action: {
-              label: "Öffnen",
-              onClick: () => {
-                window.location.href = "/payments";
-              },
-            },
+            href: "/payments",
           });
         },
       )
