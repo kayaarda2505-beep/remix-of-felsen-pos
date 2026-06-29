@@ -169,36 +169,74 @@ export function OnScreenKeyboard() {
     [mode],
   );
 
-  // Push page content up so the keyboard sits BELOW the focused input
-  // instead of covering it. We add padding to <body> equal to keyboard height
-  // and scroll the focused element into the remaining viewport.
+  // Make sure the focused input is visible above the keyboard.
+  // Works for normal pages (body padding + scroll) and for modals/dialogs
+  // (shift the dialog container up by the overlap amount).
   useEffect(() => {
     const active = target && !hidden;
     if (!active) {
       document.body.style.paddingBottom = "";
+      document.querySelectorAll<HTMLElement>("[data-osk-shifted]").forEach((n) => {
+        n.style.transform = "";
+        n.removeAttribute("data-osk-shifted");
+      });
       return;
     }
-    const measure = () => {
+
+    const findDialog = (el: Element | null): HTMLElement | null => {
+      let cur: Element | null = el;
+      while (cur && cur !== document.body) {
+        if (cur instanceof HTMLElement) {
+          const pos = getComputedStyle(cur).position;
+          if (cur.getAttribute("role") === "dialog" || pos === "fixed") return cur;
+        }
+        cur = cur.parentElement;
+      }
+      return null;
+    };
+
+    const adjust = () => {
       const h = rootRef.current?.offsetHeight ?? 0;
-      document.body.style.paddingBottom = `${h}px`;
       const el = targetRef.current;
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const visibleBottom = window.innerHeight - h - 12;
-        if (rect.bottom > visibleBottom) {
-          window.scrollBy({ top: rect.bottom - visibleBottom, behavior: "smooth" });
+      if (!el) return;
+      const dialog = findDialog(el);
+      const rect = el.getBoundingClientRect();
+      const visibleBottom = window.innerHeight - h - 12;
+      const overlap = rect.bottom - visibleBottom;
+
+      if (dialog) {
+        // shift the whole modal up
+        document.body.style.paddingBottom = "";
+        const prev = parseFloat(dialog.dataset.oskShift || "0");
+        const next = Math.max(0, prev + Math.max(0, overlap));
+        if (next > 0) {
+          dialog.style.transform = `translateY(-${next}px)`;
+          dialog.dataset.oskShift = String(next);
+          dialog.setAttribute("data-osk-shifted", "");
+        }
+      } else {
+        document.body.style.paddingBottom = `${h}px`;
+        if (overlap > 0) {
+          el.scrollIntoView({ block: "center", behavior: "smooth" });
         }
       }
     };
-    const raf = requestAnimationFrame(measure);
-    const ro = rootRef.current ? new ResizeObserver(measure) : null;
+
+    const raf = requestAnimationFrame(adjust);
+    const ro = rootRef.current ? new ResizeObserver(adjust) : null;
     if (rootRef.current && ro) ro.observe(rootRef.current);
     return () => {
       cancelAnimationFrame(raf);
       ro?.disconnect();
       document.body.style.paddingBottom = "";
+      document.querySelectorAll<HTMLElement>("[data-osk-shifted]").forEach((n) => {
+        n.style.transform = "";
+        delete n.dataset.oskShift;
+        n.removeAttribute("data-osk-shifted");
+      });
     };
   }, [target, hidden, mode, layoutName]);
+
 
 
   if (!target || hidden) {
