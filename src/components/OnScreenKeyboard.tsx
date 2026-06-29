@@ -183,6 +183,7 @@ export function OnScreenKeyboard() {
 
   return (
     <div
+      ref={rootRef}
       data-osk-root
       onMouseDown={(e) => e.preventDefault()}
       className="osk-root fixed inset-x-0 bottom-0 z-[60] border-t border-white/10 bg-neutral-900/95 backdrop-blur-xl p-2 shadow-2xl"
