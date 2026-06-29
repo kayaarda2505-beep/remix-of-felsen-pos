@@ -120,18 +120,18 @@ export function AdminAuthScreen() {
             )}
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setMode(mode === "login" ? "signup" : "login");
-              setError(null);
-            }}
-            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
-          >
-            {mode === "login"
-              ? "Noch kein Admin-Konto? Jetzt einrichten →"
-              : "← Zurück zur Anmeldung"}
-          </button>
+          {mode === "signup" && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode("login");
+                setError(null);
+              }}
+              className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
+            >
+              ← Zurück zur Anmeldung
+            </button>
+          )}
         </form>
 
         <p className="text-[10px] text-muted-foreground text-center mt-6 tracking-wider uppercase">
