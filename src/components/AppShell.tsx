@@ -371,7 +371,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             return;
           }
 
-          // Klassische Bezahl-Anfrage (Bar / EC) → persistent Uber-style alert
+          // Klassische Bezahl-Anfrage (Bar / EC) → persistent Uber-style alert (nur Service)
+          if (operatorRoleRef.current !== "service") return;
           const methodTxt =
             r.method === "cash" ? "Bar" : r.method === "card_terminal" ? "EC-Gerät" : "Online";
           beep();
