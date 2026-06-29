@@ -180,7 +180,6 @@ export function OnScreenKeyboard() {
     }
     const measure = () => {
       const h = rootRef.current?.offsetHeight ?? 0;
-      setOskHeight(h);
       document.body.style.paddingBottom = `${h}px`;
       const el = targetRef.current;
       if (el) {
