@@ -390,8 +390,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       supabase.removeChannel(ch);
     };
   }, []);
-
   const operatorRole = operator?.role;
+  const operatorRoleRef = useRef<string | undefined>(operatorRole);
+  useEffect(() => { operatorRoleRef.current = operatorRole; }, [operatorRole]);
   const handleServiceCall = useCallback((r: any) => {
     if (!r?.id || handledServiceCallIds.current.has(r.id)) return;
     handledServiceCallIds.current.add(r.id);
