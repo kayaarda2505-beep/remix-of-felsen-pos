@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
 import { printBill } from "@/lib/receipt";
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
+import { UrgentAlertOverlay, pushUrgentAlert } from "@/components/UrgentAlert";
 
 async function autoPrintServiceCall(r: any) {
   if (!isDesktopApp()) return;
@@ -370,20 +371,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             return;
           }
 
-          // Klassische Bezahl-Anfrage (Bar / EC) → bisheriges Verhalten
+          // Klassische Bezahl-Anfrage (Bar / EC) → persistent Uber-style alert
           const methodTxt =
             r.method === "cash" ? "Bar" : r.method === "card_terminal" ? "EC-Gerät" : "Online";
           beep();
-          toast(`💰 Tisch ${r.table_name ?? "?"} möchte bezahlen`, {
+          pushUrgentAlert({
+            id: `payment-${r.id}`,
+            kind: "payment",
+            title: `Tisch ${r.table_name ?? "?"} möchte bezahlen`,
             description: `${methodTxt} · CHF ${Number(r.amount ?? 0).toFixed(2)}`,
-            position: "bottom-right",
-            duration: 12000,
-            action: {
-              label: "Öffnen",
-              onClick: () => {
-                window.location.href = "/payments";
-              },
-            },
+            href: "/payments",
           });
         },
       )
@@ -397,10 +394,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!r?.id || handledServiceCallIds.current.has(r.id)) return;
     handledServiceCallIds.current.add(r.id);
     playServiceDing();
-    toast(`🔔 Tisch ${r.table_name ?? "?"} ruft den Service`, {
+    pushUrgentAlert({
+      id: `service-${r.id}`,
+      kind: "service",
+      title: `Tisch ${r.table_name ?? "?"} ruft den Service`,
       description: r.note ? `„${r.note}"` : "Bitte zum Tisch kommen",
-      position: "bottom-right",
-      duration: 15000,
     });
     void autoPrintServiceCall(r);
   }, [playServiceDing]);
@@ -452,6 +450,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <SpotifyBarSpeakerProvider>
+    <UrgentAlertOverlay />
     <div className="h-screen flex w-full overflow-hidden">
       <aside className="hidden md:flex w-20 lg:w-60 flex-col p-3 lg:p-4 gap-1 border-r border-border/40 bg-sidebar/60 backdrop-blur-2xl overflow-y-auto">
 
