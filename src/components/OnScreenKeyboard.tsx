@@ -169,6 +169,39 @@ export function OnScreenKeyboard() {
     [mode],
   );
 
+  // Push page content up so the keyboard sits BELOW the focused input
+  // instead of covering it. We add padding to <body> equal to keyboard height
+  // and scroll the focused element into the remaining viewport.
+  useEffect(() => {
+    const active = target && !hidden;
+    if (!active) {
+      document.body.style.paddingBottom = "";
+      return;
+    }
+    const measure = () => {
+      const h = rootRef.current?.offsetHeight ?? 0;
+      setOskHeight(h);
+      document.body.style.paddingBottom = `${h}px`;
+      const el = targetRef.current;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const visibleBottom = window.innerHeight - h - 12;
+        if (rect.bottom > visibleBottom) {
+          window.scrollBy({ top: rect.bottom - visibleBottom, behavior: "smooth" });
+        }
+      }
+    };
+    const raf = requestAnimationFrame(measure);
+    const ro = rootRef.current ? new ResizeObserver(measure) : null;
+    if (rootRef.current && ro) ro.observe(rootRef.current);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+      document.body.style.paddingBottom = "";
+    };
+  }, [target, hidden, mode, layoutName]);
+
+
   if (!target || hidden) {
     return hidden ? (
       <button
