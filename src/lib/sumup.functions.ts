@@ -43,12 +43,14 @@ export const sumupListReaders = createServerFn({ method: "POST" })
 
 export const sumupSendToReader = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { amount: number; description?: string; currency?: string }) =>
+  .inputValidator((input: { amount: number; description?: string; currency?: string; tipping?: boolean; tipRates?: number[] }) =>
     z
       .object({
         amount: z.number().positive().max(100000),
         description: z.string().max(120).optional(),
         currency: z.string().length(3).optional(),
+        tipping: z.boolean().optional(),
+        tipRates: z.array(z.number().min(0).max(1)).max(6).optional(),
       })
       .parse(input),
   )
@@ -57,6 +59,16 @@ export const sumupSendToReader = createServerFn({ method: "POST" })
     const currency = data.currency ?? "CHF";
     const minorUnit = 2;
     const value = Math.round(data.amount * 100);
+    const tippingEnabled = data.tipping !== false;
+    const tipRates = data.tipRates ?? [0.05, 0.1, 0.15];
+
+    const body: Record<string, unknown> = {
+      total_amount: { value, currency, minor_unit: minorUnit },
+      description: data.description ?? "Kasse",
+    };
+    if (tippingEnabled) {
+      body.tip_rates = tipRates;
+    }
 
     const res = await fetch(
       `${SUMUP_BASE}/v0.1/merchants/${merchantCode}/readers/${readerId}/checkout`,
@@ -66,12 +78,10 @@ export const sumupSendToReader = createServerFn({ method: "POST" })
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          total_amount: { value, currency, minor_unit: minorUnit },
-          description: data.description ?? "Kasse",
-        }),
+        body: JSON.stringify(body),
       },
     );
+
 
     const text = await res.text();
     if (!res.ok) {
