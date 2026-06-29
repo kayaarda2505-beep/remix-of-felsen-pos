@@ -538,7 +538,48 @@ function Reports() {
         </motion.div>
       )}
 
+      {/* Einzelne Umsätze (Bestellungen) */}
+      {!useAggregates && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }} className="glass rounded-3xl p-5 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Einzelne Umsätze</div>
+              <div className="text-xl font-semibold tabular-nums mt-0.5">{orders.length} Bestellungen</div>
+            </div>
+            <div className="text-xs text-muted-foreground">{revenue.toFixed(2)} CHF gesamt</div>
+          </div>
+          {orders.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground py-6 flex flex-col items-center gap-2">
+              <Receipt className="w-8 h-8 opacity-40" />
+              Keine Bestellungen
+            </div>
+          ) : (
+            <div className="divide-y divide-border/30 -mx-2 max-h-[480px] overflow-y-auto">
+              {[...orders]
+                .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .map((o: any) => {
+                  const dt = new Date(o.created_at);
+                  const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+                  return (
+                    <div key={o.id} className="flex items-center gap-3 px-2 py-2">
+                      <div className={`w-2 h-2 rounded-full ${o.status === "paid" ? "bg-success" : "bg-accent/60"}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm truncate">#{String(o.id).slice(0, 8)} · {time}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {o.status === "paid" ? "Bezahlt" : o.status}{o.guests ? ` · ${o.guests} Gäste` : ""}
+                        </div>
+                      </div>
+                      <div className="text-sm font-semibold tabular-nums">{Number(o.total ?? 0).toFixed(2)} CHF</div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Expenses section */}
+
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-3xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
