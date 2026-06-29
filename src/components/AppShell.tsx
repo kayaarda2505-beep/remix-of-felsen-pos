@@ -397,7 +397,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!r?.id || handledServiceCallIds.current.has(r.id)) return;
     handledServiceCallIds.current.add(r.id);
     // Pop-up/Klingelton nur für Service & Manager
-    if (operatorRole === "service" || operatorRole === "manager") {
+    if (operatorRole === "service") {
       playServiceDing();
       pushUrgentAlert({
         id: `service-${r.id}`,
@@ -415,7 +415,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!it?.id || handledDrinkItemIds.current.has(it.id)) return;
     if (routeForCategory(it.category) !== "bar") return;
     handledDrinkItemIds.current.add(it.id);
-    if (operatorRole !== "barkeeper" && operatorRole !== "manager") return;
+    if (operatorRole !== "barkeeper") return;
 
     let tableName: string | null = null;
     if (it.order_id) {
@@ -437,7 +437,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [operatorRole, playServiceDing]);
 
   useEffect(() => {
-    if (operatorRole !== "barkeeper" && operatorRole !== "manager") return;
+    if (operatorRole !== "barkeeper") return;
     const ch = supabase
       .channel(`order_items_bar_notify_${Math.random().toString(36).slice(2)}`)
       .on(
@@ -457,7 +457,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [handleDrinkOrderItem, operatorRole]);
 
   useEffect(() => {
-    if (operatorRole !== "barkeeper" && operatorRole !== "manager") return;
+    if (operatorRole !== "barkeeper") return;
     const pollDrinkItems = async () => {
       const sinceIso = new Date(mountedAt.current - 5000).toISOString();
       const { data } = await supabase
