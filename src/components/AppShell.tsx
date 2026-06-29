@@ -25,7 +25,7 @@ import { SaintsLogo } from "./SaintsLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
-import { printBill } from "@/lib/receipt";
+import { printBill, routeForCategory } from "@/lib/receipt";
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 import { UrgentAlertOverlay, pushUrgentAlert } from "@/components/UrgentAlert";
 
@@ -390,18 +390,88 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const operatorRole = operator?.role;
   const handleServiceCall = useCallback((r: any) => {
     if (!r?.id || handledServiceCallIds.current.has(r.id)) return;
     handledServiceCallIds.current.add(r.id);
+    // Pop-up/Klingelton nur für Service & Manager
+    if (operatorRole === "service" || operatorRole === "manager") {
+      playServiceDing();
+      pushUrgentAlert({
+        id: `service-${r.id}`,
+        kind: "service",
+        title: `Tisch ${r.table_name ?? "?"} ruft den Service`,
+        description: r.note ? `„${r.note}"` : "Bitte zum Tisch kommen",
+      });
+    }
+    void autoPrintServiceCall(r);
+  }, [playServiceDing, operatorRole]);
+
+  // Barkeeper-Alert: neue Drink-Bestellung (Bar-Station)
+  const handledDrinkItemIds = useRef<Set<string>>(new Set());
+  const handleDrinkOrderItem = useCallback(async (it: any) => {
+    if (!it?.id || handledDrinkItemIds.current.has(it.id)) return;
+    if (routeForCategory(it.category) !== "bar") return;
+    handledDrinkItemIds.current.add(it.id);
+    if (operatorRole !== "barkeeper" && operatorRole !== "manager") return;
+
+    let tableName: string | null = null;
+    if (it.order_id) {
+      const { data: o } = await supabase
+        .from("orders")
+        .select("table_name")
+        .eq("id", it.order_id)
+        .maybeSingle();
+      tableName = (o as any)?.table_name ?? null;
+    }
     playServiceDing();
     pushUrgentAlert({
-      id: `service-${r.id}`,
+      id: `drink-${it.id}`,
       kind: "service",
-      title: `Tisch ${r.table_name ?? "?"} ruft den Service`,
-      description: r.note ? `„${r.note}"` : "Bitte zum Tisch kommen",
+      title: `Neue Drink-Bestellung${tableName ? ` · Tisch ${tableName}` : ""}`,
+      description: `${it.qty ?? 1}× ${it.product_name ?? "Getränk"}`,
+      href: "/kitchen",
     });
-    void autoPrintServiceCall(r);
-  }, [playServiceDing]);
+  }, [operatorRole, playServiceDing]);
+
+  useEffect(() => {
+    if (operatorRole !== "barkeeper" && operatorRole !== "manager") return;
+    const ch = supabase
+      .channel(`order_items_bar_notify_${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "order_items" },
+        (payload: any) => {
+          const it = payload.new;
+          const ts = it.sent_at ?? it.created_at;
+          if (ts && new Date(ts).getTime() < mountedAt.current - 5000) return;
+          void handleDrinkOrderItem(it);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [handleDrinkOrderItem, operatorRole]);
+
+  useEffect(() => {
+    if (operatorRole !== "barkeeper" && operatorRole !== "manager") return;
+    const pollDrinkItems = async () => {
+      const sinceIso = new Date(mountedAt.current - 5000).toISOString();
+      const { data } = await supabase
+        .from("order_items")
+        .select("id, order_id, product_name, qty, category, sent_at")
+        .gte("sent_at", sinceIso)
+        .order("sent_at", { ascending: true })
+        .limit(50);
+      for (const it of data ?? []) await handleDrinkOrderItem(it);
+    };
+    const interval = window.setInterval(() => {
+      void pollDrinkItems();
+    }, 5000);
+    void pollDrinkItems();
+    return () => window.clearInterval(interval);
+  }, [handleDrinkOrderItem, operatorRole]);
 
   useEffect(() => {
     const ch = supabase
