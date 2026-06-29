@@ -398,10 +398,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!r?.id || handledServiceCallIds.current.has(r.id)) return;
     handledServiceCallIds.current.add(r.id);
     playServiceDing();
-    toast(`🔔 Tisch ${r.table_name ?? "?"} ruft den Service`, {
+    pushUrgentAlert({
+      id: `service-${r.id}`,
+      kind: "service",
+      title: `Tisch ${r.table_name ?? "?"} ruft den Service`,
       description: r.note ? `„${r.note}"` : "Bitte zum Tisch kommen",
-      position: "bottom-right",
-      duration: 15000,
     });
     void autoPrintServiceCall(r);
   }, [playServiceDing]);
