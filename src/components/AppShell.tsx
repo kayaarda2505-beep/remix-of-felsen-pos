@@ -371,7 +371,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             return;
           }
 
-          // Klassische Bezahl-Anfrage (Bar / EC) → persistent Uber-style alert
+          // Klassische Bezahl-Anfrage (Bar / EC) → persistent Uber-style alert (nur Service)
+          if (operatorRoleRef.current !== "service") return;
           const methodTxt =
             r.method === "cash" ? "Bar" : r.method === "card_terminal" ? "EC-Gerät" : "Online";
           beep();
@@ -389,13 +390,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       supabase.removeChannel(ch);
     };
   }, []);
-
   const operatorRole = operator?.role;
+  const operatorRoleRef = useRef<string | undefined>(operatorRole);
+  useEffect(() => { operatorRoleRef.current = operatorRole; }, [operatorRole]);
   const handleServiceCall = useCallback((r: any) => {
     if (!r?.id || handledServiceCallIds.current.has(r.id)) return;
     handledServiceCallIds.current.add(r.id);
     // Pop-up/Klingelton nur für Service & Manager
-    if (operatorRole === "service" || operatorRole === "manager") {
+    if (operatorRole === "service") {
       playServiceDing();
       pushUrgentAlert({
         id: `service-${r.id}`,
@@ -413,7 +415,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!it?.id || handledDrinkItemIds.current.has(it.id)) return;
     if (routeForCategory(it.category) !== "bar") return;
     handledDrinkItemIds.current.add(it.id);
-    if (operatorRole !== "barkeeper" && operatorRole !== "manager") return;
+    if (operatorRole !== "barkeeper") return;
 
     let tableName: string | null = null;
     if (it.order_id) {
@@ -435,7 +437,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [operatorRole, playServiceDing]);
 
   useEffect(() => {
-    if (operatorRole !== "barkeeper" && operatorRole !== "manager") return;
+    if (operatorRole !== "barkeeper") return;
     const ch = supabase
       .channel(`order_items_bar_notify_${Math.random().toString(36).slice(2)}`)
       .on(
@@ -455,7 +457,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [handleDrinkOrderItem, operatorRole]);
 
   useEffect(() => {
-    if (operatorRole !== "barkeeper" && operatorRole !== "manager") return;
+    if (operatorRole !== "barkeeper") return;
     const pollDrinkItems = async () => {
       const sinceIso = new Date(mountedAt.current - 5000).toISOString();
       const { data } = await supabase
