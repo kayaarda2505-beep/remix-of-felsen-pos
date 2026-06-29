@@ -409,13 +409,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     void autoPrintServiceCall(r);
   }, [playServiceDing, operatorRole]);
 
-  // Barkeeper-Alert: neue Drink-Bestellung (Bar-Station)
+  // Barkeeper / Küche Alert: neue Bestellung an passender Station
   const handledDrinkItemIds = useRef<Set<string>>(new Set());
-  const handleDrinkOrderItem = useCallback(async (it: any) => {
+  const handleStationOrderItem = useCallback(async (it: any) => {
     if (!it?.id || handledDrinkItemIds.current.has(it.id)) return;
-    if (routeForCategory(it.category) !== "bar") return;
+    const station = routeForCategory(it.category); // "bar" | "kueche"
+    if (operatorRole === "barkeeper" && station !== "bar") return;
+    if (operatorRole === "kueche" && station !== "kueche") return;
+    if (operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
     handledDrinkItemIds.current.add(it.id);
-    if (operatorRole !== "barkeeper") return;
 
     let tableName: string | null = null;
     if (it.order_id) {
@@ -427,19 +429,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       tableName = (o as any)?.table_name ?? null;
     }
     playServiceDing();
+    const label = station === "bar" ? "Drink-Bestellung" : "Küchen-Bestellung";
     pushUrgentAlert({
-      id: `drink-${it.id}`,
+      id: `order-${it.id}`,
       kind: "service",
-      title: `Neue Drink-Bestellung${tableName ? ` · Tisch ${tableName}` : ""}`,
-      description: `${it.qty ?? 1}× ${it.product_name ?? "Getränk"}`,
+      title: `Neue ${label}${tableName ? ` · Tisch ${tableName}` : ""}`,
+      description: `${it.qty ?? 1}× ${it.product_name ?? "Artikel"}`,
       href: "/kitchen",
     });
   }, [operatorRole, playServiceDing]);
 
   useEffect(() => {
-    if (operatorRole !== "barkeeper") return;
+    if (operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
     const ch = supabase
-      .channel(`order_items_bar_notify_${Math.random().toString(36).slice(2)}`)
+      .channel(`order_items_station_notify_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "order_items" },
@@ -447,18 +450,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           const it = payload.new;
           const ts = it.sent_at ?? it.created_at;
           if (ts && new Date(ts).getTime() < mountedAt.current - 5000) return;
-          void handleDrinkOrderItem(it);
+          void handleStationOrderItem(it);
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [handleDrinkOrderItem, operatorRole]);
+  }, [handleStationOrderItem, operatorRole]);
 
   useEffect(() => {
-    if (operatorRole !== "barkeeper") return;
-    const pollDrinkItems = async () => {
+    if (operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
+    const pollStationItems = async () => {
       const sinceIso = new Date(mountedAt.current - 5000).toISOString();
       const { data } = await supabase
         .from("order_items")
@@ -466,14 +469,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         .gte("sent_at", sinceIso)
         .order("sent_at", { ascending: true })
         .limit(50);
-      for (const it of data ?? []) await handleDrinkOrderItem(it);
+      for (const it of data ?? []) await handleStationOrderItem(it);
     };
     const interval = window.setInterval(() => {
-      void pollDrinkItems();
+      void pollStationItems();
     }, 5000);
-    void pollDrinkItems();
+    void pollStationItems();
     return () => window.clearInterval(interval);
-  }, [handleDrinkOrderItem, operatorRole]);
+  }, [handleStationOrderItem, operatorRole]);
 
   useEffect(() => {
     const ch = supabase
