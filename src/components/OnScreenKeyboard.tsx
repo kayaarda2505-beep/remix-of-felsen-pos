@@ -69,7 +69,9 @@ export function OnScreenKeyboard() {
   const [mode, setMode] = useState<Mode>("text");
   const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
   const [hidden, setHidden] = useState(false);
+  
   const keyboardRef = useRef<any>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const targetRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -167,6 +169,38 @@ export function OnScreenKeyboard() {
     [mode],
   );
 
+  // Push page content up so the keyboard sits BELOW the focused input
+  // instead of covering it. We add padding to <body> equal to keyboard height
+  // and scroll the focused element into the remaining viewport.
+  useEffect(() => {
+    const active = target && !hidden;
+    if (!active) {
+      document.body.style.paddingBottom = "";
+      return;
+    }
+    const measure = () => {
+      const h = rootRef.current?.offsetHeight ?? 0;
+      document.body.style.paddingBottom = `${h}px`;
+      const el = targetRef.current;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const visibleBottom = window.innerHeight - h - 12;
+        if (rect.bottom > visibleBottom) {
+          window.scrollBy({ top: rect.bottom - visibleBottom, behavior: "smooth" });
+        }
+      }
+    };
+    const raf = requestAnimationFrame(measure);
+    const ro = rootRef.current ? new ResizeObserver(measure) : null;
+    if (rootRef.current && ro) ro.observe(rootRef.current);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+      document.body.style.paddingBottom = "";
+    };
+  }, [target, hidden, mode, layoutName]);
+
+
   if (!target || hidden) {
     return hidden ? (
       <button
@@ -181,6 +215,7 @@ export function OnScreenKeyboard() {
 
   return (
     <div
+      ref={rootRef}
       data-osk-root
       onMouseDown={(e) => e.preventDefault()}
       className="osk-root fixed inset-x-0 bottom-0 z-[60] border-t border-white/10 bg-neutral-900/95 backdrop-blur-xl p-2 shadow-2xl"
