@@ -69,7 +69,7 @@ export function OnScreenKeyboard() {
   const [mode, setMode] = useState<Mode>("text");
   const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
   const [hidden, setHidden] = useState(false);
-  const [oskHeight, setOskHeight] = useState(0);
+  
   const keyboardRef = useRef<any>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const targetRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
