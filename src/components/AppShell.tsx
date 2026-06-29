@@ -28,6 +28,7 @@ import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from
 import { printBill, routeForCategory } from "@/lib/receipt";
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 import { UrgentAlertOverlay, pushUrgentAlert } from "@/components/UrgentAlert";
+import { installAudioUnlock, getAudioContext } from "@/lib/audio-unlock";
 
 async function autoPrintServiceCall(r: any) {
   if (!isDesktopApp()) return;
@@ -206,9 +207,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const playServiceDing = useCallback(() => {
     try {
-      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
+      const ctx = getAudioContext();
+      if (!ctx) return;
       const play = (freq: number, start: number, dur = 0.2) => {
         const o = ctx.createOscillator();
         const g = ctx.createGain();
@@ -225,7 +225,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       play(1320, 0, 0.25);
       play(990, 0.28, 0.3);
       play(1320, 0.6, 0.35);
-      setTimeout(() => ctx.close(), 1400);
     } catch {
       // ignore
     }
@@ -247,6 +246,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       },
     });
   }, [playSongAlert]);
+
+  useEffect(() => { installAudioUnlock(); }, []);
 
   useEffect(() => {
     void refreshOpenSongCount();

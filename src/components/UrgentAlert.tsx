@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Bell, CreditCard, X } from "lucide-react";
+import { getAudioContext } from "@/lib/audio-unlock";
 
 export type UrgentAlert = {
   id: string;
@@ -48,40 +49,32 @@ function useUrgentAlerts() {
  * the regular notification sounds.
  */
 function useLoopingRing(active: boolean) {
-  const ctxRef = useRef<AudioContext | null>(null);
   const timerRef = useRef<number | null>(null);
 
   const ring = useCallback(() => {
     try {
-      let ctx = ctxRef.current;
-      if (!ctx) {
-        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-        if (!Ctx) return;
-        ctx = new Ctx();
-        ctxRef.current = ctx;
-      }
-      if (ctx.state === "suspended") void ctx.resume();
+      const ctx = getAudioContext();
+      if (!ctx) return;
       const master = ctx.createGain();
       master.gain.value = 0.85;
       master.connect(ctx.destination);
 
       const tone = (freq: number, start: number, dur: number) => {
-        const o = ctx!.createOscillator();
-        const g = ctx!.createGain();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
         o.type = "square";
         o.frequency.value = freq;
-        g.gain.setValueAtTime(0.0001, ctx!.currentTime + start);
-        g.gain.exponentialRampToValueAtTime(0.9, ctx!.currentTime + start + 0.02);
-        g.gain.setValueAtTime(0.9, ctx!.currentTime + start + dur - 0.05);
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx!.currentTime + start + dur);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+        g.gain.exponentialRampToValueAtTime(0.9, ctx.currentTime + start + 0.02);
+        g.gain.setValueAtTime(0.9, ctx.currentTime + start + dur - 0.05);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
         o.connect(g);
         g.connect(master);
-        o.start(ctx!.currentTime + start);
-        o.stop(ctx!.currentTime + start + dur + 0.02);
+        o.start(ctx.currentTime + start);
+        o.stop(ctx.currentTime + start + dur + 0.02);
       };
-      // Ding-dong pattern — Uber-style insistent
-      tone(988, 0, 0.35);   // B5
-      tone(740, 0.4, 0.45); // F#5
+      tone(988, 0, 0.35);
+      tone(740, 0.4, 0.45);
       tone(988, 0.95, 0.35);
       tone(740, 1.35, 0.5);
     } catch {
