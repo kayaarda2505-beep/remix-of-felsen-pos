@@ -74,6 +74,8 @@ function POS() {
   // null = walk-in (Theke), otherwise an order id
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [walkInCart, setWalkInCart] = useState<LocalLine[]>([]);
+  // Ungesendete Artikel je Tab-Order (Puffer bis „Senden an Küche")
+  const [pendingByOrder, setPendingByOrder] = useState<Record<string, LocalLine[]>>({});
   const [payMode, setPayMode] = useState<null | "cash" | "card">(null);
 
   const { data: openOrders = [] } = useQuery<OpenOrder[]>({
