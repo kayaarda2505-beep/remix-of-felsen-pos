@@ -928,7 +928,7 @@ function POS() {
         {payMode && (
           <PaymentDialog
             mode={payMode}
-            total={total}
+            total={outstanding}
             printers={printers}
             tableName={isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : "Theke"}
             onClose={() => setPayMode(null)}
@@ -942,7 +942,56 @@ function POS() {
             }}
           />
         )}
+        {splitOpen && isTab && activeOrder && (
+          <SplitPaymentDialog
+            outstanding={outstanding}
+            tableName={activeOrder.dining_tables?.name ?? "Tisch"}
+            orderId={activeOrder.id}
+            tableId={activeOrder.table_id}
+            printers={printers}
+            onClose={() => setSplitOpen(false)}
+            onPaid={async ({ amount, method, closeOrder }) => {
+              await supabase.from("payment_requests").insert({
+                order_id: activeOrder.id,
+                table_id: activeOrder.table_id,
+                table_name: activeOrder.dining_tables?.name ?? "Tisch",
+                amount,
+                method: method.toLowerCase().includes("twint")
+                  ? "twint"
+                  : method.toLowerCase() === "bar"
+                    ? "cash"
+                    : "card_terminal",
+                status: "paid",
+                handled_at: new Date().toISOString(),
+                note: `Teilzahlung · ${method}`,
+              });
+              if (closeOrder) {
+                await supabase
+                  .from("orders")
+                  .update({ status: "paid", closed_at: new Date().toISOString() })
+                  .eq("id", activeOrder.id);
+                if (activeOrder.table_id) {
+                  await supabase
+                    .from("dining_tables")
+                    .update({ status: "free", opened_at: null, guests: null })
+                    .eq("id", activeOrder.table_id);
+                }
+                setActiveOrderId(null);
+                setTip(0);
+                toast.success("Rechnung vollständig bezahlt");
+              } else {
+                toast.success(`Teilzahlung CHF ${amount.toFixed(2)} erfasst`);
+              }
+              setSplitOpen(false);
+              qc.invalidateQueries({ queryKey: ["partial_payments", activeOrder.id] });
+              qc.invalidateQueries({ queryKey: ["orders", "open"] });
+              qc.invalidateQueries({ queryKey: ["dining_tables"] });
+              qc.invalidateQueries({ queryKey: ["payments_range"] });
+            }}
+          />
+        )}
       </AnimatePresence>
+
 
       <ProductModifierDialog
         product={editing}
