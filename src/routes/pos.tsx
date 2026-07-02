@@ -434,8 +434,10 @@ function POS() {
     ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0) + pendingSubtotal
     : walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
   const total = subtotal + tip;
+  const outstanding = isTab ? Math.max(0, +(total - paidSum).toFixed(2)) : total;
   const hasPending = pendingCart.length > 0;
   const showCart = isTab ? tabItems : walkInCart;
+
 
   // Vollbild-Toggle (F11-Ersatz, blendet die Windows-Taskleiste aus)
   const [isFullscreen, setIsFullscreen] = useState(
