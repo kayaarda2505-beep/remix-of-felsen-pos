@@ -869,8 +869,22 @@ function POS() {
                 CHF {total.toFixed(2)}
               </span>
             </div>
+            {isTab && paidSum > 0 && (
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Bereits bezahlt</span>
+                  <span className="tabular-nums text-success">− CHF {paidSum.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Offen</span>
+                  <span className="text-xl font-semibold tabular-nums">
+                    CHF {outstanding.toFixed(2)}
+                  </span>
+                </div>
+              </>
+            )}
 
-            <div className="grid grid-cols-2 gap-2 pt-3">
+            <div className="grid grid-cols-3 gap-2 pt-3">
               {[
                 { mode: "card" as const, icon: CreditCard, label: "Karte" },
                 { mode: "cash" as const, icon: Banknote, label: "Bar" },
@@ -878,7 +892,7 @@ function POS() {
                 <button
                   key={m.label}
                   onClick={() => setPayMode(m.mode)}
-                  disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || hasPending || payTab.isPending}
+                  disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || hasPending || payTab.isPending || outstanding <= 0}
                   title={hasPending ? "Zuerst an Küche senden" : undefined}
                   className="glass rounded-xl py-3 flex flex-col items-center gap-1 text-xs hover:border-accent/40 transition-colors disabled:opacity-40"
                 >
@@ -886,6 +900,15 @@ function POS() {
                   {m.label}
                 </button>
               ))}
+              <button
+                onClick={() => setSplitOpen(true)}
+                disabled={!isTab || tabItems.length === 0 || hasPending || outstanding <= 0}
+                title={!isTab ? "Nur für Tische" : hasPending ? "Zuerst an Küche senden" : undefined}
+                className="glass rounded-xl py-3 flex flex-col items-center gap-1 text-xs hover:border-accent/40 transition-colors disabled:opacity-40"
+              >
+                <SplitSquareHorizontal className="w-4 h-4" />
+                Teilbetrag
+              </button>
             </div>
             <motion.button
               whileTap={{ scale: 0.98 }}
@@ -894,8 +917,9 @@ function POS() {
               className="w-full rounded-2xl py-3 mt-2 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
-              Zwischenrechnung • CHF {total.toFixed(2)}
+              Zwischenrechnung • CHF {outstanding.toFixed(2)}
             </motion.button>
+
           </div>
         </aside>
       </div>
