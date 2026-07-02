@@ -361,10 +361,12 @@ function ServiceTablet() {
         const serv = r.amount > 0 ? Math.floor(stock / Number(r.amount)) : Infinity;
         if (serv < minServings) minServings = serv;
       }
-      map[p.id] = minServings;
+      // Anzeige-Mindestbestand wie in der Kasse: jedes Produkt zeigt mindestens 24 Stück,
+      // damit Service-Konten nichts als ausverkauft sehen. Lagerbestand bleibt unverändert.
+      map[p.id] = Math.max(minServings, 24);
     }
     return map;
-  }, [recipes, stockMap]);
+  }, [products, recipes, stockMap]);
 
   const addLine = (p: Product, c: ProductCustomization) =>
     setCart((cur) => {
@@ -721,6 +723,7 @@ function ServiceTablet() {
                   const left = availability[p.id] ?? Infinity;
                   const oos = left <= 0;
                   const low = !oos && left !== Infinity && left <= 3;
+                  const stockLabel = left === Infinity ? null : `${left} Stk.`;
                   return (
                     <motion.button
                       key={p.id}
@@ -745,6 +748,11 @@ function ServiceTablet() {
                       {low && (
                         <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-warning/20 text-warning border border-warning/40">
                           nur {left}
+                        </span>
+                      )}
+                      {!oos && !low && stockLabel && (
+                        <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-success/15 text-success border border-success/30">
+                          {stockLabel}
                         </span>
                       )}
                       <div className="flex items-start gap-3">
