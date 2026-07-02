@@ -951,20 +951,21 @@ function POS() {
             printers={printers}
             onClose={() => setSplitOpen(false)}
             onPaid={async ({ amount, method, closeOrder }) => {
-              await supabase.from("payment_requests").insert({
+              const { error: insErr } = await supabase.from("payment_requests").insert({
                 order_id: activeOrder.id,
                 table_id: activeOrder.table_id,
                 table_name: activeOrder.dining_tables?.name ?? "Tisch",
                 amount,
-                method: method.toLowerCase().includes("twint")
-                  ? "twint"
-                  : method.toLowerCase() === "bar"
-                    ? "cash"
-                    : "card_terminal",
+                method: method.toLowerCase() === "bar" ? "cash" : "card_terminal",
                 status: "paid",
                 handled_at: new Date().toISOString(),
                 note: `Teilzahlung · ${method}`,
               });
+              if (insErr) {
+                toast.error("Teilzahlung konnte nicht gespeichert werden: " + insErr.message);
+                return;
+              }
+
               if (closeOrder) {
                 await supabase
                   .from("orders")
