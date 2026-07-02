@@ -56,7 +56,7 @@ function useLoopingRing(active: boolean) {
       const ctx = getAudioContext();
       if (!ctx) return;
       const master = ctx.createGain();
-      master.gain.value = 0.55;
+      master.gain.value = 0.95;
       master.connect(ctx.destination);
 
       // Warm, bell-like chime using sine tones with soft envelopes.
