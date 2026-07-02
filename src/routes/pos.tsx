@@ -406,10 +406,12 @@ function POS() {
   });
 
   const isTab = !!activeOrderId;
+  const pendingSubtotal = pendingCart.reduce((s, l) => s + l.product.price * l.qty, 0);
   const subtotal = isTab
-    ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0)
+    ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0) + pendingSubtotal
     : walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
   const total = subtotal + tip;
+  const hasPending = pendingCart.length > 0;
   const showCart = isTab ? tabItems : walkInCart;
 
   // Vollbild-Toggle (F11-Ersatz, blendet die Windows-Taskleiste aus)
