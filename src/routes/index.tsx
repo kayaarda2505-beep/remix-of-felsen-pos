@@ -1828,7 +1828,8 @@ function FloorPlan({
         {tables.map((t, i) => {
           const { x, y } = fallbackPos(t, i);
           const openO = orderByTable.get(t.id);
-          const occupied = !!openO;
+          const openTotal = openO ? Number(openO.total) : 0;
+          const occupied = !!openO && openTotal > 0;
           const AreaIcon = AREAS.find((a) => a.value === t.area)!.icon;
           const isRound = t.area === "bar";
           const size = Math.max(56, Math.min(92, 48 + (t.seats ?? 2) * 6));
