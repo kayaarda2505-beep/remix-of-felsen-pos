@@ -852,7 +852,8 @@ function POS() {
                 <button
                   key={m.label}
                   onClick={() => setPayMode(m.mode)}
-                  disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || payTab.isPending}
+                  disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || hasPending || payTab.isPending}
+                  title={hasPending ? "Zuerst an Küche senden" : undefined}
                   className="glass rounded-xl py-3 flex flex-col items-center gap-1 text-xs hover:border-accent/40 transition-colors disabled:opacity-40"
                 >
                   <m.icon className="w-4 h-4" />
@@ -862,7 +863,7 @@ function POS() {
             </div>
             <motion.button
               whileTap={{ scale: 0.98 }}
-              disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || payTab.isPending}
+              disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || hasPending || payTab.isPending}
               onClick={printInterim}
               className="w-full rounded-2xl py-3 mt-2 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
