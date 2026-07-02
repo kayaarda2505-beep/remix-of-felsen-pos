@@ -80,6 +80,8 @@ function POS() {
   // Ungesendete Artikel je Tab-Order (Puffer bis „Senden an Küche")
   const [pendingByOrder, setPendingByOrder] = useState<Record<string, LocalLine[]>>({});
   const [payMode, setPayMode] = useState<null | "cash" | "card">(null);
+  const [splitOpen, setSplitOpen] = useState(false);
+
 
   const { data: openOrders = [] } = useQuery<OpenOrder[]>({
     queryKey: ["orders", "open"],
