@@ -531,13 +531,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 
 
-  const visibleNav = operator?.role === "barkeeper"
+  const operatorRole = operator?.role as string | undefined;
+  const visibleNav = operatorRole === "barkeeper"
     ? nav.filter((n) => BARKEEPER_ALLOWED.has(n.to))
-    : operator?.role === "service"
+    : operatorRole === "service"
     ? nav.filter((n) => SERVICE_ALLOWED.has(n.to))
-    : operator?.role === "kasse"
+    : operatorRole === "kasse"
     ? nav.filter((n) => KASSE_ALLOWED.has(n.to))
     : nav;
+
 
 
   return (
