@@ -56,27 +56,28 @@ function useLoopingRing(active: boolean) {
       const ctx = getAudioContext();
       if (!ctx) return;
       const master = ctx.createGain();
-      master.gain.value = 0.85;
+      master.gain.value = 0.55;
       master.connect(ctx.destination);
 
-      const tone = (freq: number, start: number, dur: number) => {
+      // Warm, bell-like chime using sine tones with soft envelopes.
+      const chime = (freq: number, start: number, dur: number, vol = 0.5) => {
         const o = ctx.createOscillator();
         const g = ctx.createGain();
-        o.type = "square";
+        o.type = "sine";
         o.frequency.value = freq;
-        g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
-        g.gain.exponentialRampToValueAtTime(0.9, ctx.currentTime + start + 0.02);
-        g.gain.setValueAtTime(0.9, ctx.currentTime + start + dur - 0.05);
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+        const t0 = ctx.currentTime + start;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(vol, t0 + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
         o.connect(g);
         g.connect(master);
-        o.start(ctx.currentTime + start);
-        o.stop(ctx.currentTime + start + dur + 0.02);
+        o.start(t0);
+        o.stop(t0 + dur + 0.05);
       };
-      tone(988, 0, 0.35);
-      tone(740, 0.4, 0.45);
-      tone(988, 0.95, 0.35);
-      tone(740, 1.35, 0.5);
+      // Pleasant major third (E5 + G#5) then resolving B5
+      chime(659.25, 0, 1.2, 0.5);
+      chime(830.61, 0.02, 1.2, 0.32);
+      chime(987.77, 0.55, 1.0, 0.28);
     } catch {
       // ignore
     }
@@ -91,7 +92,7 @@ function useLoopingRing(active: boolean) {
       return;
     }
     ring();
-    timerRef.current = window.setInterval(ring, 2000);
+    timerRef.current = window.setInterval(ring, 2600);
     return () => {
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
