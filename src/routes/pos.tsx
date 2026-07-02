@@ -826,7 +826,7 @@ function POS() {
         onClose={() => setEditing(null)}
         onConfirm={(c) => {
           if (!editing) return;
-          if (isTab) addToTab.mutate({ p: editing, c });
+          if (isTab) addPending(editing, c);
           else addWalkIn(editing, c);
         }}
       />
