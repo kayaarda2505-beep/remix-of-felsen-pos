@@ -1384,7 +1384,7 @@ export type Database = {
       order_status: "open" | "paid" | "cancelled"
       table_area: "indoor" | "outdoor" | "bar"
       table_status: "free" | "occupied" | "bill" | "pending"
-      team_role: "manager" | "barkeeper" | "service" | "kueche"
+      team_role: "manager" | "barkeeper" | "service" | "kueche" | "kasse"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1517,7 +1517,7 @@ export const Constants = {
       order_status: ["open", "paid", "cancelled"],
       table_area: ["indoor", "outdoor", "bar"],
       table_status: ["free", "occupied", "bill", "pending"],
-      team_role: ["manager", "barkeeper", "service", "kueche"],
+      team_role: ["manager", "barkeeper", "service", "kueche", "kasse"],
     },
   },
 } as const
