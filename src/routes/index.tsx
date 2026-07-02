@@ -503,11 +503,12 @@ function ServiceTablet() {
 
                         <AreaIcon className="w-3 h-3" /> {t.seats}P
                       </div>
-                      {openO && (
+                      {openO && Number(openO.total) > 0 && (
                         <div className="absolute top-2 right-2 rounded-md bg-accent text-accent-foreground text-[10px] font-bold px-1.5 py-0.5 tabular-nums shadow-md">
                           {Number(openO.total).toFixed(2)}
                         </div>
                       )}
+
                     </button>
                   );
                 })}
