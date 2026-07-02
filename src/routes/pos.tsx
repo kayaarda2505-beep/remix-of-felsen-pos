@@ -155,7 +155,9 @@ function POS() {
         const serv = r.amount > 0 ? Math.floor(stock / Number(r.amount)) : Infinity;
         if (serv < minServings) minServings = serv;
       }
-      map[p.id] = minServings;
+      // Anzeige-Mindestbestand: jedes Produkt zeigt mindestens 24 Stück,
+      // damit nichts als "ausverkauft" markiert wird. Lagerbestand bleibt unverändert.
+      map[p.id] = Math.max(minServings, 24);
     }
     return map;
   }, [recipes, stockMap]);
