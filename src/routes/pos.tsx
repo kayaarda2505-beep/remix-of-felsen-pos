@@ -200,26 +200,80 @@ function POS() {
       c.map((l) => (l.id === id ? { ...l, qty: l.qty + d } : l)).filter((l) => l.qty > 0),
     );
 
-  // Tab helpers
-  const addToTab = useMutation({
-    mutationFn: async ({ p, c }: { p: Product; c: ProductCustomization }) => {
+  // Tab: Artikel werden erst lokal gepuffert; sie werden erst per
+  // „Senden an Küche"-Button in die Datenbank geschrieben. Erst dann klingelt
+  // es in Küche/Bar.
+  const pendingCart = activeOrderId ? pendingByOrder[activeOrderId] ?? [] : [];
+  const addPending = (p: Product, c: ProductCustomization) => {
+    if (!activeOrderId) return;
+    setPendingByOrder((cur) => {
+      const list = cur[activeOrderId] ?? [];
+      if (c.modifiers.length === 0 && !c.note) {
+        const ex = list.find((l) => l.product.id === p.id && l.modifiers.length === 0 && !l.note);
+        if (ex) {
+          return {
+            ...cur,
+            [activeOrderId]: list.map((l) => (l.id === ex.id ? { ...l, qty: l.qty + c.qty } : l)),
+          };
+        }
+      }
+      return {
+        ...cur,
+        [activeOrderId]: [
+          ...list,
+          {
+            id: `${p.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            product: p,
+            qty: c.qty,
+            modifiers: c.modifiers,
+            note: c.note,
+          },
+        ],
+      };
+    });
+  };
+  const incPending = (id: string, d: number) => {
+    if (!activeOrderId) return;
+    setPendingByOrder((cur) => {
+      const list = cur[activeOrderId] ?? [];
+      return {
+        ...cur,
+        [activeOrderId]: list
+          .map((l) => (l.id === id ? { ...l, qty: l.qty + d } : l))
+          .filter((l) => l.qty > 0),
+      };
+    });
+  };
+
+  const sendPending = useMutation({
+    mutationFn: async () => {
       if (!activeOrderId) return;
-      const { error } = await supabase.from("order_items").insert({
+      const list = pendingByOrder[activeOrderId] ?? [];
+      if (list.length === 0) return;
+      const rows = list.map((l) => ({
         order_id: activeOrderId,
-        product_id: p.id,
-        product_name: p.name,
-        category: p.category,
-        unit_price: p.price,
-        qty: c.qty,
-        modifiers: c.modifiers,
-        note: c.note ?? null,
-      });
+        product_id: l.product.id,
+        product_name: l.product.name,
+        category: l.product.category,
+        unit_price: l.product.price,
+        qty: l.qty,
+        modifiers: l.modifiers,
+        note: l.note ?? null,
+      }));
+      const { error } = await supabase.from("order_items").insert(rows);
       if (error) throw error;
     },
     onSuccess: () => {
+      if (activeOrderId) {
+        setPendingByOrder((cur) => {
+          const { [activeOrderId]: _, ...rest } = cur;
+          return rest;
+        });
+      }
       qc.invalidateQueries({ queryKey: ["order_items", activeOrderId] });
       qc.invalidateQueries({ queryKey: ["orders", "open"] });
       qc.invalidateQueries({ queryKey: ["ingredients", "stock"] });
+      toast.success("An Küche/Bar gesendet");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
