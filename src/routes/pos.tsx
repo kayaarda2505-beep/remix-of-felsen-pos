@@ -20,7 +20,8 @@ import {
   Minimize2,
   Smartphone,
   Send,
-} from "lucide-react";
+  SplitSquareHorizontal,
+
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader } from "@/components/AppShell";
