@@ -737,8 +737,79 @@ function POS() {
                       </div>
                     </motion.div>
                   ))}
+              {isTab &&
+                pendingCart.map((l) => (
+                  <motion.div
+                    key={`pending-${l.id}`}
+                    layout
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="flex items-start gap-3 p-2 rounded-xl bg-warning/10 border border-warning/30"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-warning/25 text-warning border border-warning/40">
+                          ungesendet
+                        </span>
+                        <div className="text-sm font-medium truncate">{l.product.name}</div>
+                      </div>
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        CHF {l.product.price.toFixed(2)}
+                      </div>
+                      {(l.modifiers.length > 0 || l.note) && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {l.modifiers.map((m) => (
+                            <span key={m} className="text-[10px] px-1.5 py-0.5 rounded-md bg-accent/15 text-accent border border-accent/30">
+                              {m}
+                            </span>
+                          ))}
+                          {l.note && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-muted-foreground border border-border/40 flex items-center gap-1">
+                              <Pencil className="w-2.5 h-2.5" /> {l.note}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 glass rounded-lg p-0.5 shrink-0">
+                      <button
+                        onClick={() => incPending(l.id, -1)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-6 text-center text-sm tabular-nums">{l.qty}</span>
+                      <button
+                        onClick={() => incPending(l.id, 1)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
+                      {(l.product.price * l.qty).toFixed(2)}
+                    </div>
+                  </motion.div>
+                ))}
             </AnimatePresence>
           </div>
+
+          {isTab && hasPending && (
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              disabled={sendPending.isPending}
+              onClick={() => sendPending.mutate()}
+              className="w-full rounded-2xl py-3 mt-3 bg-primary text-primary-foreground font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+            >
+              {sendPending.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Senden an Küche • {pendingCart.reduce((s, l) => s + l.qty, 0)} Artikel
+            </motion.button>
+          )}
 
           <div className="border-t border-border/40 pt-4 mt-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
