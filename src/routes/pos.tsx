@@ -111,6 +111,24 @@ function POS() {
     },
   });
 
+  // Bereits geleistete Teilzahlungen für den aktiven Tab
+  const { data: paidRows = [] } = useQuery<{ amount: number; method: string; note: string | null }[]>({
+    queryKey: ["partial_payments", activeOrderId],
+    enabled: !!activeOrderId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payment_requests")
+        .select("amount, method, note")
+        .eq("order_id", activeOrderId!)
+        .eq("status", "paid");
+      if (error) throw error;
+      return (data ?? []).map((r) => ({ amount: Number(r.amount), method: String(r.method), note: r.note })) as any;
+    },
+    refetchInterval: 5000,
+  });
+  const paidSum = paidRows.reduce((s, r) => s + r.amount, 0);
+
+
   const { data: printers = [] } = useQuery({
     queryKey: ["printers", "active"],
     queryFn: async () => {
