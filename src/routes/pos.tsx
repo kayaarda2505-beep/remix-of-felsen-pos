@@ -644,7 +644,7 @@ function POS() {
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               </div>
             )}
-            {showCart.length === 0 && !tabLoading && (
+            {showCart.length === 0 && !hasPending && !tabLoading && (
               <div className="text-center text-sm text-muted-foreground py-12">
                 {isTab ? "Noch keine Artikel auf diesem Tisch" : "Tippe Produkte zum Hinzufügen"}
               </div>
