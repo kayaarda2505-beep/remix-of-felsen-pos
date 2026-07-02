@@ -535,7 +535,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     ? nav.filter((n) => BARKEEPER_ALLOWED.has(n.to))
     : operator?.role === "service"
     ? nav.filter((n) => SERVICE_ALLOWED.has(n.to))
+    : operator?.role === "kasse"
+    ? nav.filter((n) => KASSE_ALLOWED.has(n.to))
     : nav;
+
 
   return (
     <SpotifyBarSpeakerProvider>
