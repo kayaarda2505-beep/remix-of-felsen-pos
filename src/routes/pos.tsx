@@ -477,18 +477,19 @@ function POS() {
     setEditing(p);
   };
 
-  if (operator && operator.role !== "manager" && operator.role !== "barkeeper") {
+  if (operator && !["manager", "barkeeper", "kasse"].includes(operator.role as string)) {
     return (
       <div className="p-6 h-screen flex items-center justify-center">
         <div className="glass-strong rounded-3xl p-10 max-w-md text-center">
           <h1 className="text-xl font-semibold mb-2">Kein Zugriff</h1>
           <p className="text-sm text-muted-foreground">
-            Die Kasse ist nur für Manager und Barkeeper verfügbar. Bitte nutze den Service-Bereich.
+            Die Kasse ist nur für Manager, Barkeeper und Kasse verfügbar. Bitte nutze den Service-Bereich.
           </p>
         </div>
       </div>
     );
   }
+
 
   return (
     <div className="p-3 lg:p-4 pb-24 md:pb-3 h-screen flex flex-col w-full max-w-[1800px] mx-auto overflow-hidden">
