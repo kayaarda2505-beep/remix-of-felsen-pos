@@ -481,7 +481,9 @@ function ServiceTablet() {
                 .filter((t) => areaFilter === "all" || t.area === areaFilter)
                 .map((t) => {
                   const openO = orderByTable.get(t.id);
+                  const hasTotal = !!openO && Number(openO.total) > 0;
                   const occupied = !!openO;
+                  const highlight = hasTotal;
                   const AreaIcon = AREAS.find((a) => a.value === t.area)!.icon;
                   return (
                     <button
@@ -491,13 +493,14 @@ function ServiceTablet() {
                         setStep(openO ? "tab" : "menu");
                       }}
                       className={`relative rounded-2xl p-3 border-2 flex flex-col items-start gap-1 text-left tap-highlight-none transition-colors ${
-                        occupied
+                        highlight
                           ? "border-emerald-300 bg-emerald-400/20"
                           : "border-white/10 bg-white/[0.04] active:bg-white/[0.08]"
                       }`}
                     >
                       <div className="text-lg font-semibold leading-tight">{t.name}</div>
-                      <div className={`text-[10px] uppercase tracking-wider flex items-center gap-1 ${occupied ? "text-emerald-100/90" : "text-muted-foreground"}`}>
+                      <div className={`text-[10px] uppercase tracking-wider flex items-center gap-1 ${highlight ? "text-emerald-100/90" : "text-muted-foreground"}`}>
+
                         <AreaIcon className="w-3 h-3" /> {t.seats}P
                       </div>
                       {openO && (
