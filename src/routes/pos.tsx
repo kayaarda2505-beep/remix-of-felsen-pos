@@ -1277,3 +1277,239 @@ function PaymentDialog({
     </motion.div>
   );
 }
+
+function SplitPaymentDialog({
+  outstanding,
+  tableName,
+  orderId,
+  tableId,
+  printers,
+  onClose,
+  onPaid,
+}: {
+  outstanding: number;
+  tableName: string;
+  orderId: string;
+  tableId: string | null;
+  printers: PrinterConfig[];
+  onClose: () => void;
+  onPaid: (args: { amount: number; method: string; closeOrder: boolean }) => Promise<void> | void;
+}) {
+  const [amountStr, setAmountStr] = useState<string>(outstanding.toFixed(2));
+  const [busy, setBusy] = useState(false);
+  const [sumupPhase, setSumupPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
+  const [sumupMsg, setSumupMsg] = useState<string>("");
+  const sendToReader = useServerFn(sumupSendToReader);
+  const getTxStatus = useServerFn(sumupGetTransactionStatus);
+
+  const amount = Math.max(0, +(Number(amountStr.replace(",", ".")) || 0).toFixed(2));
+  const valid = amount > 0 && amount <= outstanding + 0.001;
+  const closeAfter = Math.abs(amount - outstanding) < 0.005;
+
+  const quick = Array.from(
+    new Set(
+      [
+        outstanding,
+        outstanding / 2,
+        outstanding / 3,
+        outstanding / 4,
+        10,
+        20,
+        50,
+      ]
+        .filter((v) => v > 0 && v <= outstanding + 0.001)
+        .map((v) => +v.toFixed(2)),
+    ),
+  ).slice(0, 6);
+
+  const payCash = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    try {
+      await onPaid({ amount, method: "Bar", closeOrder: closeAfter });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const payCard = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    setSumupPhase("sending");
+    setSumupMsg("Sende an Terminal …");
+    try {
+      const { clientTransactionId } = await sendToReader({
+        data: { amount, description: `Teilzahlung ${tableName}` },
+      });
+      setSumupPhase("waiting");
+      setSumupMsg("Am Terminal bezahlen …");
+      if (!clientTransactionId) {
+        // Kein Polling möglich → als bezahlt annehmen nach manueller Bestätigung
+        return;
+      }
+      const started = Date.now();
+      while (Date.now() - started < 120_000) {
+        await new Promise((r) => setTimeout(r, 2500));
+        try {
+          const s = await getTxStatus({ data: { clientTransactionId } });
+          if (s.status === "SUCCESSFUL") {
+            setSumupPhase("ok");
+            setSumupMsg("Bezahlung erfolgreich");
+            if (isDesktopApp()) {
+              await printCardReceipt({
+                printers,
+                info: {
+                  transactionId: s.transactionId,
+                  transactionCode: s.transactionCode,
+                  cardType: s.cardType,
+                  cardLast4: s.cardLast4,
+                  authCode: s.authCode,
+                  entryMode: s.entryMode,
+                  amount,
+                  currency: s.currency,
+                  timestamp: s.timestamp,
+                  merchantCode: s.merchantCode,
+                  tableName,
+                },
+              });
+            }
+            await onPaid({ amount, method: "SumUp Terminal", closeOrder: closeAfter });
+            return;
+          }
+          if (s.status === "FAILED" || s.status === "CANCELLED") {
+            setSumupPhase("fail");
+            setSumupMsg(s.status === "CANCELLED" ? "Am Terminal abgebrochen" : "Zahlung fehlgeschlagen");
+            return;
+          }
+        } catch {
+          /* weiter pollen */
+        }
+      }
+      setSumupPhase("fail");
+      setSumupMsg("Zeitüberschreitung.");
+    } catch (e: any) {
+      setSumupPhase("fail");
+      setSumupMsg(e?.message ?? "Fehler");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmCardManual = async () => {
+    if (!valid) return;
+    await onPaid({ amount, method: "Karte manuell", closeOrder: closeAfter });
+  };
+
+  // Referenzen "verwenden" um Lint-Warnungen zu vermeiden
+  void orderId; void tableId;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 10 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.95, y: 10 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass-strong rounded-3xl p-6 w-full max-w-md"
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Teilzahlung · Tisch {tableName}
+            </div>
+            <h2 className="text-xl font-semibold">Betrag eingeben</h2>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-xl glass flex items-center justify-center">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between text-sm mb-3">
+          <span className="text-muted-foreground">Offen</span>
+          <span className="text-lg font-semibold tabular-nums">CHF {outstanding.toFixed(2)}</span>
+        </div>
+
+        <div className="space-y-1.5 mb-3">
+          <label className="text-xs uppercase tracking-wider text-muted-foreground">Betrag (CHF)</label>
+          <input
+            type="number"
+            step="0.05"
+            min={0}
+            max={outstanding}
+            value={amountStr}
+            onChange={(e) => setAmountStr(e.target.value)}
+            className="glass rounded-xl px-3 py-3 text-2xl w-full outline-none bg-transparent tabular-nums font-semibold"
+          />
+          <div className="flex flex-wrap gap-2 pt-1">
+            {quick.map((v) => (
+              <button
+                key={v}
+                onClick={() => setAmountStr(v.toFixed(2))}
+                className="rounded-lg px-2.5 py-1.5 text-xs glass hover:border-accent/40 tabular-nums"
+              >
+                CHF {v.toFixed(2)}
+              </button>
+            ))}
+          </div>
+          {amount > 0 && (
+            <div className="text-xs text-muted-foreground pt-1 tabular-nums">
+              Verbleibt danach: CHF {Math.max(0, +(outstanding - amount).toFixed(2)).toFixed(2)}
+              {closeAfter && <span className="text-success ml-2">→ Rechnung wird abgeschlossen</span>}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 pt-2">
+          <button
+            onClick={payCash}
+            disabled={!valid || busy}
+            className="glass rounded-xl py-3 flex flex-col items-center gap-1 text-sm hover:border-accent/40 disabled:opacity-40"
+          >
+            <Banknote className="w-5 h-5" />
+            Bar
+          </button>
+          <button
+            onClick={payCard}
+            disabled={!valid || busy || sumupPhase === "sending" || sumupPhase === "waiting"}
+            className="glass rounded-xl py-3 flex flex-col items-center gap-1 text-sm hover:border-accent/40 disabled:opacity-40"
+          >
+            {sumupPhase === "sending" || sumupPhase === "waiting" ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <CreditCard className="w-5 h-5" />
+            )}
+            Karte (SumUp)
+          </button>
+        </div>
+        {sumupMsg && (
+          <div
+            className={`text-xs mt-2 text-center ${
+              sumupPhase === "fail"
+                ? "text-destructive"
+                : sumupPhase === "ok"
+                  ? "text-success"
+                  : "text-muted-foreground"
+            }`}
+          >
+            {sumupMsg}
+          </div>
+        )}
+        {sumupPhase === "fail" && (
+          <button
+            onClick={confirmCardManual}
+            className="w-full mt-2 rounded-xl py-2 text-xs bg-white/5 hover:bg-white/10"
+          >
+            Trotzdem als Karten-Zahlung markieren
+          </button>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
