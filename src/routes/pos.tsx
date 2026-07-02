@@ -19,6 +19,7 @@ import {
   Maximize2,
   Minimize2,
   Smartphone,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -73,6 +74,8 @@ function POS() {
   // null = walk-in (Theke), otherwise an order id
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [walkInCart, setWalkInCart] = useState<LocalLine[]>([]);
+  // Ungesendete Artikel je Tab-Order (Puffer bis „Senden an Küche")
+  const [pendingByOrder, setPendingByOrder] = useState<Record<string, LocalLine[]>>({});
   const [payMode, setPayMode] = useState<null | "cash" | "card">(null);
 
   const { data: openOrders = [] } = useQuery<OpenOrder[]>({
@@ -197,26 +200,80 @@ function POS() {
       c.map((l) => (l.id === id ? { ...l, qty: l.qty + d } : l)).filter((l) => l.qty > 0),
     );
 
-  // Tab helpers
-  const addToTab = useMutation({
-    mutationFn: async ({ p, c }: { p: Product; c: ProductCustomization }) => {
+  // Tab: Artikel werden erst lokal gepuffert; sie werden erst per
+  // „Senden an Küche"-Button in die Datenbank geschrieben. Erst dann klingelt
+  // es in Küche/Bar.
+  const pendingCart = activeOrderId ? pendingByOrder[activeOrderId] ?? [] : [];
+  const addPending = (p: Product, c: ProductCustomization) => {
+    if (!activeOrderId) return;
+    setPendingByOrder((cur) => {
+      const list = cur[activeOrderId] ?? [];
+      if (c.modifiers.length === 0 && !c.note) {
+        const ex = list.find((l) => l.product.id === p.id && l.modifiers.length === 0 && !l.note);
+        if (ex) {
+          return {
+            ...cur,
+            [activeOrderId]: list.map((l) => (l.id === ex.id ? { ...l, qty: l.qty + c.qty } : l)),
+          };
+        }
+      }
+      return {
+        ...cur,
+        [activeOrderId]: [
+          ...list,
+          {
+            id: `${p.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            product: p,
+            qty: c.qty,
+            modifiers: c.modifiers,
+            note: c.note,
+          },
+        ],
+      };
+    });
+  };
+  const incPending = (id: string, d: number) => {
+    if (!activeOrderId) return;
+    setPendingByOrder((cur) => {
+      const list = cur[activeOrderId] ?? [];
+      return {
+        ...cur,
+        [activeOrderId]: list
+          .map((l) => (l.id === id ? { ...l, qty: l.qty + d } : l))
+          .filter((l) => l.qty > 0),
+      };
+    });
+  };
+
+  const sendPending = useMutation({
+    mutationFn: async () => {
       if (!activeOrderId) return;
-      const { error } = await supabase.from("order_items").insert({
+      const list = pendingByOrder[activeOrderId] ?? [];
+      if (list.length === 0) return;
+      const rows = list.map((l) => ({
         order_id: activeOrderId,
-        product_id: p.id,
-        product_name: p.name,
-        category: p.category,
-        unit_price: p.price,
-        qty: c.qty,
-        modifiers: c.modifiers,
-        note: c.note ?? null,
-      });
+        product_id: l.product.id,
+        product_name: l.product.name,
+        category: l.product.category,
+        unit_price: l.product.price,
+        qty: l.qty,
+        modifiers: l.modifiers,
+        note: l.note ?? null,
+      }));
+      const { error } = await supabase.from("order_items").insert(rows);
       if (error) throw error;
     },
     onSuccess: () => {
+      if (activeOrderId) {
+        setPendingByOrder((cur) => {
+          const { [activeOrderId]: _, ...rest } = cur;
+          return rest;
+        });
+      }
       qc.invalidateQueries({ queryKey: ["order_items", activeOrderId] });
       qc.invalidateQueries({ queryKey: ["orders", "open"] });
       qc.invalidateQueries({ queryKey: ["ingredients", "stock"] });
+      toast.success("An Küche/Bar gesendet");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
@@ -349,10 +406,12 @@ function POS() {
   });
 
   const isTab = !!activeOrderId;
+  const pendingSubtotal = pendingCart.reduce((s, l) => s + l.product.price * l.qty, 0);
   const subtotal = isTab
-    ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0)
+    ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0) + pendingSubtotal
     : walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
   const total = subtotal + tip;
+  const hasPending = pendingCart.length > 0;
   const showCart = isTab ? tabItems : walkInCart;
 
   // Vollbild-Toggle (F11-Ersatz, blendet die Windows-Taskleiste aus)
@@ -585,7 +644,7 @@ function POS() {
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               </div>
             )}
-            {showCart.length === 0 && !tabLoading && (
+            {showCart.length === 0 && !hasPending && !tabLoading && (
               <div className="text-center text-sm text-muted-foreground py-12">
                 {isTab ? "Noch keine Artikel auf diesem Tisch" : "Tippe Produkte zum Hinzufügen"}
               </div>
@@ -678,8 +737,79 @@ function POS() {
                       </div>
                     </motion.div>
                   ))}
+              {isTab &&
+                pendingCart.map((l) => (
+                  <motion.div
+                    key={`pending-${l.id}`}
+                    layout
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="flex items-start gap-3 p-2 rounded-xl bg-warning/10 border border-warning/30"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-warning/25 text-warning border border-warning/40">
+                          ungesendet
+                        </span>
+                        <div className="text-sm font-medium truncate">{l.product.name}</div>
+                      </div>
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        CHF {l.product.price.toFixed(2)}
+                      </div>
+                      {(l.modifiers.length > 0 || l.note) && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {l.modifiers.map((m) => (
+                            <span key={m} className="text-[10px] px-1.5 py-0.5 rounded-md bg-accent/15 text-accent border border-accent/30">
+                              {m}
+                            </span>
+                          ))}
+                          {l.note && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-muted-foreground border border-border/40 flex items-center gap-1">
+                              <Pencil className="w-2.5 h-2.5" /> {l.note}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 glass rounded-lg p-0.5 shrink-0">
+                      <button
+                        onClick={() => incPending(l.id, -1)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-6 text-center text-sm tabular-nums">{l.qty}</span>
+                      <button
+                        onClick={() => incPending(l.id, 1)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
+                      {(l.product.price * l.qty).toFixed(2)}
+                    </div>
+                  </motion.div>
+                ))}
             </AnimatePresence>
           </div>
+
+          {isTab && hasPending && (
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              disabled={sendPending.isPending}
+              onClick={() => sendPending.mutate()}
+              className="w-full rounded-2xl py-3 mt-3 bg-primary text-primary-foreground font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+            >
+              {sendPending.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Senden an Küche • {pendingCart.reduce((s, l) => s + l.qty, 0)} Artikel
+            </motion.button>
+          )}
 
           <div className="border-t border-border/40 pt-4 mt-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
@@ -722,7 +852,8 @@ function POS() {
                 <button
                   key={m.label}
                   onClick={() => setPayMode(m.mode)}
-                  disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || payTab.isPending}
+                  disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || hasPending || payTab.isPending}
+                  title={hasPending ? "Zuerst an Küche senden" : undefined}
                   className="glass rounded-xl py-3 flex flex-col items-center gap-1 text-xs hover:border-accent/40 transition-colors disabled:opacity-40"
                 >
                   <m.icon className="w-4 h-4" />
@@ -732,7 +863,7 @@ function POS() {
             </div>
             <motion.button
               whileTap={{ scale: 0.98 }}
-              disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || payTab.isPending}
+              disabled={(isTab ? tabItems.length === 0 : walkInCart.length === 0) || hasPending || payTab.isPending}
               onClick={printInterim}
               className="w-full rounded-2xl py-3 mt-2 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
@@ -769,7 +900,7 @@ function POS() {
         onClose={() => setEditing(null)}
         onConfirm={(c) => {
           if (!editing) return;
-          if (isTab) addToTab.mutate({ p: editing, c });
+          if (isTab) addPending(editing, c);
           else addWalkIn(editing, c);
         }}
       />
