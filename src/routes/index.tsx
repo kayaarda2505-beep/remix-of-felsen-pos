@@ -1828,7 +1828,8 @@ function FloorPlan({
         {tables.map((t, i) => {
           const { x, y } = fallbackPos(t, i);
           const openO = orderByTable.get(t.id);
-          const occupied = !!openO;
+          const openTotal = openO ? Number(openO.total) : 0;
+          const occupied = !!openO && openTotal > 0;
           const AreaIcon = AREAS.find((a) => a.value === t.area)!.icon;
           const isRound = t.area === "bar";
           const size = Math.max(56, Math.min(92, 48 + (t.seats ?? 2) * 6));
@@ -1862,9 +1863,9 @@ function FloorPlan({
               <div className={`text-[9px] uppercase tracking-wider flex items-center gap-0.5 ${occupied ? "text-emerald-100/90" : "text-muted-foreground"}`}>
                 <AreaIcon className="w-2.5 h-2.5" /> {t.seats}P
               </div>
-              {openO && (
+              {openO && openTotal > 0 && (
                 <div className="absolute -top-2 -right-2 rounded-md bg-accent text-accent-foreground text-[10px] font-bold px-1.5 py-0.5 tabular-nums shadow-md">
-                  {Number(openO.total).toFixed(2)}
+                  {openTotal.toFixed(2)}
                 </div>
               )}
             </motion.button>
