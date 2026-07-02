@@ -152,12 +152,25 @@ const SERVICE_ALLOWED = new Set<string>([
   "/settings",
 ]);
 
+const KASSE_ALLOWED = new Set<string>([
+  "/",
+  "/pos",
+  "/tables",
+  "/inventory",
+  "/reports",
+  "/musik",
+  "/payments",
+  "/settings",
+]);
+
 const roleLabel: Record<string, string> = {
   manager: "Manager",
   barkeeper: "Barkeeper",
   service: "Service",
   kueche: "Küche",
+  kasse: "Kasse",
 };
+
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -518,11 +531,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 
 
-  const visibleNav = operator?.role === "barkeeper"
+  const navRole = operator?.role as string | undefined;
+  const visibleNav = navRole === "barkeeper"
     ? nav.filter((n) => BARKEEPER_ALLOWED.has(n.to))
-    : operator?.role === "service"
+    : navRole === "service"
     ? nav.filter((n) => SERVICE_ALLOWED.has(n.to))
+    : navRole === "kasse"
+    ? nav.filter((n) => KASSE_ALLOWED.has(n.to))
     : nav;
+
+
+
 
   return (
     <SpotifyBarSpeakerProvider>
