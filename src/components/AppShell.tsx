@@ -152,12 +152,25 @@ const SERVICE_ALLOWED = new Set<string>([
   "/settings",
 ]);
 
+const KASSE_ALLOWED = new Set<string>([
+  "/",
+  "/pos",
+  "/tables",
+  "/inventory",
+  "/reports",
+  "/musik",
+  "/payments",
+  "/settings",
+]);
+
 const roleLabel: Record<string, string> = {
   manager: "Manager",
   barkeeper: "Barkeeper",
   service: "Service",
   kueche: "Küche",
+  kasse: "Kasse",
 };
+
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
