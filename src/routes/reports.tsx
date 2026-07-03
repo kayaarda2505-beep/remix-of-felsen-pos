@@ -363,14 +363,19 @@ function Reports() {
     },
   });
 
-  // Kumulative Bar-Einnahmen und Bar-Ausgaben bis Ende Tag
+  // Kumulative Bar-Einnahmen (inkl. Trinkgeld bar & direkt bezahlte Bestellungen ohne payment_request) und Bar-Ausgaben bis Ende Tag
   const { data: cashCumRow } = useQuery({
-    queryKey: ["cash_cum", endOfDay],
+    queryKey: ["cash_cum_v3", endOfDay],
     queryFn: async () => {
-      const [{ data: pays, error: pErr }, { data: exps, error: eErr }] = await Promise.all([
+      const [
+        { data: cashPays, error: pErr },
+        { data: exps, error: eErr },
+        { data: paidOrders, error: oErr },
+        { data: allPays, error: apErr },
+      ] = await Promise.all([
         supabase
           .from("payment_requests")
-          .select("amount")
+          .select("amount, tip")
           .eq("status", "paid")
           .eq("method", "cash")
           .lte("created_at", endOfDay)
@@ -381,14 +386,35 @@ function Reports() {
           .lte("expense_date", fmtISO(deferredTo))
           .in("payment_method", ["cash", "bar", "Bar", "Cash"])
           .limit(50000),
+        supabase
+          .from("orders")
+          .select("id, total")
+          .eq("status", "paid")
+          .lte("created_at", endOfDay)
+          .limit(50000),
+        supabase
+          .from("payment_requests")
+          .select("order_id")
+          .eq("status", "paid")
+          .lte("created_at", endOfDay)
+          .limit(50000),
       ]);
       if (pErr) throw pErr;
       if (eErr) throw eErr;
-      const cashIn = (pays ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
+      if (oErr) throw oErr;
+      if (apErr) throw apErr;
+      const paidOrderIds = new Set((allPays ?? []).map((p: any) => p.order_id).filter(Boolean));
+      const cashFromPays = (cashPays ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
+      const cashTips = (cashPays ?? []).reduce((s, p: any) => s + Number(p.tip ?? 0), 0);
+      const cashFromDirectPaid = (paidOrders ?? [])
+        .filter((o: any) => !paidOrderIds.has(o.id))
+        .reduce((s, o: any) => s + Number(o.total ?? 0), 0);
+      const cashIn = cashFromPays + cashTips + cashFromDirectPaid;
       const cashOut = (exps ?? []).reduce((s, e: any) => s + Number(e.amount ?? 0), 0);
-      return { cashIn, cashOut };
+      return { cashIn, cashOut, cashTips };
     },
   });
+
 
 
 
