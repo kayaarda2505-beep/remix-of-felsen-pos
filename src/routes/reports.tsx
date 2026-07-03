@@ -254,6 +254,48 @@ function Reports() {
   }, [payments, feeMap]);
   const feeTotal = feesByMethod.reduce((s, f) => s + f.sum, 0);
 
+  // Umsatz nach Zahlungsart (aus payment_requests)
+  const paymentBreakdown = useMemo(() => {
+    let cash = 0, card = 0, twint = 0, other = 0, tips = 0;
+    let cashCount = 0, cardCount = 0;
+    for (const p of payments) {
+      const amt = Number(p.amount ?? 0);
+      const tip = Number(p.tip ?? 0);
+      tips += tip;
+      if (p.method === "cash") { cash += amt; cashCount++; }
+      else if (p.method === "card_terminal" || p.method === "stripe" || p.method === "apple_pay" || p.method === "google_pay") { card += amt; cardCount++; }
+      else if (p.method === "twint") { twint += amt; }
+      else { other += amt; }
+    }
+    return { cash, card, twint, other, tips, cashCount, cardCount };
+  }, [payments]);
+
+  // Bar-Ausgaben (was aus der Kasse rausging)
+  const cashExpenseTotal = useMemo(
+    () => expenses
+      .filter((e) => (e.payment_method ?? "").toLowerCase() === "cash" || (e.payment_method ?? "").toLowerCase() === "bar")
+      .reduce((s, e) => s + Number(e.amount ?? 0), 0),
+    [expenses],
+  );
+
+  // Kassen-Zählung (nur bei Einzeltag sinnvoll)
+  const { data: cashCountRow } = useQuery({
+    queryKey: ["cash_counts", isoFrom, singleDay],
+    enabled: singleDay,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("cash_counts")
+        .select("id, counted_amount, expected_amount, note, counted_by, created_at")
+        .eq("count_date", isoFrom)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; counted_amount: number; expected_amount: number; note: string | null; counted_by: string | null; created_at: string } | null;
+    },
+  });
+
+
   const revenue = useAggregates
     ? Number(ordersSummary?.revenue ?? 0)
     : orders.reduce((s, o) => s + Number(o.total ?? 0), 0);
