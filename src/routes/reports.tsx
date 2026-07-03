@@ -6,8 +6,8 @@ import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Pr
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
-import { printDailyReport } from "@/lib/receipt";
-import { isDesktopApp } from "@/lib/printer-bridge";
+import { printDailyReport, printBill } from "@/lib/receipt";
+import { isDesktopApp, type PrinterConfig } from "@/lib/printer-bridge";
 
 
 
