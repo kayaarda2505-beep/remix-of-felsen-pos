@@ -199,23 +199,26 @@ function ServiceTablet() {
       };
       const { data: existingPayments, error: existingErr } = await supabase
         .from("payment_requests")
-        .select("id")
+        .select("amount, tip")
         .eq("order_id", activeTableOrder.id)
-        .eq("status", "paid")
-        .limit(1);
+        .eq("status", "paid");
       if (existingErr) throw existingErr;
+      const existingPaid = (existingPayments ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+      const existingTip = (existingPayments ?? []).reduce((sum, row) => sum + Number(row.tip ?? 0), 0);
+      const remainingPaymentAmount = Math.max(0, +(paymentAmount - existingPaid).toFixed(2));
+      const remainingTip = Math.max(0, +(effectiveTip - existingTip).toFixed(2));
 
-      if ((existingPayments ?? []).length === 0) {
+      if (remainingPaymentAmount > 0) {
         const { error: payErr } = await supabase.from("payment_requests").insert({
           table_id: selectedTable.id,
           table_name: selectedTable.name,
           order_id: activeTableOrder.id,
-          amount: paymentAmount,
-          tip: effectiveTip,
+          amount: remainingPaymentAmount,
+          tip: remainingTip,
           method,
           status: "paid",
           handled_at: new Date().toISOString(),
-          note: `${selectedTable.name} · ${paymentMethod}${effectiveTip > 0 ? ` · Trinkgeld CHF ${effectiveTip.toFixed(2)}` : ""}`,
+          note: `${selectedTable.name} · ${paymentMethod}${remainingTip > 0 ? ` · Trinkgeld CHF ${remainingTip.toFixed(2)}` : ""}`,
         });
         if (payErr) throw payErr;
       }
