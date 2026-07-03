@@ -46,6 +46,20 @@ function Reports() {
   const [isRangePending, startRangeTransition] = useTransition();
   const deferredFrom = useDeferredValue(from);
   const deferredTo = useDeferredValue(to);
+  const queryClient = useQueryClient();
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  // Rolle des aktuellen Users (für Löschen-Berechtigung)
+  const { data: canDelete = false } = useQuery({
+    queryKey: ["current_user_role_can_delete"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const roles = (data ?? []).map((r: any) => r.role);
+      return roles.includes("admin") || roles.includes("manager");
+    },
+  });
 
   const applyPreset = (p: RangePreset) => {
     const now = new Date(); now.setHours(0,0,0,0);
@@ -112,12 +126,12 @@ function Reports() {
 
   // Rohe Items nur bei kurzen Zeiträumen laden
   const { data: items = [] } = useQuery({
-    queryKey: ["items_range", isoFrom, isoToNext, useAggregates],
+    queryKey: ["items_range_v2", isoFrom, isoToNext, useAggregates],
     enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_items")
-        .select("category, qty, unit_price, sent_at")
+        .select("order_id, product_name, category, qty, unit_price, note, sent_at")
         .gte("sent_at", `${isoFrom}T00:00:00`)
         .lt("sent_at", `${isoToNext}T00:00:00`)
         .limit(20000);
@@ -196,17 +210,17 @@ function Reports() {
   });
 
   const { data: payments = [] } = useQuery({
-    queryKey: ["payments_range_v2", isoFrom, isoToNext],
+    queryKey: ["payments_range_v3", isoFrom, isoToNext],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payment_requests")
-        .select("amount, tip, method, status, created_at, handled_at")
+        .select("id, order_id, amount, tip, method, status, note, created_at, handled_at")
         .eq("status", "paid")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
         .limit(10000);
       if (error) throw error;
-      return (data ?? []) as Array<{ amount: number; tip: number | null; method: string; status: string; created_at: string; handled_at: string | null }>;
+      return (data ?? []) as Array<{ id: string; order_id: string | null; amount: number; tip: number | null; method: string; status: string; note: string | null; created_at: string; handled_at: string | null }>;
     },
   });
 
@@ -672,22 +686,97 @@ function Reports() {
               Keine Bestellungen
             </div>
           ) : (
-            <div className="divide-y divide-border/30 -mx-2 max-h-[480px] overflow-y-auto">
+            <div className="divide-y divide-border/30 -mx-2 max-h-[560px] overflow-y-auto">
               {[...orders]
                 .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                 .map((o: any) => {
                   const dt = new Date(o.created_at);
                   const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+                  const orderItems = (items as any[]).filter((it) => it.order_id === o.id);
+                  const orderPays = (payments as any[]).filter((p) => p.order_id === o.id);
+                  const tipSum = orderPays.reduce((s, p) => s + Number(p.tip || 0), 0);
+                  const methodLabel = (m: string) => m === "cash" ? "Bar" : m === "card_terminal" ? "Karte" : m === "twint" ? "TWINT" : m === "stripe" ? "Stripe" : m;
+                  const methods = orderPays.length ? [...new Set(orderPays.map(p => methodLabel(p.method)))].join(", ") : "—";
+                  const isOpen = expandedOrder === o.id;
                   return (
-                    <div key={o.id} className="flex items-center gap-3 px-2 py-2">
-                      <div className={`w-2 h-2 rounded-full ${o.status === "paid" ? "bg-success" : "bg-accent/60"}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm truncate">#{String(o.id).slice(0, 8)} · {time}</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {o.status === "paid" ? "Bezahlt" : o.status}{o.guests ? ` · ${o.guests} Gäste` : ""}
+                    <div key={o.id} className="px-2">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedOrder(isOpen ? null : o.id)}
+                        className="w-full flex items-center gap-3 py-2 text-left hover:bg-white/5 rounded-lg transition"
+                      >
+                        <div className={`w-2 h-2 rounded-full ${o.status === "paid" ? "bg-success" : "bg-accent/60"}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm truncate">#{String(o.id).slice(0, 8)} · {time}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {o.status === "paid" ? "Bezahlt" : o.status}{o.guests ? ` · ${o.guests} Gäste` : ""} · {methods}{tipSum > 0 ? ` · TG ${tipSum.toFixed(2)}` : ""}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-sm font-semibold tabular-nums">{Number(o.total ?? 0).toFixed(2)} CHF</div>
+                        <div className="text-sm font-semibold tabular-nums">{Number(o.total ?? 0).toFixed(2)} CHF</div>
+                      </button>
+                      {isOpen && (
+                        <div className="ml-5 mb-3 mt-1 p-3 rounded-xl bg-white/5 space-y-3">
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Positionen</div>
+                            {orderItems.length === 0 ? (
+                              <div className="text-xs text-muted-foreground">Keine Positionen</div>
+                            ) : (
+                              <div className="space-y-1">
+                                {orderItems.map((it, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-xs">
+                                    <div className="min-w-0 truncate">
+                                      <span className="tabular-nums text-muted-foreground mr-2">{it.qty}×</span>
+                                      {it.product_name}
+                                      {it.note ? <span className="text-muted-foreground"> · {it.note}</span> : null}
+                                    </div>
+                                    <div className="tabular-nums">{(Number(it.unit_price) * Number(it.qty)).toFixed(2)}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Zahlungen</div>
+                            {orderPays.length === 0 ? (
+                              <div className="text-xs text-muted-foreground">Keine Zahlung erfasst</div>
+                            ) : (
+                              <div className="space-y-1">
+                                {orderPays.map((p) => (
+                                  <div key={p.id} className="flex items-center justify-between text-xs">
+                                    <div className="truncate">
+                                      {methodLabel(p.method)}
+                                      {p.note ? <span className="text-muted-foreground"> · {p.note}</span> : null}
+                                      {Number(p.tip || 0) > 0 ? <span className="text-muted-foreground"> · TG {Number(p.tip).toFixed(2)}</span> : null}
+                                    </div>
+                                    <div className="tabular-nums">{Number(p.amount).toFixed(2)}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {canDelete && (
+                            <div className="pt-1 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!confirm(`Bestellung #${String(o.id).slice(0,8)} wirklich löschen? Zahlungen werden ebenfalls entfernt.`)) return;
+                                  const { error: pErr } = await supabase.from("payment_requests").delete().eq("order_id", o.id);
+                                  if (pErr) { toast.error("Zahlungen löschen fehlgeschlagen: " + pErr.message); return; }
+                                  const { error: oErr } = await supabase.from("orders").delete().eq("id", o.id);
+                                  if (oErr) { toast.error("Bestellung löschen fehlgeschlagen: " + oErr.message); return; }
+                                  toast.success("Bestellung gelöscht");
+                                  setExpandedOrder(null);
+                                  queryClient.invalidateQueries();
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs bg-destructive/20 hover:bg-destructive/30 text-destructive border border-destructive/30 transition"
+                              >
+                                Bestellung löschen
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
