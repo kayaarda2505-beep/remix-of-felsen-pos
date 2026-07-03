@@ -197,30 +197,35 @@ function ServiceTablet() {
         tip: effectiveTip,
         paymentMethod,
       };
-      const { error: payErr } = await supabase.from("payment_requests").insert({
-        table_id: selectedTable.id,
-        table_name: selectedTable.name,
-        order_id: activeTableOrder.id,
-        amount: paymentAmount,
-        tip: effectiveTip,
-        method,
-        status: "paid",
-        handled_at: new Date().toISOString(),
-        note: `${selectedTable.name} · ${paymentMethod}${effectiveTip > 0 ? ` · Trinkgeld CHF ${effectiveTip.toFixed(2)}` : ""}`,
-      });
-      if (payErr) throw payErr;
-      // Rechnung drucken (vor dem Schliessen, damit tabItems noch da sind)
-      if (isDesktopApp()) {
-        const err = await printBill({
-          printers,
-          ...snapshot,
+      const { data: existingPayments, error: existingErr } = await supabase
+        .from("payment_requests")
+        .select("id")
+        .eq("order_id", activeTableOrder.id)
+        .eq("status", "paid")
+        .limit(1);
+      if (existingErr) throw existingErr;
+
+      if ((existingPayments ?? []).length === 0) {
+        const { error: payErr } = await supabase.from("payment_requests").insert({
+          table_id: selectedTable.id,
+          table_name: selectedTable.name,
+          order_id: activeTableOrder.id,
+          amount: paymentAmount,
+          tip: effectiveTip,
+          method,
+          status: "paid",
+          handled_at: new Date().toISOString(),
+          note: `${selectedTable.name} · ${paymentMethod}${effectiveTip > 0 ? ` · Trinkgeld CHF ${effectiveTip.toFixed(2)}` : ""}`,
         });
-        if (err) toast.error(`Druck: ${err}`);
+        if (payErr) throw payErr;
       }
+
       const { error: oErr } = await supabase
         .from("orders")
         .update({ status: "paid", closed_at: new Date().toISOString(), total: finalTotal })
-        .eq("id", activeTableOrder.id);
+        .eq("id", activeTableOrder.id)
+        .select("id")
+        .single();
       if (oErr) throw oErr;
       const { error: tErr } = await supabase
         .from("dining_tables")
