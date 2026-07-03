@@ -131,7 +131,7 @@ function Reports() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_items")
-        .select("order_id, product_name, category, qty, unit_price, note, sent_at")
+        .select("id, order_id, product_name, category, qty, unit_price, note, sent_at")
         .gte("sent_at", `${isoFrom}T00:00:00`)
         .lt("sent_at", `${isoToNext}T00:00:00`)
         .limit(20000);
