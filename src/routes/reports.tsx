@@ -627,7 +627,7 @@ function Reports() {
         isoDate={isoFrom}
         cashRevenue={paymentBreakdown.cash}
         cashExpenses={cashExpenseTotal}
-        tips={paymentBreakdown.tips}
+        tips={Number(cashCumRow?.cashTips ?? 0)}
         cashCountRow={cashCountRow}
         movementsTotal={movementsCumTotal}
         cashInCum={Number(cashCumRow?.cashIn ?? 0)}
