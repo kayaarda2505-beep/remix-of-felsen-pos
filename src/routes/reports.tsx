@@ -126,7 +126,7 @@ function Reports() {
 
   // Rohe Items nur bei kurzen Zeiträumen laden
   const { data: items = [] } = useQuery({
-    queryKey: ["items_range_v2", isoFrom, isoToNext, useAggregates],
+    queryKey: ["items_range_v3", isoFrom, isoToNext, useAggregates],
     enabled: !useAggregates,
     queryFn: async () => {
       const { data, error } = await supabase
