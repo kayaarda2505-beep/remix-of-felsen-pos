@@ -1049,7 +1049,7 @@ function CashTillPanel({
           </div>
         </div>
         <div className="rounded-xl bg-white/5 px-3 py-2">
-          <div className="text-[10px] uppercase text-muted-foreground">Trinkgeld (im Umsatz)</div>
+          <div className="text-[10px] uppercase text-muted-foreground">Trinkgeld bar (in Kasse)</div>
           <div className="text-sm font-semibold tabular-nums mt-0.5 text-success">+{tips.toFixed(2)}</div>
         </div>
         <div className="rounded-xl bg-accent/10 px-3 py-2">
