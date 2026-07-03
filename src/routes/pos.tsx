@@ -112,21 +112,22 @@ function POS() {
   });
 
   // Bereits geleistete Teilzahlungen für den aktiven Tab
-  const { data: paidRows = [] } = useQuery<{ amount: number; method: string; note: string | null }[]>({
+  const { data: paidRows = [] } = useQuery<{ amount: number; tip: number; method: string; note: string | null }[]>({
     queryKey: ["partial_payments", activeOrderId],
     enabled: !!activeOrderId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payment_requests")
-        .select("amount, method, note")
+        .select("amount, tip, method, note")
         .eq("order_id", activeOrderId!)
         .eq("status", "paid");
       if (error) throw error;
-      return (data ?? []).map((r) => ({ amount: Number(r.amount), method: String(r.method), note: r.note })) as any;
+      return (data ?? []).map((r) => ({ amount: Number(r.amount), tip: Number(r.tip ?? 0), method: String(r.method), note: r.note })) as any;
     },
     refetchInterval: 5000,
   });
   const paidSum = paidRows.reduce((s, r) => s + r.amount, 0);
+  const paidTipSum = paidRows.reduce((s, r) => s + Number(r.tip ?? 0), 0);
 
 
   const { data: printers = [] } = useQuery({
@@ -328,28 +329,12 @@ function POS() {
         unit_price: Number(it.unit_price),
         modifiers: it.modifiers,
       }));
-      const effectiveTip = tip + extraTip;
-      const finalTotal = Number(activeOrder.total) + effectiveTip;
-      if (isDesktopApp()) {
-        const err = await printBill({
-          printers,
-          tableName,
-          items,
-          subtotal: Number(activeOrder.total),
-          total: finalTotal,
-          tip: effectiveTip,
-          paymentMethod: method,
-        });
-        if (err) toast.error(`Druck: ${err}`);
-      }
-      const { error } = await supabase
-        .from("orders")
-        .update({ status: "paid", closed_at: new Date().toISOString(), total: finalTotal })
-        .eq("id", activeOrderId);
-      if (error) throw error;
+      const effectiveTip = +(tip + extraTip).toFixed(2);
+      const baseTotal = Number(activeOrder.total ?? subtotal);
+      const finalTotal = +(baseTotal + effectiveTip).toFixed(2);
       const outstandingAmt = Math.max(0, +(finalTotal - paidSum).toFixed(2));
       if (outstandingAmt > 0) {
-        await supabase.from("payment_requests").insert({
+        const { error: payErr } = await supabase.from("payment_requests").insert({
           order_id: activeOrderId,
           table_name: tableName,
           amount: outstandingAmt,
@@ -359,6 +344,24 @@ function POS() {
           handled_at: new Date().toISOString(),
           note: `${tableName} · ${method}`,
         });
+        if (payErr) throw payErr;
+      }
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: "paid", closed_at: new Date().toISOString(), total: finalTotal })
+        .eq("id", activeOrderId);
+      if (error) throw error;
+      if (isDesktopApp()) {
+        const err = await printBill({
+          printers,
+          tableName,
+          items,
+          subtotal: baseTotal,
+          total: finalTotal,
+          tip: effectiveTip + paidTipSum,
+          paymentMethod: method,
+        });
+        if (err) toast.error(`Druck: ${err}`);
       }
       if (activeOrder.table_id) {
         await supabase
@@ -371,6 +374,8 @@ function POS() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders", "open"] });
       qc.invalidateQueries({ queryKey: ["dining_tables"] });
+      qc.invalidateQueries({ queryKey: ["payments_range_v3"] });
+      qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       setActiveOrderId(null);
       setTip(0);
     },
@@ -399,9 +404,20 @@ function POS() {
       }));
       const { error: iErr } = await supabase.from("order_items").insert(rows);
       if (iErr) throw iErr;
-      const effectiveTip = tip + extraTip;
+      const effectiveTip = +(tip + extraTip).toFixed(2);
       const itemsSubtotal = walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
-      const totalAmt = itemsSubtotal + effectiveTip;
+      const totalAmt = +(itemsSubtotal + effectiveTip).toFixed(2);
+      const { error: payErr } = await supabase.from("payment_requests").insert({
+        order_id: order.id,
+        table_name: "Theke",
+        amount: totalAmt,
+        tip: effectiveTip,
+        method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
+        status: "paid",
+        handled_at: new Date().toISOString(),
+        note: `Theke · ${method}`,
+      });
+      if (payErr) throw payErr;
       const { error: uErr } = await supabase
         .from("orders")
         .update({ status: "paid", closed_at: new Date().toISOString(), total: totalAmt })
@@ -427,22 +443,14 @@ function POS() {
         });
         if (err) toast.error(`Druck: ${err}`);
       }
-      await supabase.from("payment_requests").insert({
-        order_id: order.id,
-        table_name: "Theke",
-        amount: totalAmt,
-        tip: effectiveTip,
-        method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
-        status: "paid",
-        handled_at: new Date().toISOString(),
-        note: `Theke · ${method}`,
-      });
       toast.success(`Bezahlt mit ${method}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders_range"] });
       qc.invalidateQueries({ queryKey: ["items_range"] });
       qc.invalidateQueries({ queryKey: ["payments_range"] });
+      qc.invalidateQueries({ queryKey: ["payments_range_v3"] });
+      qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       setWalkInCart([]);
       setTip(0);
     },
@@ -455,7 +463,7 @@ function POS() {
   const subtotal = isTab
     ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0) + pendingSubtotal
     : walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
-  const total = subtotal + tip;
+  const total = subtotal + (isTab ? paidTipSum : 0) + tip;
   const outstanding = isTab ? Math.max(0, +(total - paidSum).toFixed(2)) : total;
   const hasPending = pendingCart.length > 0;
   const showCart = isTab ? tabItems : walkInCart;
@@ -956,7 +964,7 @@ function POS() {
             onClose={() => setPayMode(null)}
             onConfirm={(method, _received, diff, diffType) => {
               setPayMode(null);
-              const extraTip = diffType === "tip" && diff > 0 ? diff : 0;
+              const extraTip = diffType === "tip" && diff > 0 ? +diff.toFixed(2) : 0;
               if (isTab) {
                 payTab.mutate({ method, extraTip });
               } else if (walkInCart.length > 0) {
@@ -974,12 +982,13 @@ function POS() {
             tableId={activeOrder.table_id}
             printers={printers}
             onClose={() => setSplitOpen(false)}
-            onPaid={async ({ amount, method, closeOrder }) => {
+            onPaid={async ({ amount, method, closeOrder, tip: paidTip = 0 }) => {
               const { error: insErr } = await supabase.from("payment_requests").insert({
                 order_id: activeOrder.id,
                 table_id: activeOrder.table_id,
                 table_name: activeOrder.dining_tables?.name ?? "Tisch",
                 amount,
+                tip: paidTip,
                 method: method.toLowerCase() === "bar" ? "cash" : "card_terminal",
                 status: "paid",
                 handled_at: new Date().toISOString(),
@@ -990,10 +999,11 @@ function POS() {
                 return;
               }
 
+              const updatedTotal = +(Number(activeOrder.total ?? subtotal) + paidTip).toFixed(2);
               if (closeOrder) {
                 await supabase
                   .from("orders")
-                  .update({ status: "paid", closed_at: new Date().toISOString() })
+                  .update({ status: "paid", closed_at: new Date().toISOString(), total: updatedTotal })
                   .eq("id", activeOrder.id);
                 if (activeOrder.table_id) {
                   await supabase
@@ -1005,6 +1015,12 @@ function POS() {
                 setTip(0);
                 toast.success("Rechnung vollständig bezahlt");
               } else {
+                if (paidTip > 0) {
+                  await supabase
+                    .from("orders")
+                    .update({ total: updatedTotal })
+                    .eq("id", activeOrder.id);
+                }
                 toast.success(`Teilzahlung CHF ${amount.toFixed(2)} erfasst`);
               }
               setSplitOpen(false);
@@ -1012,6 +1028,8 @@ function POS() {
               qc.invalidateQueries({ queryKey: ["orders", "open"] });
               qc.invalidateQueries({ queryKey: ["dining_tables"] });
               qc.invalidateQueries({ queryKey: ["payments_range"] });
+              qc.invalidateQueries({ queryKey: ["payments_range_v3"] });
+              qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
             }}
           />
         )}
@@ -1099,6 +1117,11 @@ function PaymentDialog({
           if (s.status === "SUCCESSFUL") {
             setSumupPhase("ok");
             setSumupMsg("Bezahlung erfolgreich");
+            const terminalAmount = typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
+              ? +Number(s.amount).toFixed(2)
+              : total;
+            const terminalTip = Math.max(0, +(terminalAmount - total).toFixed(2));
+            setSumupMsg(terminalTip > 0 ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}` : "Bezahlung erfolgreich");
             if (isDesktopApp()) {
               const err = await printCardReceipt({
                 printers,
@@ -1109,7 +1132,9 @@ function PaymentDialog({
                   cardLast4: s.cardLast4,
                   authCode: s.authCode,
                   entryMode: s.entryMode,
-                  amount: total,
+                  amount: terminalAmount,
+                  baseAmount: total,
+                  tip: terminalTip,
                   currency: s.currency,
                   timestamp: s.timestamp,
                   merchantCode: s.merchantCode,
@@ -1118,7 +1143,7 @@ function PaymentDialog({
               });
               if (err) toast.error(`Karten-Beleg: ${err}`);
             }
-            setTimeout(() => onConfirm("SumUp Terminal", total, 0, "tip"), 500);
+            setTimeout(() => onConfirm("SumUp Terminal", terminalAmount, terminalTip, "tip"), 500);
             return;
           }
           if (s.status === "FAILED" || s.status === "CANCELLED") {
