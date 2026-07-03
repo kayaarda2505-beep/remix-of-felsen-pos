@@ -425,6 +425,7 @@ function POS() {
         order_id: order.id,
         table_name: "Theke",
         amount: totalAmt,
+        tip,
         method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
         status: "paid",
         handled_at: new Date().toISOString(),
