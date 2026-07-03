@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useDeferredValue, useMemo, useState, useTransition } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer } from "lucide-react";
+import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer, Banknote, Coins, AlertTriangle, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { printDailyReport } from "@/lib/receipt";
 import { isDesktopApp } from "@/lib/printer-bridge";
+
 
 
 export const Route = createFileRoute("/reports")({
@@ -195,20 +196,20 @@ function Reports() {
   });
 
   const { data: payments = [] } = useQuery({
-    queryKey: ["payments_range", isoFrom, isoToNext, useAggregates],
-    enabled: !useAggregates,
+    queryKey: ["payments_range_v2", isoFrom, isoToNext],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payment_requests")
-        .select("amount, method, status, created_at, handled_at")
+        .select("amount, tip, method, status, created_at, handled_at")
         .eq("status", "paid")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
-        .limit(5000);
+        .limit(10000);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Array<{ amount: number; tip: number | null; method: string; status: string; created_at: string; handled_at: string | null }>;
     },
   });
+
 
   const { data: paymentMethodAgg = [] } = useQuery({
     queryKey: ["report_payment_method_totals", isoFrom, isoToNext, useAggregates],
@@ -237,20 +238,9 @@ function Reports() {
     return m;
   }, [feeOverrides]);
 
-  // Gebühren pro Methode berechnen
+  // Gebühren pro Methode berechnen (immer aus payment_requests)
   const feesByMethod = useMemo(() => {
     const m = new Map<string, { sum: number; count: number; volume: number; label: string }>();
-    if (useAggregates) {
-      for (const p of paymentMethodAgg) {
-        const def = DEFAULT_FEES[p.method];
-        if (!def) continue;
-        const pct = feeMap.get(p.method) ?? def.pct;
-        const count = Number(p.payment_count ?? 0);
-        const volume = Number(p.volume ?? 0);
-        m.set(p.method, { sum: (volume * pct) / 100 + (def.fixed * count), count, volume, label: def.label });
-      }
-      return [...m.entries()].map(([method, v]) => ({ method, ...v }));
-    }
     for (const p of payments) {
       const def = DEFAULT_FEES[p.method as string];
       if (!def) continue; // Bar/Cash → keine Gebühren
@@ -261,8 +251,50 @@ function Reports() {
       m.set(p.method as string, cur);
     }
     return [...m.entries()].map(([method, v]) => ({ method, ...v }));
-  }, [payments, paymentMethodAgg, feeMap, useAggregates]);
+  }, [payments, feeMap]);
   const feeTotal = feesByMethod.reduce((s, f) => s + f.sum, 0);
+
+  // Umsatz nach Zahlungsart (aus payment_requests)
+  const paymentBreakdown = useMemo(() => {
+    let cash = 0, card = 0, twint = 0, other = 0, tips = 0;
+    let cashCount = 0, cardCount = 0;
+    for (const p of payments) {
+      const amt = Number(p.amount ?? 0);
+      const tip = Number(p.tip ?? 0);
+      tips += tip;
+      if (p.method === "cash") { cash += amt; cashCount++; }
+      else if (p.method === "card_terminal" || p.method === "stripe" || p.method === "apple_pay" || p.method === "google_pay") { card += amt; cardCount++; }
+      else if (p.method === "twint") { twint += amt; }
+      else { other += amt; }
+    }
+    return { cash, card, twint, other, tips, cashCount, cardCount };
+  }, [payments]);
+
+  // Bar-Ausgaben (was aus der Kasse rausging)
+  const cashExpenseTotal = useMemo(
+    () => expenses
+      .filter((e) => (e.payment_method ?? "").toLowerCase() === "cash" || (e.payment_method ?? "").toLowerCase() === "bar")
+      .reduce((s, e) => s + Number(e.amount ?? 0), 0),
+    [expenses],
+  );
+
+  // Kassen-Zählung (nur bei Einzeltag sinnvoll)
+  const { data: cashCountRow } = useQuery({
+    queryKey: ["cash_counts", isoFrom, singleDay],
+    enabled: singleDay,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("cash_counts")
+        .select("id, counted_amount, expected_amount, note, counted_by, created_at")
+        .eq("count_date", isoFrom)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; counted_amount: number; expected_amount: number; note: string | null; counted_by: string | null; created_at: string } | null;
+    },
+  });
+
 
   const revenue = useAggregates
     ? Number(ordersSummary?.revenue ?? 0)
@@ -451,13 +483,30 @@ function Reports() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-        <Kpi label="Umsatz" value={revenue} icon={<TrendingUp className="w-4 h-4" />} accent />
-        <Kpi label="Ausgaben" value={expenseTotal} icon={<TrendingDown className="w-4 h-4 text-destructive" />} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+        <Kpi label="Umsatz gesamt" value={revenue} icon={<TrendingUp className="w-4 h-4" />} accent />
+        <Kpi label="Umsatz Karte" value={paymentBreakdown.card + paymentBreakdown.twint} icon={<CreditCard className="w-4 h-4" />} sub={`${paymentBreakdown.cardCount} Karte · ${paymentBreakdown.twint > 0 ? `TWINT ${paymentBreakdown.twint.toFixed(2)}` : "keine TWINT"}`} />
+        <Kpi label="Umsatz Bar" value={paymentBreakdown.cash} icon={<Banknote className="w-4 h-4" />} sub={`${paymentBreakdown.cashCount} Bar-Zahlungen`} />
+        <Kpi label="Trinkgeld" value={paymentBreakdown.tips} icon={<Coins className="w-4 h-4 text-success" />} highlight={paymentBreakdown.tips > 0 ? "positive" : undefined} />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <Kpi label="Ausgaben" value={expenseTotal} icon={<TrendingDown className="w-4 h-4 text-destructive" />} sub={`${expenseCount} Belege`} />
         <Kpi label="Gebühren" value={feeTotal} icon={<CreditCard className="w-4 h-4 text-destructive/80" />} sub={`${feesByMethod.reduce((s, f) => s + f.count, 0)} Online-Zahlungen`} />
         <Kpi label="Gewinn" value={profit} icon={<Wallet className="w-4 h-4" />} highlight={profit >= 0 ? "positive" : "negative"} />
         <Kpi label="Ø Bon" value={avgTicket} icon={<ShoppingCart className="w-4 h-4" />} sub={`${closedCount} Abschlüsse`} />
       </div>
+
+      {/* Kassenbestand */}
+      <CashTillPanel
+        singleDay={singleDay}
+        isoDate={isoFrom}
+        cashRevenue={paymentBreakdown.cash}
+        cashExpenses={cashExpenseTotal}
+        tips={paymentBreakdown.tips}
+        cashCountRow={cashCountRow}
+      />
+
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* Trend chart */}
@@ -642,3 +691,144 @@ function Kpi({ label, value, icon, sub, accent, highlight }: {
     </motion.div>
   );
 }
+
+function CashTillPanel({
+  singleDay, isoDate, cashRevenue, cashExpenses, tips, cashCountRow,
+}: {
+  singleDay: boolean;
+  isoDate: string;
+  cashRevenue: number;
+  cashExpenses: number;
+  tips: number;
+  cashCountRow: { id: string; counted_amount: number; expected_amount: number; note: string | null; counted_by: string | null; created_at: string } | null | undefined;
+}) {
+  const qc = useQueryClient();
+  const expected = +(cashRevenue - cashExpenses).toFixed(2);
+  const [counted, setCounted] = useState<string>("");
+  const [note, setNote] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (cashCountRow) {
+      setCounted(String(cashCountRow.counted_amount ?? ""));
+      setNote(cashCountRow.note ?? "");
+    } else {
+      setCounted("");
+      setNote("");
+    }
+  }, [cashCountRow?.id, isoDate]);
+
+  const countedNum = Number(counted.replace(",", ".")) || 0;
+  const diff = +(countedNum - expected).toFixed(2);
+  const hasCount = counted !== "" && !isNaN(Number(counted.replace(",", ".")));
+
+  const save = async () => {
+    if (!singleDay) return;
+    setSaving(true);
+    const payload = {
+      count_date: isoDate,
+      counted_amount: countedNum,
+      expected_amount: expected,
+      note: note || null,
+    };
+    const { error } = await (supabase as any).from("cash_counts").insert(payload);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Kassenzählung gespeichert");
+    qc.invalidateQueries({ queryKey: ["cash_counts"] });
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl p-5 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Kassenbestand · Bargeld</div>
+          <div className="text-xl font-semibold tabular-nums mt-0.5">{expected.toFixed(2)} CHF <span className="text-xs text-muted-foreground font-normal">Soll</span></div>
+        </div>
+        <Banknote className="w-5 h-5 text-muted-foreground" />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-xs">
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Bar-Einnahmen</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5">+{cashRevenue.toFixed(2)}</div>
+        </div>
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Bar-Ausgaben</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5 text-destructive/90">−{cashExpenses.toFixed(2)}</div>
+        </div>
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Trinkgeld (im Umsatz)</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5 text-success">+{tips.toFixed(2)}</div>
+        </div>
+        <div className="rounded-xl bg-accent/10 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Soll in der Kasse</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5 text-accent">{expected.toFixed(2)}</div>
+        </div>
+      </div>
+
+      {!singleDay ? (
+        <div className="text-xs text-muted-foreground">Kassenzählung ist nur pro Tag möglich — wähle einen einzelnen Tag oben.</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
+            <label className="text-xs">
+              <div className="text-[10px] uppercase text-muted-foreground mb-1">Gezählt (Ist)</div>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={counted}
+                onChange={(e) => setCounted(e.target.value)}
+                placeholder="0.00"
+                className="w-full h-10 rounded-xl bg-white/5 px-3 outline-none tabular-nums focus:ring-2 focus:ring-accent/40"
+              />
+            </label>
+            <label className="text-xs md:col-span-2">
+              <div className="text-[10px] uppercase text-muted-foreground mb-1">Notiz</div>
+              <input
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="z. B. Wechselgeld ergänzt"
+                className="w-full h-10 rounded-xl bg-white/5 px-3 outline-none focus:ring-2 focus:ring-accent/40"
+              />
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">Ist</span>
+                <span className="font-semibold tabular-nums">{hasCount ? countedNum.toFixed(2) : "—"} CHF</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">Differenz</span>
+                {hasCount ? (
+                  <span className={`font-semibold tabular-nums flex items-center gap-1 ${Math.abs(diff) < 0.01 ? "text-success" : diff > 0 ? "text-accent" : "text-destructive"}`}>
+                    {Math.abs(diff) >= 0.01 && <AlertTriangle className="w-3.5 h-3.5" />}
+                    {diff > 0 ? "+" : ""}{diff.toFixed(2)} CHF
+                  </span>
+                ) : <span className="text-muted-foreground">—</span>}
+              </div>
+            </div>
+            <button
+              onClick={save}
+              disabled={!hasCount || saving}
+              className="glass rounded-xl px-3 h-10 text-xs flex items-center gap-2 hover:border-accent/40 disabled:opacity-50"
+            >
+              <Save className="w-3.5 h-3.5" />
+              {saving ? "Speichere…" : "Zählung speichern"}
+            </button>
+          </div>
+
+          {cashCountRow && (
+            <div className="text-[10px] text-muted-foreground mt-3">
+              Zuletzt gezählt: {new Date(cashCountRow.created_at).toLocaleString("de-CH")} · Soll damals {Number(cashCountRow.expected_amount).toFixed(2)} CHF · Ist {Number(cashCountRow.counted_amount).toFixed(2)} CHF
+            </div>
+          )}
+        </>
+      )}
+    </motion.div>
+  );
+}
+

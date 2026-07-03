@@ -44,6 +44,36 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_counts: {
+        Row: {
+          count_date: string
+          counted_amount: number
+          counted_by: string | null
+          created_at: string
+          expected_amount: number
+          id: string
+          note: string | null
+        }
+        Insert: {
+          count_date?: string
+          counted_amount?: number
+          counted_by?: string | null
+          created_at?: string
+          expected_amount?: number
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          count_date?: string
+          counted_amount?: number
+          counted_by?: string | null
+          created_at?: string
+          expected_amount?: number
+          id?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
       dining_tables: {
         Row: {
           area: Database["public"]["Enums"]["table_area"]
@@ -641,6 +671,7 @@ export type Database = {
           status: string
           table_id: string | null
           table_name: string | null
+          tip: number
         }
         Insert: {
           amount?: number
@@ -653,6 +684,7 @@ export type Database = {
           status?: string
           table_id?: string | null
           table_name?: string | null
+          tip?: number
         }
         Update: {
           amount?: number
@@ -665,6 +697,7 @@ export type Database = {
           status?: string
           table_id?: string | null
           table_name?: string | null
+          tip?: number
         }
         Relationships: [
           {
