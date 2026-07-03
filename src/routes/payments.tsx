@@ -141,6 +141,10 @@ function PaymentsPage() {
       closeDialog();
       qc.invalidateQueries({ queryKey: ["payment_requests"] });
       qc.invalidateQueries({ queryKey: ["orders_day"] });
+      qc.invalidateQueries({ queryKey: ["payments_range_v4"] });
+      qc.invalidateQueries({ queryKey: ["orders_closed_range"] });
+      qc.invalidateQueries({ queryKey: ["orders_from_payments"] });
+      qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
     } catch (e: any) {
       toast.error(e?.message ?? "Fehler");
     } finally {

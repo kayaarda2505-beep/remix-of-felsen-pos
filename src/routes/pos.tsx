@@ -374,7 +374,9 @@ function POS() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders", "open"] });
       qc.invalidateQueries({ queryKey: ["dining_tables"] });
-      qc.invalidateQueries({ queryKey: ["payments_range_v3"] });
+      qc.invalidateQueries({ queryKey: ["payments_range_v4"] });
+      qc.invalidateQueries({ queryKey: ["orders_closed_range"] });
+      qc.invalidateQueries({ queryKey: ["orders_from_payments"] });
       qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       setActiveOrderId(null);
       setTip(0);
@@ -449,7 +451,10 @@ function POS() {
       qc.invalidateQueries({ queryKey: ["orders_range"] });
       qc.invalidateQueries({ queryKey: ["items_range"] });
       qc.invalidateQueries({ queryKey: ["payments_range"] });
-      qc.invalidateQueries({ queryKey: ["payments_range_v3"] });
+      qc.invalidateQueries({ queryKey: ["payments_range_v4"] });
+      qc.invalidateQueries({ queryKey: ["orders_closed_range"] });
+      qc.invalidateQueries({ queryKey: ["orders_from_payments"] });
+      qc.invalidateQueries({ queryKey: ["items_for_payment_orders"] });
       qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       setWalkInCart([]);
       setTip(0);
@@ -1028,7 +1033,9 @@ function POS() {
               qc.invalidateQueries({ queryKey: ["orders", "open"] });
               qc.invalidateQueries({ queryKey: ["dining_tables"] });
               qc.invalidateQueries({ queryKey: ["payments_range"] });
-              qc.invalidateQueries({ queryKey: ["payments_range_v3"] });
+              qc.invalidateQueries({ queryKey: ["payments_range_v4"] });
+              qc.invalidateQueries({ queryKey: ["orders_closed_range"] });
+              qc.invalidateQueries({ queryKey: ["orders_from_payments"] });
               qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
             }}
           />
