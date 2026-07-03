@@ -357,8 +357,7 @@ function Reports() {
 
   // Kumulative Bar-Einnahmen und Bar-Ausgaben bis Ende Tag
   const { data: cashCumRow } = useQuery({
-    queryKey: ["cash_cum", endOfDay, singleDay],
-    enabled: singleDay,
+    queryKey: ["cash_cum", endOfDay],
     queryFn: async () => {
       const [{ data: pays, error: pErr }, { data: exps, error: eErr }] = await Promise.all([
         supabase
@@ -382,6 +381,7 @@ function Reports() {
       return { cashIn, cashOut };
     },
   });
+
 
 
 
