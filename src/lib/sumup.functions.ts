@@ -128,17 +128,19 @@ export const sumupGetTransactionStatus = createServerFn({ method: "POST" })
     const items = Array.isArray(json) ? json : json?.items ?? [json];
     const tx = items?.[0];
     const status: string = tx?.status ?? "PENDING";
-    const rawAmount = tx?.amount;
-    const rawTotalAmount = tx?.total_amount;
-    const totalMinorUnit = Number(rawTotalAmount?.minor_unit ?? 2);
-    const normalizedAmount =
-      typeof rawAmount === "number"
-        ? rawAmount
-        : typeof rawAmount === "string"
-          ? Number(rawAmount)
-          : typeof rawTotalAmount?.value === "number"
-            ? rawTotalAmount.value / Math.pow(10, totalMinorUnit)
-            : undefined;
+    const normalizeMoney = (value: any): number | undefined => {
+      if (typeof value === "number") return value;
+      if (typeof value === "string") return Number(value);
+      if (value && typeof value.value === "number") {
+        const minorUnit = Number(value.minor_unit ?? 2);
+        return value.value / Math.pow(10, minorUnit);
+      }
+      return undefined;
+    };
+    const baseAmount = normalizeMoney(tx?.amount);
+    const tipAmount = normalizeMoney(tx?.tip_amount ?? tx?.tip);
+    const explicitTotal = normalizeMoney(tx?.total_amount ?? tx?.amount_total);
+    const normalizedAmount = explicitTotal ?? (baseAmount != null && tipAmount != null ? baseAmount + tipAmount : baseAmount);
     return {
       status: status.toUpperCase() as "SUCCESSFUL" | "FAILED" | "CANCELLED" | "PENDING",
       transactionId: tx?.id as string | undefined,
