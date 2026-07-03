@@ -319,7 +319,7 @@ function POS() {
   });
 
   const payTab = useMutation({
-    mutationFn: async ({ method }: { method: string }) => {
+    mutationFn: async ({ method, extraTip = 0 }: { method: string; extraTip?: number }) => {
       if (!activeOrderId || !activeOrder) return;
       const tableName = activeOrder.dining_tables?.name ?? "Theke";
       const items: ReceiptItem[] = tabItems.map((it) => ({
@@ -328,17 +328,20 @@ function POS() {
         unit_price: Number(it.unit_price),
         modifiers: it.modifiers,
       }));
+      const effectiveTip = tip + extraTip;
+      const finalTotal = Number(activeOrder.total) + effectiveTip;
       if (isDesktopApp()) {
         const err = await printBill({
           printers,
           tableName,
           items,
-          total: Number(activeOrder.total) + tip,
+          subtotal: Number(activeOrder.total),
+          total: finalTotal,
+          tip: effectiveTip,
           paymentMethod: method,
         });
         if (err) toast.error(`Druck: ${err}`);
       }
-      const finalTotal = Number(activeOrder.total) + tip;
       const { error } = await supabase
         .from("orders")
         .update({ status: "paid", closed_at: new Date().toISOString(), total: finalTotal })
@@ -350,7 +353,7 @@ function POS() {
           order_id: activeOrderId,
           table_name: tableName,
           amount: outstandingAmt,
-          tip,
+          tip: effectiveTip,
           method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
           status: "paid",
           handled_at: new Date().toISOString(),
@@ -373,6 +376,7 @@ function POS() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
+
 
   const payWalkIn = useMutation({
     mutationFn: async ({ method }: { method: string }) => {
