@@ -128,6 +128,19 @@ export const sumupGetTransactionStatus = createServerFn({ method: "POST" })
     const items = Array.isArray(json) ? json : json?.items ?? [json];
     const tx = items?.[0];
     const status: string = tx?.status ?? "PENDING";
+    const normalizeMoney = (value: any): number | undefined => {
+      if (typeof value === "number") return value;
+      if (typeof value === "string") return Number(value);
+      if (value && typeof value.value === "number") {
+        const minorUnit = Number(value.minor_unit ?? 2);
+        return value.value / Math.pow(10, minorUnit);
+      }
+      return undefined;
+    };
+    const baseAmount = normalizeMoney(tx?.amount);
+    const tipAmount = normalizeMoney(tx?.tip_amount ?? tx?.tip);
+    const explicitTotal = normalizeMoney(tx?.total_amount ?? tx?.amount_total);
+    const normalizedAmount = explicitTotal ?? (baseAmount != null && tipAmount != null ? baseAmount + tipAmount : baseAmount);
     return {
       status: status.toUpperCase() as "SUCCESSFUL" | "FAILED" | "CANCELLED" | "PENDING",
       transactionId: tx?.id as string | undefined,
@@ -136,7 +149,7 @@ export const sumupGetTransactionStatus = createServerFn({ method: "POST" })
       cardLast4: (tx?.card?.last_4_digits ?? tx?.card?.last4) as string | undefined,
       authCode: tx?.auth_code as string | undefined,
       entryMode: tx?.entry_mode as string | undefined,
-      amount: (tx?.amount ?? tx?.total_amount?.value) as number | undefined,
+      amount: Number.isFinite(normalizedAmount) ? normalizedAmount : undefined,
       currency: (tx?.currency ?? tx?.total_amount?.currency) as string | undefined,
       timestamp: (tx?.timestamp ?? tx?.transaction_timestamp) as string | undefined,
       merchantCode: (tx?.merchant_code ?? undefined) as string | undefined,

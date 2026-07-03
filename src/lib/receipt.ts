@@ -216,15 +216,15 @@ export function buildBill(opts: {
   // Summen
   const tip = opts.tip ?? Math.max(0, opts.total - subtotal);
   lines.push({ cols: ["Zwischensumme", `${cur} ${fmt(subtotal)}`] });
-  if (tip > 0) {
-    lines.push({ cols: ["Trinkgeld", `${cur} ${fmt(tip)}`] });
-  }
   lines.push({ separator: true });
   lines.push({
     cols: ["TOTAL", `${cur} ${fmt(opts.total)}`],
     bold: true,
     size: "double-h",
   });
+  if (tip > 0) {
+    lines.push({ cols: ["davon Trinkgeld", `${cur} ${fmt(tip)}`], bold: true });
+  }
 
   // MWST-Aufschlüsselung (inkl.)
   if (s.vatRate > 0 && s.vatIncluded) {
@@ -280,6 +280,8 @@ export type CardReceiptInfo = {
   authCode?: string;
   entryMode?: string;
   amount: number;
+  baseAmount?: number;
+  tip?: number;
   currency?: string;
   timestamp?: string;
   merchantCode?: string;
@@ -308,6 +310,12 @@ export function buildCardReceipt(info: CardReceiptInfo, s: ReceiptSettings): Rec
   if (info.authCode) lines.push({ cols: ["Auth-Code", info.authCode] });
 
   lines.push({ separator: true });
+  const tip = Number(info.tip ?? 0);
+  if (tip > 0 && info.baseAmount) {
+    lines.push({ cols: ["Rechnung", `${cur} ${fmt(info.baseAmount)}`] });
+    lines.push({ cols: ["Trinkgeld", `${cur} ${fmt(tip)}`], bold: true });
+    lines.push({ separator: true });
+  }
   lines.push({
     cols: ["BETRAG", `${cur} ${fmt(info.amount)}`],
     bold: true,
@@ -417,6 +425,7 @@ export async function printBill(opts: {
 export type DailyReportData = {
   rangeLabel: string;            // "Heute · Mittwoch, 17.06.2026" o.ä.
   revenue: number;
+  tipTotal?: number;
   expenseTotal: number;
   feeTotal: number;
   profit: number;
@@ -443,6 +452,9 @@ export function buildDailyReport(d: DailyReportData, s: ReceiptSettings): Receip
 
   // Kern-Kennzahlen
   lines.push({ cols: ["Umsatz brutto", `${cur} ${fmt(d.revenue)}`], bold: true });
+  if (Number(d.tipTotal ?? 0) > 0) {
+    lines.push({ cols: ["Trinkgeld", `${cur} ${fmt(Number(d.tipTotal ?? 0))}`], bold: true });
+  }
   lines.push({ cols: ["Abschlüsse", String(d.closedOrdersCount)] });
   lines.push({ cols: ["Ø Bon", `${cur} ${fmt(d.avgTicket)}`] });
   lines.push({ separator: true });
