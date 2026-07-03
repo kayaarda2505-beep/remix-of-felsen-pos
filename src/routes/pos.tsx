@@ -334,22 +334,34 @@ function POS() {
       const finalTotal = +(baseTotal + paidTipSum + effectiveTip).toFixed(2);
       const outstandingAmt = Math.max(0, +(finalTotal - paidSum).toFixed(2));
       if (outstandingAmt > 0) {
-        const { error: payErr } = await supabase.from("payment_requests").insert({
-          order_id: activeOrderId,
-          table_name: tableName,
-          amount: outstandingAmt,
-          tip: effectiveTip,
-          method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
-          status: "paid",
-          handled_at: new Date().toISOString(),
-          note: `${tableName} · ${method}`,
-        });
-        if (payErr) throw payErr;
+        const { data: existingPayments, error: existingErr } = await supabase
+          .from("payment_requests")
+          .select("id")
+          .eq("order_id", activeOrderId)
+          .eq("status", "paid")
+          .limit(1);
+        if (existingErr) throw existingErr;
+
+        if ((existingPayments ?? []).length === 0) {
+          const { error: payErr } = await supabase.from("payment_requests").insert({
+            order_id: activeOrderId,
+            table_name: tableName,
+            amount: outstandingAmt,
+            tip: effectiveTip,
+            method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
+            status: "paid",
+            handled_at: new Date().toISOString(),
+            note: `${tableName} · ${method}`,
+          });
+          if (payErr) throw payErr;
+        }
       }
       const { error } = await supabase
         .from("orders")
         .update({ status: "paid", closed_at: new Date().toISOString(), total: finalTotal })
-        .eq("id", activeOrderId);
+        .eq("id", activeOrderId)
+        .select("id")
+        .single();
       if (error) throw error;
       if (isDesktopApp()) {
         const err = await printBill({
