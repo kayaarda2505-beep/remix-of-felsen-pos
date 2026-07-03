@@ -197,30 +197,38 @@ function ServiceTablet() {
         tip: effectiveTip,
         paymentMethod,
       };
-      const { error: payErr } = await supabase.from("payment_requests").insert({
-        table_id: selectedTable.id,
-        table_name: selectedTable.name,
-        order_id: activeTableOrder.id,
-        amount: paymentAmount,
-        tip: effectiveTip,
-        method,
-        status: "paid",
-        handled_at: new Date().toISOString(),
-        note: `${selectedTable.name} · ${paymentMethod}${effectiveTip > 0 ? ` · Trinkgeld CHF ${effectiveTip.toFixed(2)}` : ""}`,
-      });
-      if (payErr) throw payErr;
-      // Rechnung drucken (vor dem Schliessen, damit tabItems noch da sind)
-      if (isDesktopApp()) {
-        const err = await printBill({
-          printers,
-          ...snapshot,
+      const { data: existingPayments, error: existingErr } = await supabase
+        .from("payment_requests")
+        .select("amount, tip")
+        .eq("order_id", activeTableOrder.id)
+        .eq("status", "paid");
+      if (existingErr) throw existingErr;
+      const existingPaid = (existingPayments ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+      const existingTip = (existingPayments ?? []).reduce((sum, row) => sum + Number(row.tip ?? 0), 0);
+      const remainingPaymentAmount = Math.max(0, +(paymentAmount - existingPaid).toFixed(2));
+      const remainingTip = Math.max(0, +(effectiveTip - existingTip).toFixed(2));
+
+      if (remainingPaymentAmount > 0) {
+        const { error: payErr } = await supabase.from("payment_requests").insert({
+          table_id: selectedTable.id,
+          table_name: selectedTable.name,
+          order_id: activeTableOrder.id,
+          amount: remainingPaymentAmount,
+          tip: remainingTip,
+          method,
+          status: "paid",
+          handled_at: new Date().toISOString(),
+          note: `${selectedTable.name} · ${paymentMethod}${remainingTip > 0 ? ` · Trinkgeld CHF ${remainingTip.toFixed(2)}` : ""}`,
         });
-        if (err) toast.error(`Druck: ${err}`);
+        if (payErr) throw payErr;
       }
+
       const { error: oErr } = await supabase
         .from("orders")
         .update({ status: "paid", closed_at: new Date().toISOString(), total: finalTotal })
-        .eq("id", activeTableOrder.id);
+        .eq("id", activeTableOrder.id)
+        .select("id")
+        .single();
       if (oErr) throw oErr;
       const { error: tErr } = await supabase
         .from("dining_tables")
