@@ -295,6 +295,71 @@ function Reports() {
     },
   });
 
+  // Kassen-Bewegungen (Einlagen/Entnahmen)
+  // Kumulativ bis Ende gewählter Tag → für Soll-Berechnung
+  const endOfDay = `${fmtISO(deferredTo)}T23:59:59.999`;
+  const { data: cashMovementsCum = [] } = useQuery({
+    queryKey: ["cash_movements_cum", endOfDay, singleDay],
+    enabled: singleDay,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("cash_movements")
+        .select("amount")
+        .lte("occurred_at", endOfDay);
+      if (error) throw error;
+      return (data ?? []) as Array<{ amount: number }>;
+    },
+  });
+  const movementsCumTotal = useMemo(
+    () => cashMovementsCum.reduce((s, m) => s + Number(m.amount ?? 0), 0),
+    [cashMovementsCum],
+  );
+
+  // Bewegungen des gewählten Tages (für Anzeige)
+  const { data: cashMovementsDay = [] } = useQuery({
+    queryKey: ["cash_movements_day", isoFrom, isoToNext, singleDay],
+    enabled: singleDay,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("cash_movements")
+        .select("id, occurred_at, amount, kind, note")
+        .gte("occurred_at", `${isoFrom}T00:00:00`)
+        .lt("occurred_at", `${isoToNext}T00:00:00`)
+        .order("occurred_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; occurred_at: string; amount: number; kind: string; note: string | null }>;
+    },
+  });
+
+  // Kumulative Bar-Einnahmen und Bar-Ausgaben bis Ende Tag
+  const { data: cashCumRow } = useQuery({
+    queryKey: ["cash_cum", endOfDay, singleDay],
+    enabled: singleDay,
+    queryFn: async () => {
+      const [{ data: pays, error: pErr }, { data: exps, error: eErr }] = await Promise.all([
+        supabase
+          .from("payment_requests")
+          .select("amount")
+          .eq("status", "paid")
+          .eq("method", "cash")
+          .lte("created_at", endOfDay)
+          .limit(50000),
+        supabase
+          .from("expenses")
+          .select("amount")
+          .lte("expense_date", fmtISO(deferredTo))
+          .in("payment_method", ["cash", "bar", "Bar", "Cash"])
+          .limit(50000),
+      ]);
+      if (pErr) throw pErr;
+      if (eErr) throw eErr;
+      const cashIn = (pays ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
+      const cashOut = (exps ?? []).reduce((s, e: any) => s + Number(e.amount ?? 0), 0);
+      return { cashIn, cashOut };
+    },
+  });
+
+
 
   const revenue = useAggregates
     ? Number(ordersSummary?.revenue ?? 0)
