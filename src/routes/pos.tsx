@@ -1343,7 +1343,7 @@ function SplitPaymentDialog({
   tableId: string | null;
   printers: PrinterConfig[];
   onClose: () => void;
-  onPaid: (args: { amount: number; method: string; closeOrder: boolean }) => Promise<void> | void;
+  onPaid: (args: { amount: number; method: string; closeOrder: boolean; tip?: number }) => Promise<void> | void;
 }) {
   const [amountStr, setAmountStr] = useState<string>(outstanding.toFixed(2));
   const [busy, setBusy] = useState(false);
