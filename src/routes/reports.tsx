@@ -238,20 +238,9 @@ function Reports() {
     return m;
   }, [feeOverrides]);
 
-  // Gebühren pro Methode berechnen
+  // Gebühren pro Methode berechnen (immer aus payment_requests)
   const feesByMethod = useMemo(() => {
     const m = new Map<string, { sum: number; count: number; volume: number; label: string }>();
-    if (useAggregates) {
-      for (const p of paymentMethodAgg) {
-        const def = DEFAULT_FEES[p.method];
-        if (!def) continue;
-        const pct = feeMap.get(p.method) ?? def.pct;
-        const count = Number(p.payment_count ?? 0);
-        const volume = Number(p.volume ?? 0);
-        m.set(p.method, { sum: (volume * pct) / 100 + (def.fixed * count), count, volume, label: def.label });
-      }
-      return [...m.entries()].map(([method, v]) => ({ method, ...v }));
-    }
     for (const p of payments) {
       const def = DEFAULT_FEES[p.method as string];
       if (!def) continue; // Bar/Cash → keine Gebühren
@@ -262,7 +251,7 @@ function Reports() {
       m.set(p.method as string, cur);
     }
     return [...m.entries()].map(([method, v]) => ({ method, ...v }));
-  }, [payments, paymentMethodAgg, feeMap, useAggregates]);
+  }, [payments, feeMap]);
   const feeTotal = feesByMethod.reduce((s, f) => s + f.sum, 0);
 
   const revenue = useAggregates
