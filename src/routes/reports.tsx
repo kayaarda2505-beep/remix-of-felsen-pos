@@ -990,39 +990,38 @@ function CashTillPanel({
         <div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Kassenbestand · Bargeld</div>
           <div className="text-xl font-semibold tabular-nums mt-0.5">
-            {singleDay ? expected.toFixed(2) : (cashRevenue - cashExpenses).toFixed(2)} CHF{" "}
-            <span className="text-xs text-muted-foreground font-normal">Soll {singleDay ? "(kumulativ)" : "(Zeitraum)"}</span>
+            {expected.toFixed(2)} CHF{" "}
+            <span className="text-xs text-muted-foreground font-normal">Soll (kumulativ)</span>
           </div>
         </div>
         <Banknote className="w-5 h-5 text-muted-foreground" />
       </div>
 
-      {singleDay && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 text-xs">
-          <div className="rounded-xl bg-white/5 px-3 py-2">
-            <div className="text-[10px] uppercase text-muted-foreground">Bar-Einnahmen (bis heute)</div>
-            <div className="text-sm font-semibold tabular-nums mt-0.5">+{cashInCum.toFixed(2)}</div>
-          </div>
-          <div className="rounded-xl bg-white/5 px-3 py-2">
-            <div className="text-[10px] uppercase text-muted-foreground">Bar-Ausgaben (bis heute)</div>
-            <div className="text-sm font-semibold tabular-nums mt-0.5 text-destructive/90">−{cashOutCum.toFixed(2)}</div>
-          </div>
-          <div className="rounded-xl bg-white/5 px-3 py-2">
-            <div className="text-[10px] uppercase text-muted-foreground">Einlagen/Entnahmen</div>
-            <div className={`text-sm font-semibold tabular-nums mt-0.5 ${movementsTotal >= 0 ? "text-success" : "text-destructive/90"}`}>
-              {movementsTotal >= 0 ? "+" : ""}{movementsTotal.toFixed(2)}
-            </div>
-          </div>
-          <div className="rounded-xl bg-white/5 px-3 py-2">
-            <div className="text-[10px] uppercase text-muted-foreground">Trinkgeld (im Umsatz)</div>
-            <div className="text-sm font-semibold tabular-nums mt-0.5 text-success">+{tips.toFixed(2)}</div>
-          </div>
-          <div className="rounded-xl bg-accent/10 px-3 py-2">
-            <div className="text-[10px] uppercase text-muted-foreground">Soll in der Kasse</div>
-            <div className="text-sm font-semibold tabular-nums mt-0.5 text-accent">{expected.toFixed(2)}</div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 text-xs">
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Bar-Einnahmen (bis Ende Zeitraum)</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5">+{cashInCum.toFixed(2)}</div>
+        </div>
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Bar-Ausgaben (bis Ende Zeitraum)</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5 text-destructive/90">−{cashOutCum.toFixed(2)}</div>
+        </div>
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Einlagen/Entnahmen</div>
+          <div className={`text-sm font-semibold tabular-nums mt-0.5 ${movementsTotal >= 0 ? "text-success" : "text-destructive/90"}`}>
+            {movementsTotal >= 0 ? "+" : ""}{movementsTotal.toFixed(2)}
           </div>
         </div>
-      )}
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Trinkgeld (im Umsatz)</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5 text-success">+{tips.toFixed(2)}</div>
+        </div>
+        <div className="rounded-xl bg-accent/10 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Soll in der Kasse</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5 text-accent">{expected.toFixed(2)}</div>
+        </div>
+      </div>
+
 
       {!singleDay ? (
         <div className="text-xs text-muted-foreground">Kassenzählung & Bewegungen sind nur pro Tag möglich — wähle einen einzelnen Tag oben.</div>
