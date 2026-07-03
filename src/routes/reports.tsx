@@ -763,6 +763,7 @@ function Kpi({ label, value, icon, sub, accent, highlight }: {
 
 function CashTillPanel({
   singleDay, isoDate, cashRevenue, cashExpenses, tips, cashCountRow,
+  movementsTotal, cashInCum, cashOutCum, movementsDay,
 }: {
   singleDay: boolean;
   isoDate: string;
@@ -770,12 +771,22 @@ function CashTillPanel({
   cashExpenses: number;
   tips: number;
   cashCountRow: { id: string; counted_amount: number; expected_amount: number; note: string | null; counted_by: string | null; created_at: string } | null | undefined;
+  movementsTotal: number;
+  cashInCum: number;
+  cashOutCum: number;
+  movementsDay: Array<{ id: string; occurred_at: string; amount: number; kind: string; note: string | null }>;
 }) {
   const qc = useQueryClient();
-  const expected = +(cashRevenue - cashExpenses).toFixed(2);
+  // Soll = kumulative Bar-Einnahmen − kumulative Bar-Ausgaben + kumulative Einlagen/Entnahmen
+  const expected = +(cashInCum - cashOutCum + movementsTotal).toFixed(2);
   const [counted, setCounted] = useState<string>("");
   const [note, setNote] = useState<string>("");
   const [saving, setSaving] = useState(false);
+
+  // Bewegung hinzufügen
+  const [movAmount, setMovAmount] = useState<string>("");
+  const [movNote, setMovNote] = useState<string>("");
+  const [movSaving, setMovSaving] = useState(false);
 
   useEffect(() => {
     if (cashCountRow) {
@@ -807,39 +818,139 @@ function CashTillPanel({
     qc.invalidateQueries({ queryKey: ["cash_counts"] });
   };
 
+  const addMovement = async (sign: 1 | -1) => {
+    const raw = Number(movAmount.replace(",", ".")) || 0;
+    if (raw <= 0) { toast.error("Betrag eingeben"); return; }
+    setMovSaving(true);
+    const amount = raw * sign;
+    const { error } = await (supabase as any).from("cash_movements").insert({
+      amount,
+      kind: sign > 0 ? "deposit" : "withdrawal",
+      note: movNote || null,
+      occurred_at: new Date().toISOString(),
+    });
+    setMovSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(sign > 0 ? "Einlage gebucht" : "Entnahme gebucht");
+    setMovAmount(""); setMovNote("");
+    qc.invalidateQueries({ queryKey: ["cash_movements_cum"] });
+    qc.invalidateQueries({ queryKey: ["cash_movements_day"] });
+  };
+
+  const deleteMovement = async (id: string) => {
+    const { error } = await (supabase as any).from("cash_movements").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Bewegung gelöscht");
+    qc.invalidateQueries({ queryKey: ["cash_movements_cum"] });
+    qc.invalidateQueries({ queryKey: ["cash_movements_day"] });
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl p-5 mb-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Kassenbestand · Bargeld</div>
-          <div className="text-xl font-semibold tabular-nums mt-0.5">{expected.toFixed(2)} CHF <span className="text-xs text-muted-foreground font-normal">Soll</span></div>
+          <div className="text-xl font-semibold tabular-nums mt-0.5">
+            {singleDay ? expected.toFixed(2) : (cashRevenue - cashExpenses).toFixed(2)} CHF{" "}
+            <span className="text-xs text-muted-foreground font-normal">Soll {singleDay ? "(kumulativ)" : "(Zeitraum)"}</span>
+          </div>
         </div>
         <Banknote className="w-5 h-5 text-muted-foreground" />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-xs">
-        <div className="rounded-xl bg-white/5 px-3 py-2">
-          <div className="text-[10px] uppercase text-muted-foreground">Bar-Einnahmen</div>
-          <div className="text-sm font-semibold tabular-nums mt-0.5">+{cashRevenue.toFixed(2)}</div>
+      {singleDay && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 text-xs">
+          <div className="rounded-xl bg-white/5 px-3 py-2">
+            <div className="text-[10px] uppercase text-muted-foreground">Bar-Einnahmen (bis heute)</div>
+            <div className="text-sm font-semibold tabular-nums mt-0.5">+{cashInCum.toFixed(2)}</div>
+          </div>
+          <div className="rounded-xl bg-white/5 px-3 py-2">
+            <div className="text-[10px] uppercase text-muted-foreground">Bar-Ausgaben (bis heute)</div>
+            <div className="text-sm font-semibold tabular-nums mt-0.5 text-destructive/90">−{cashOutCum.toFixed(2)}</div>
+          </div>
+          <div className="rounded-xl bg-white/5 px-3 py-2">
+            <div className="text-[10px] uppercase text-muted-foreground">Einlagen/Entnahmen</div>
+            <div className={`text-sm font-semibold tabular-nums mt-0.5 ${movementsTotal >= 0 ? "text-success" : "text-destructive/90"}`}>
+              {movementsTotal >= 0 ? "+" : ""}{movementsTotal.toFixed(2)}
+            </div>
+          </div>
+          <div className="rounded-xl bg-white/5 px-3 py-2">
+            <div className="text-[10px] uppercase text-muted-foreground">Trinkgeld (im Umsatz)</div>
+            <div className="text-sm font-semibold tabular-nums mt-0.5 text-success">+{tips.toFixed(2)}</div>
+          </div>
+          <div className="rounded-xl bg-accent/10 px-3 py-2">
+            <div className="text-[10px] uppercase text-muted-foreground">Soll in der Kasse</div>
+            <div className="text-sm font-semibold tabular-nums mt-0.5 text-accent">{expected.toFixed(2)}</div>
+          </div>
         </div>
-        <div className="rounded-xl bg-white/5 px-3 py-2">
-          <div className="text-[10px] uppercase text-muted-foreground">Bar-Ausgaben</div>
-          <div className="text-sm font-semibold tabular-nums mt-0.5 text-destructive/90">−{cashExpenses.toFixed(2)}</div>
-        </div>
-        <div className="rounded-xl bg-white/5 px-3 py-2">
-          <div className="text-[10px] uppercase text-muted-foreground">Trinkgeld (im Umsatz)</div>
-          <div className="text-sm font-semibold tabular-nums mt-0.5 text-success">+{tips.toFixed(2)}</div>
-        </div>
-        <div className="rounded-xl bg-accent/10 px-3 py-2">
-          <div className="text-[10px] uppercase text-muted-foreground">Soll in der Kasse</div>
-          <div className="text-sm font-semibold tabular-nums mt-0.5 text-accent">{expected.toFixed(2)}</div>
-        </div>
-      </div>
+      )}
 
       {!singleDay ? (
-        <div className="text-xs text-muted-foreground">Kassenzählung ist nur pro Tag möglich — wähle einen einzelnen Tag oben.</div>
+        <div className="text-xs text-muted-foreground">Kassenzählung & Bewegungen sind nur pro Tag möglich — wähle einen einzelnen Tag oben.</div>
       ) : (
         <>
+          {/* Einlage / Entnahme */}
+          <div className="rounded-2xl bg-white/5 p-3 mb-4">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Bargeld einlegen oder entnehmen</div>
+            <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_auto_auto] gap-2 items-end">
+              <label className="text-xs">
+                <div className="text-[10px] uppercase text-muted-foreground mb-1">Betrag CHF</div>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={movAmount}
+                  onChange={(e) => setMovAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full h-10 rounded-xl bg-white/5 px-3 outline-none tabular-nums focus:ring-2 focus:ring-accent/40"
+                />
+              </label>
+              <label className="text-xs">
+                <div className="text-[10px] uppercase text-muted-foreground mb-1">Grund / Notiz</div>
+                <input
+                  type="text"
+                  value={movNote}
+                  onChange={(e) => setMovNote(e.target.value)}
+                  placeholder="z. B. Wechselgeld, Anfangsbestand, Safe-Drop"
+                  className="w-full h-10 rounded-xl bg-white/5 px-3 outline-none focus:ring-2 focus:ring-accent/40"
+                />
+              </label>
+              <button
+                onClick={() => addMovement(1)}
+                disabled={movSaving}
+                className="h-10 px-3 rounded-xl bg-success/20 text-success text-xs font-semibold hover:bg-success/30 disabled:opacity-50 flex items-center gap-1"
+              >
+                + Einlegen
+              </button>
+              <button
+                onClick={() => addMovement(-1)}
+                disabled={movSaving}
+                className="h-10 px-3 rounded-xl bg-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/30 disabled:opacity-50 flex items-center gap-1"
+              >
+                − Entnehmen
+              </button>
+            </div>
+
+            {movementsDay.length > 0 && (
+              <div className="mt-3 divide-y divide-border/30">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Bewegungen heute</div>
+                {movementsDay.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 py-1.5 text-xs">
+                    <div className="w-2 h-2 rounded-full" style={{ background: Number(m.amount) >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))" }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate">{m.note || (m.kind === "deposit" ? "Einlage" : m.kind === "withdrawal" ? "Entnahme" : m.kind)}</div>
+                      <div className="text-[10px] text-muted-foreground">{new Date(m.occurred_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}</div>
+                    </div>
+                    <div className={`font-semibold tabular-nums ${Number(m.amount) >= 0 ? "text-success" : "text-destructive"}`}>
+                      {Number(m.amount) > 0 ? "+" : ""}{Number(m.amount).toFixed(2)} CHF
+                    </div>
+                    <button onClick={() => deleteMovement(m.id)} className="text-[10px] text-muted-foreground hover:text-destructive">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Kassenzählung */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
             <label className="text-xs">
               <div className="text-[10px] uppercase text-muted-foreground mb-1">Gezählt (Ist)</div>
@@ -853,18 +964,18 @@ function CashTillPanel({
               />
             </label>
             <label className="text-xs md:col-span-2">
-              <div className="text-[10px] uppercase text-muted-foreground mb-1">Notiz</div>
+              <div className="text-[10px] uppercase text-muted-foreground mb-1">Notiz zur Zählung</div>
               <input
                 type="text"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="z. B. Wechselgeld ergänzt"
+                placeholder="z. B. Nachzählung durch Chef"
                 className="w-full h-10 rounded-xl bg-white/5 px-3 outline-none focus:ring-2 focus:ring-accent/40"
               />
             </label>
           </div>
 
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-xs">Ist</span>
