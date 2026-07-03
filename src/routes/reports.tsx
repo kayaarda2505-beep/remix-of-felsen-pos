@@ -140,6 +140,29 @@ function Reports() {
     },
   });
 
+  // Aktive Drucker für "Beleg nachdrucken"
+  const { data: printers = [] } = useQuery<PrinterConfig[]>({
+    queryKey: ["printers", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("printers")
+        .select("id, name, type, ip_address, port")
+        .eq("active", true);
+      if (error) throw error;
+      return (data ?? []) as PrinterConfig[];
+    },
+  });
+
+  // Tisch-Namen für Belegkopf
+  const { data: tables = [] } = useQuery<Array<{ id: string; name: string | null }>>({
+    queryKey: ["dining_tables_names"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("dining_tables").select("id, name");
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; name: string | null }>;
+    },
+  });
+
   // Server-Aggregation bei langen Zeiträumen
   const { data: categoryAgg = [] } = useQuery({
     queryKey: ["report_category_totals", isoFrom, isoToNext, useAggregates],
