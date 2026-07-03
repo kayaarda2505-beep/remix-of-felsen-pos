@@ -18,6 +18,7 @@ type Row = {
   table_name: string | null;
   order_id: string | null;
   amount: number;
+  tip?: number | null;
   method: Method;
   status: "new" | "handled" | "paid" | "cancelled";
   note: string | null;
@@ -104,10 +105,13 @@ function PaymentsPage() {
     setBusy(true);
     try {
       const noteParts: string[] = [];
+      const baseAmount = Number(payingRow.amount);
+      const tip = Math.max(0, Number(extra?.tip ?? 0));
+      const paidAmount = +(baseAmount + tip).toFixed(2);
       if (extra) {
         noteParts.push(`Gegeben CHF ${extra.given.toFixed(2)}`);
-        if (extra.tip > 0) noteParts.push(`Trinkgeld CHF ${extra.tip.toFixed(2)}`);
-        const change = extra.given - Number(payingRow.amount) - extra.tip;
+        if (tip > 0) noteParts.push(`Trinkgeld CHF ${tip.toFixed(2)}`);
+        const change = extra.given - paidAmount;
         if (change > 0) noteParts.push(`Rückgeld CHF ${change.toFixed(2)}`);
       }
       const note = noteParts.length ? noteParts.join(" · ") : payingRow.note;
@@ -117,6 +121,8 @@ function PaymentsPage() {
         .update({
           status: "paid",
           method,
+          amount: paidAmount,
+          tip,
           note,
           handled_at: new Date().toISOString(),
         })
@@ -126,7 +132,7 @@ function PaymentsPage() {
       if (payingRow.order_id) {
         const { error: oErr } = await supabase
           .from("orders")
-          .update({ status: "paid", closed_at: new Date().toISOString() })
+          .update({ status: "paid", closed_at: new Date().toISOString(), total: paidAmount })
           .eq("id", payingRow.order_id);
         if (oErr) throw oErr;
       }
