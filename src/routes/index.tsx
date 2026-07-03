@@ -170,12 +170,20 @@ function ServiceTablet() {
   const [pendingReceipt, setPendingReceipt] = useState<{
     tableName: string;
     items: ReceiptItem[];
+    subtotal: number;
     total: number;
+    tip: number;
+    paymentMethod: string;
   } | null>(null);
 
   const payTab = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ method, tip = 0, paidAmount }: { method: "cash" | "card_terminal"; tip?: number; paidAmount?: number }) => {
       if (!activeTableOrder || !selectedTable) throw new Error("Keine offene Rechnung");
+      const baseTotal = Number(activeTableOrder.total);
+      const effectiveTip = Math.max(0, +Number(tip || 0).toFixed(2));
+      const finalTotal = +(baseTotal + effectiveTip).toFixed(2);
+      const paymentAmount = +(paidAmount ?? finalTotal).toFixed(2);
+      const paymentMethod = method === "cash" ? "Bar" : "Karte";
       const snapshot = {
         tableName: selectedTable.name,
         items: tabItems.map((it) => ({
@@ -184,8 +192,23 @@ function ServiceTablet() {
           unit_price: Number(it.unit_price),
           modifiers: it.modifiers,
         })) as ReceiptItem[],
-        total: Number(activeTableOrder.total),
+        subtotal: baseTotal,
+        total: finalTotal,
+        tip: effectiveTip,
+        paymentMethod,
       };
+      const { error: payErr } = await supabase.from("payment_requests").insert({
+        table_id: selectedTable.id,
+        table_name: selectedTable.name,
+        order_id: activeTableOrder.id,
+        amount: paymentAmount,
+        tip: effectiveTip,
+        method,
+        status: "paid",
+        handled_at: new Date().toISOString(),
+        note: `${selectedTable.name} · ${paymentMethod}${effectiveTip > 0 ? ` · Trinkgeld CHF ${effectiveTip.toFixed(2)}` : ""}`,
+      });
+      if (payErr) throw payErr;
       // Rechnung drucken (vor dem Schliessen, damit tabItems noch da sind)
       if (isDesktopApp()) {
         const err = await printBill({
@@ -196,7 +219,7 @@ function ServiceTablet() {
       }
       const { error: oErr } = await supabase
         .from("orders")
-        .update({ status: "paid", closed_at: new Date().toISOString() })
+        .update({ status: "paid", closed_at: new Date().toISOString(), total: finalTotal })
         .eq("id", activeTableOrder.id);
       if (oErr) throw oErr;
       const { error: tErr } = await supabase
@@ -210,6 +233,8 @@ function ServiceTablet() {
       toast.success("Tisch abgeschlossen");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dining_tables"] });
+      qc.invalidateQueries({ queryKey: ["payments_range_v3"] });
+      qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       reset();
       if (isDesktopApp()) setPendingReceipt(snapshot);
     },
@@ -918,9 +943,9 @@ function ServiceTablet() {
             tableName={selectedTable?.name ?? "Tisch"}
             printers={printers}
             onClose={() => setShowPayChoice(false)}
-            onPaid={() => {
+            onPaid={(payment) => {
               setShowPayChoice(false);
-              payTab.mutate();
+              payTab.mutate(payment);
             }}
           />
         )}
@@ -962,7 +987,10 @@ function ServiceTablet() {
                       printers,
                       tableName: data.tableName,
                       items: data.items,
+                      subtotal: data.subtotal,
                       total: data.total,
+                      tip: data.tip,
+                      paymentMethod: data.paymentMethod,
                     });
                     if (err) toast.error(`Druck: ${err}`);
                     else toast.success("Kundenquittung gedruckt");
@@ -991,7 +1019,7 @@ function PayChoiceDialog({
   tableName: string;
   printers: any[];
   onClose: () => void;
-  onPaid: () => void;
+  onPaid: (payment: { method: "cash" | "card_terminal"; tip?: number; paidAmount?: number }) => void;
 }) {
   const [mode, setMode] = useState<"choose" | "card" | "cash">("choose");
   const [phase, setPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
@@ -1018,7 +1046,11 @@ function PayChoiceDialog({
           const s = await getTxStatus({ data: { clientTransactionId } });
           if (s.status === "SUCCESSFUL") {
             setPhase("ok");
-            setMsg("Bezahlung erfolgreich");
+            const terminalAmount = typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
+              ? +Number(s.amount).toFixed(2)
+              : total;
+            const terminalTip = Math.max(0, +(terminalAmount - total).toFixed(2));
+            setMsg(terminalTip > 0 ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}` : "Bezahlung erfolgreich");
             if (isDesktopApp()) {
               const err = await printCardReceipt({
                 printers,
@@ -1029,7 +1061,9 @@ function PayChoiceDialog({
                   cardLast4: s.cardLast4,
                   authCode: s.authCode,
                   entryMode: s.entryMode,
-                  amount: total,
+                  amount: terminalAmount,
+                  baseAmount: total,
+                  tip: terminalTip,
                   currency: s.currency,
                   timestamp: s.timestamp,
                   merchantCode: s.merchantCode,
@@ -1038,7 +1072,7 @@ function PayChoiceDialog({
               });
               if (err) toast.error(`Karten-Beleg: ${err}`);
             }
-            setTimeout(onPaid, 500);
+            setTimeout(() => onPaid({ method: "card_terminal", tip: terminalTip, paidAmount: terminalAmount }), 500);
             return;
           }
           if (s.status === "FAILED" || s.status === "CANCELLED") {
@@ -1187,8 +1221,8 @@ function PayChoiceDialog({
               </div>
 
               <button
-                disabled={given < total}
-                onClick={onPaid}
+                disabled={given < total || tip > Math.max(0, diff) + 0.001}
+                onClick={() => onPaid({ method: "cash", tip, paidAmount: +(total + tip).toFixed(2) })}
                 className="w-full py-3 rounded-xl bg-success/20 text-success font-semibold hover:bg-success/30 disabled:opacity-40"
               >
                 Bestätigen

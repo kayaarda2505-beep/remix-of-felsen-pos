@@ -278,28 +278,60 @@ function Reports() {
   }, [payments, feeMap]);
   const feeTotal = feesByMethod.reduce((s, f) => s + f.sum, 0);
 
+  const itemTotalsByOrder = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of items as any[]) {
+      if (!i.order_id) continue;
+      m.set(i.order_id, (m.get(i.order_id) ?? 0) + Number(i.unit_price ?? 0) * Number(i.qty ?? 0));
+    }
+    return m;
+  }, [items]);
+
   // Umsatz nach Zahlungsart (aus payment_requests + paid orders ohne payment_requests → Bar)
   const paymentBreakdown = useMemo(() => {
-    let cash = 0, card = 0, twint = 0, other = 0, tips = 0;
+    let cash = 0, card = 0, twint = 0, other = 0, tips = 0, cashTips = 0;
     let cashCount = 0, cardCount = 0;
+    const byOrder = new Map<string, { amount: number; tip: number; cashAmount: number; cashTip: number }>();
     for (const p of payments) {
       const amt = Number(p.amount ?? 0);
       const tip = Number(p.tip ?? 0);
       tips += tip;
-      if (p.method === "cash") { cash += amt; cashCount++; }
+      if (p.method === "cash") { cash += amt; cashTips += tip; cashCount++; }
       else if (p.method === "card_terminal" || p.method === "stripe" || p.method === "apple_pay" || p.method === "google_pay") { card += amt; cardCount++; }
       else if (p.method === "twint") { twint += amt; }
       else { other += amt; }
+      if (p.order_id) {
+        const cur = byOrder.get(p.order_id) ?? { amount: 0, tip: 0, cashAmount: 0, cashTip: 0 };
+        cur.amount += amt;
+        cur.tip += tip;
+        if (p.method === "cash") {
+          cur.cashAmount += amt;
+          cur.cashTip += tip;
+        }
+        byOrder.set(p.order_id, cur);
+      }
+    }
+    for (const [orderId, row] of byOrder) {
+      if (row.tip > 0) continue;
+      const inferredTip = Math.max(0, +(row.amount - Number(itemTotalsByOrder.get(orderId) ?? 0)).toFixed(2));
+      if (inferredTip > 0) {
+        tips += inferredTip;
+        if (row.cashAmount > 0 && Math.abs(row.cashAmount - row.amount) < 0.005) cashTips += inferredTip;
+      }
     }
     const paidOrderIds = new Set((payments as any[]).map((p) => p.order_id).filter(Boolean));
     for (const o of orders as any[]) {
       if (o.status === "paid" && !paidOrderIds.has(o.id)) {
-        cash += Number(o.total ?? 0);
+        const orderTotal = Number(o.total ?? 0);
+        const inferredTip = Math.max(0, +(orderTotal - Number(itemTotalsByOrder.get(o.id) ?? 0)).toFixed(2));
+        cash += orderTotal;
+        tips += inferredTip;
+        cashTips += inferredTip;
         cashCount++;
       }
     }
-    return { cash, card, twint, other, tips, cashCount, cardCount };
-  }, [payments, orders]);
+    return { cash, card, twint, other, tips, cashTips, cashCount, cardCount };
+  }, [payments, orders, itemTotalsByOrder]);
 
 
   // Bar-Ausgaben (was aus der Kasse rausging)
@@ -372,10 +404,11 @@ function Reports() {
         { data: exps, error: eErr },
         { data: paidOrders, error: oErr },
         { data: allPays, error: apErr },
+        { data: allItems, error: iErr },
       ] = await Promise.all([
         supabase
           .from("payment_requests")
-          .select("amount, tip")
+          .select("order_id, amount, tip")
           .eq("status", "paid")
           .eq("method", "cash")
           .lte("created_at", endOfDay)
@@ -394,21 +427,48 @@ function Reports() {
           .limit(50000),
         supabase
           .from("payment_requests")
-          .select("order_id")
+          .select("order_id, amount, tip, method")
           .eq("status", "paid")
           .lte("created_at", endOfDay)
+          .limit(50000),
+        supabase
+          .from("order_items")
+          .select("order_id, qty, unit_price")
+          .lte("sent_at", endOfDay)
           .limit(50000),
       ]);
       if (pErr) throw pErr;
       if (eErr) throw eErr;
       if (oErr) throw oErr;
       if (apErr) throw apErr;
+      if (iErr) throw iErr;
       const paidOrderIds = new Set((allPays ?? []).map((p: any) => p.order_id).filter(Boolean));
+      const itemTotals = new Map<string, number>();
+      for (const i of allItems ?? []) {
+        if (!(i as any).order_id) continue;
+        itemTotals.set((i as any).order_id, (itemTotals.get((i as any).order_id) ?? 0) + Number((i as any).qty ?? 0) * Number((i as any).unit_price ?? 0));
+      }
       const cashFromPays = (cashPays ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
-      const cashTips = (cashPays ?? []).reduce((s, p: any) => s + Number(p.tip ?? 0), 0);
-      const cashFromDirectPaid = (paidOrders ?? [])
-        .filter((o: any) => !paidOrderIds.has(o.id))
-        .reduce((s, o: any) => s + Number(o.total ?? 0), 0);
+      const cashByOrder = new Map<string, { amount: number; tip: number }>();
+      for (const p of cashPays ?? []) {
+        if (!(p as any).order_id) continue;
+        const cur = cashByOrder.get((p as any).order_id) ?? { amount: 0, tip: 0 };
+        cur.amount += Number((p as any).amount ?? 0);
+        cur.tip += Number((p as any).tip ?? 0);
+        cashByOrder.set((p as any).order_id, cur);
+      }
+      let cashTips = (cashPays ?? []).reduce((s, p: any) => s + Number(p.tip ?? 0), 0);
+      for (const [orderId, row] of cashByOrder) {
+        if (row.tip > 0) continue;
+        cashTips += Math.max(0, +(row.amount - Number(itemTotals.get(orderId) ?? 0)).toFixed(2));
+      }
+      let cashFromDirectPaid = 0;
+      for (const o of paidOrders ?? []) {
+        if (paidOrderIds.has((o as any).id)) continue;
+        const orderTotal = Number((o as any).total ?? 0);
+        cashFromDirectPaid += orderTotal;
+        cashTips += Math.max(0, +(orderTotal - Number(itemTotals.get((o as any).id) ?? 0)).toFixed(2));
+      }
       const cashIn = cashFromPays + cashFromDirectPaid;
       const cashOut = (exps ?? []).reduce((s, e: any) => s + Number(e.amount ?? 0), 0);
       return { cashIn, cashOut, cashTips };
@@ -741,7 +801,11 @@ function Reports() {
                   const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
                   const orderItems = (items as any[]).filter((it) => it.order_id === o.id);
                   const orderPays = (payments as any[]).filter((p) => p.order_id === o.id);
-                  const tipSum = orderPays.reduce((s, p) => s + Number(p.tip || 0), 0);
+                  const itemSubtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
+                  const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
+                  const storedTipSum = orderPays.reduce((s, p) => s + Number(p.tip || 0), 0);
+                  const tipSum = storedTipSum > 0 ? storedTipSum : Math.max(0, +(paidSum - itemSubtotal).toFixed(2));
+                  const displayTotal = Math.max(Number(o.total ?? 0), paidSum, +(itemSubtotal + tipSum).toFixed(2));
                   const methodLabel = (m: string) => m === "cash" ? "Bar" : m === "card_terminal" ? "Karte" : m === "twint" ? "TWINT" : m === "stripe" ? "Stripe" : m;
                   const methods = orderPays.length ? [...new Set(orderPays.map(p => methodLabel(p.method)))].join(", ") : "—";
                   const isOpen = expandedOrder === o.id;
@@ -759,7 +823,7 @@ function Reports() {
                             {o.status === "paid" ? "Bezahlt" : o.status}{o.guests ? ` · ${o.guests} Gäste` : ""} · {methods}{tipSum > 0 ? ` · TG ${tipSum.toFixed(2)}` : ""}
                           </div>
                         </div>
-                        <div className="text-sm font-semibold tabular-nums">{Number(o.total ?? 0).toFixed(2)} CHF</div>
+                        <div className="text-sm font-semibold tabular-nums">{displayTotal.toFixed(2)} CHF</div>
                       </button>
                       {isOpen && (
                         <div className="ml-5 mb-3 mt-1 p-3 rounded-xl bg-white/5 space-y-3">
@@ -816,8 +880,6 @@ function Reports() {
                                 }
                                 const tbl = tables.find((t) => t.id === o.table_id);
                                 const tableName = tbl?.name || (o.table_id ? "Tisch" : "Walk-in");
-                                const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
-                                const subtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
                                 const primaryMethod = orderPays[0]?.method ?? null;
                                 const err = await printBill({
                                   printers: printers as PrinterConfig[],
@@ -828,8 +890,8 @@ function Reports() {
                                     unit_price: Number(it.unit_price),
                                     note: it.note ?? null,
                                   })),
-                                  subtotal,
-                                  total: Number(o.total ?? paidSum),
+                                  subtotal: itemSubtotal,
+                                  total: displayTotal,
                                   tip: tipSum,
                                   interim: false,
                                   paymentMethod: primaryMethod,
