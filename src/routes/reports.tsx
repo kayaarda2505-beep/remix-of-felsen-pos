@@ -46,6 +46,20 @@ function Reports() {
   const [isRangePending, startRangeTransition] = useTransition();
   const deferredFrom = useDeferredValue(from);
   const deferredTo = useDeferredValue(to);
+  const queryClient = useQueryClient();
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  // Rolle des aktuellen Users (für Löschen-Berechtigung)
+  const { data: canDelete = false } = useQuery({
+    queryKey: ["current_user_role_can_delete"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const roles = (data ?? []).map((r: any) => r.role);
+      return roles.includes("admin") || roles.includes("manager");
+    },
+  });
 
   const applyPreset = (p: RangePreset) => {
     const now = new Date(); now.setHours(0,0,0,0);
