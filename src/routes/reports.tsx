@@ -278,7 +278,7 @@ function Reports() {
   }, [payments, feeMap]);
   const feeTotal = feesByMethod.reduce((s, f) => s + f.sum, 0);
 
-  // Umsatz nach Zahlungsart (aus payment_requests)
+  // Umsatz nach Zahlungsart (aus payment_requests + paid orders ohne payment_requests → Bar)
   const paymentBreakdown = useMemo(() => {
     let cash = 0, card = 0, twint = 0, other = 0, tips = 0;
     let cashCount = 0, cardCount = 0;
@@ -291,8 +291,16 @@ function Reports() {
       else if (p.method === "twint") { twint += amt; }
       else { other += amt; }
     }
+    const paidOrderIds = new Set((payments as any[]).map((p) => p.order_id).filter(Boolean));
+    for (const o of orders as any[]) {
+      if (o.status === "paid" && !paidOrderIds.has(o.id)) {
+        cash += Number(o.total ?? 0);
+        cashCount++;
+      }
+    }
     return { cash, card, twint, other, tips, cashCount, cardCount };
-  }, [payments]);
+  }, [payments, orders]);
+
 
   // Bar-Ausgaben (was aus der Kasse rausging)
   const cashExpenseTotal = useMemo(
@@ -385,15 +393,9 @@ function Reports() {
 
 
 
-  // Umsatz gesamt = tatsächlich bezahlte Zahlungen (Karte + TWINT + Bar + Sonstige)
-  // + Bestellungen mit Status "paid" ohne payment_requests-Eintrag (z. B. direkt abgeschlossen)
-  const paidOrdersWithoutPayments = useMemo(() => {
-    const paidOrderIds = new Set((payments as any[]).map((p) => p.order_id).filter(Boolean));
-    return (orders as any[])
-      .filter((o) => o.status === "paid" && !paidOrderIds.has(o.id))
-      .reduce((s, o) => s + Number(o.total ?? 0), 0);
-  }, [orders, payments]);
-  const revenue = paymentBreakdown.card + paymentBreakdown.twint + paymentBreakdown.cash + paymentBreakdown.other + paidOrdersWithoutPayments;
+  // Umsatz gesamt = Karte + TWINT + Bar + Sonstige (Bar enthält bereits paid orders ohne payment_requests)
+  const revenue = paymentBreakdown.card + paymentBreakdown.twint + paymentBreakdown.cash + paymentBreakdown.other;
+
 
 
   const expenseTotal = useAggregates
