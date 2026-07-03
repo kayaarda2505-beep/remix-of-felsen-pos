@@ -954,14 +954,16 @@ function POS() {
             printers={printers}
             tableName={isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : "Theke"}
             onClose={() => setPayMode(null)}
-            onConfirm={(method, _received, _diff, _diffType) => {
+            onConfirm={(method, _received, diff, diffType) => {
               setPayMode(null);
+              const extraTip = diffType === "tip" && diff > 0 ? diff : 0;
               if (isTab) {
-                payTab.mutate({ method });
+                payTab.mutate({ method, extraTip });
               } else if (walkInCart.length > 0) {
-                payWalkIn.mutate({ method });
+                payWalkIn.mutate({ method, extraTip });
               }
             }}
+
           />
         )}
         {splitOpen && isTab && activeOrder && (
