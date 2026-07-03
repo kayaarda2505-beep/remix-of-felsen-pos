@@ -6,8 +6,8 @@ import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Pr
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
-import { printDailyReport } from "@/lib/receipt";
-import { isDesktopApp } from "@/lib/printer-bridge";
+import { printDailyReport, printBill } from "@/lib/receipt";
+import { isDesktopApp, type PrinterConfig } from "@/lib/printer-bridge";
 
 
 
@@ -137,6 +137,16 @@ function Reports() {
         .limit(20000);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  // Tisch-Namen für Belegkopf beim Nachdruck
+  const { data: tables = [] } = useQuery<Array<{ id: string; name: string | null }>>({
+    queryKey: ["dining_tables_names"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("dining_tables").select("id, name");
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; name: string | null }>;
     },
   });
 
@@ -754,8 +764,48 @@ function Reports() {
                               </div>
                             )}
                           </div>
-                          {canDelete && (
-                            <div className="pt-1 flex justify-end">
+                          <div className="pt-1 flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!isDesktopApp()) {
+                                  toast.error("Kein Print-Agent aktiv – Beleg kann nicht gedruckt werden");
+                                  return;
+                                }
+                                if (orderItems.length === 0) {
+                                  toast.error("Keine Positionen zum Drucken");
+                                  return;
+                                }
+                                const tbl = tables.find((t) => t.id === o.table_id);
+                                const tableName = tbl?.name || (o.table_id ? "Tisch" : "Walk-in");
+                                const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
+                                const subtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
+                                const primaryMethod = orderPays[0]?.method ?? null;
+                                const err = await printBill({
+                                  printers: printers as PrinterConfig[],
+                                  tableName,
+                                  items: orderItems.map((it) => ({
+                                    product_name: it.product_name,
+                                    qty: Number(it.qty),
+                                    unit_price: Number(it.unit_price),
+                                    note: it.note ?? null,
+                                  })),
+                                  subtotal,
+                                  total: Number(o.total ?? paidSum),
+                                  tip: tipSum,
+                                  interim: false,
+                                  paymentMethod: primaryMethod,
+                                });
+                                if (err) toast.error(`Druck: ${err}`);
+                                else toast.success("Beleg gedruckt");
+                              }}
+                              className="px-3 py-1.5 rounded-lg text-xs bg-white/10 hover:bg-white/15 border border-white/15 transition inline-flex items-center gap-1.5"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              Beleg nachdrucken
+                            </button>
+                            {canDelete && (
                               <button
                                 type="button"
                                 onClick={async (e) => {
@@ -773,8 +823,8 @@ function Reports() {
                               >
                                 Bestellung löschen
                               </button>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
