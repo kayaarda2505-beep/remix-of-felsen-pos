@@ -370,7 +370,7 @@ function Reports() {
     return m;
   }, [reportItems]);
 
-  // Umsatz nach Zahlungsart (aus payment_requests + paid orders ohne payment_requests → Bar)
+  // Umsatz nach Zahlungsart (payment_requests sind die Quelle für Bar/Karte; fehlende Zahlungsart bleibt Sonstige)
   const paymentBreakdown = useMemo(() => {
     let cash = 0, card = 0, twint = 0, other = 0, tips = 0, cashTips = 0;
     let cashCount = 0, cardCount = 0;
@@ -412,10 +412,8 @@ function Reports() {
         const orderTotal = Number(o.total ?? 0);
         const itemTotal = Number(itemTotalsByOrder.get(o.id) ?? 0);
         const inferredTip = Math.max(0, +(orderTotal - itemTotal).toFixed(2));
-        cash += orderTotal;
+        other += orderTotal;
         tips += inferredTip;
-        cashTips += inferredTip;
-        cashCount++;
       }
     }
     return { cash, card, twint, other, tips, cashTips, cashCount, cardCount };
@@ -483,14 +481,13 @@ function Reports() {
     },
   });
 
-  // Kumulative Bar-Einnahmen (inkl. bar bezahltem Trinkgeld & direkt bezahlte Bestellungen ohne payment_request) und Bar-Ausgaben bis Ende Tag
+  // Kumulative Bar-Einnahmen (nur echte Bar-Zahlungen inkl. Trinkgeld) und Bar-Ausgaben bis Ende Tag
   const { data: cashCumRow } = useQuery({
     queryKey: ["cash_cum_v4", endOfDay],
     queryFn: async () => {
       const [
         { data: cashPays, error: pErr },
         { data: exps, error: eErr },
-        { data: paidOrders, error: oErr },
         { data: allPays, error: apErr },
         { data: allItems, error: iErr },
       ] = await Promise.all([
@@ -508,12 +505,6 @@ function Reports() {
           .in("payment_method", ["cash", "bar", "Bar", "Cash"])
           .limit(50000),
         supabase
-          .from("orders")
-          .select("id, total")
-          .eq("status", "paid")
-          .lte("created_at", endOfDay)
-          .limit(50000),
-        supabase
           .from("payment_requests")
           .select("order_id, amount, tip, method")
           .eq("status", "paid")
@@ -527,10 +518,8 @@ function Reports() {
       ]);
       if (pErr) throw pErr;
       if (eErr) throw eErr;
-      if (oErr) throw oErr;
       if (apErr) throw apErr;
       if (iErr) throw iErr;
-      const paidOrderIds = new Set((allPays ?? []).map((p: any) => p.order_id).filter(Boolean));
       const itemTotals = new Map<string, number>();
       for (const i of allItems ?? []) {
         if (!(i as any).order_id) continue;
@@ -550,14 +539,7 @@ function Reports() {
         if (row.tip > 0) continue;
         cashTips += Math.max(0, +(row.amount - Number(itemTotals.get(orderId) ?? 0)).toFixed(2));
       }
-      let cashFromDirectPaid = 0;
-      for (const o of paidOrders ?? []) {
-        if (paidOrderIds.has((o as any).id)) continue;
-        const orderTotal = Number((o as any).total ?? 0);
-        cashFromDirectPaid += orderTotal;
-        cashTips += Math.max(0, +(orderTotal - Number(itemTotals.get((o as any).id) ?? 0)).toFixed(2));
-      }
-      const cashIn = cashFromPays + cashFromDirectPaid;
+      const cashIn = cashFromPays;
       const cashOut = (exps ?? []).reduce((s, e: any) => s + Number(e.amount ?? 0), 0);
       return { cashIn, cashOut, cashTips };
     },
@@ -567,7 +549,7 @@ function Reports() {
 
 
 
-  // Umsatz gesamt = Karte + TWINT + Bar + Sonstige (Bar enthält bereits paid orders ohne payment_requests)
+  // Umsatz gesamt = Karte + TWINT + Bar + Sonstige
   const revenue = paymentBreakdown.card + paymentBreakdown.twint + paymentBreakdown.cash + paymentBreakdown.other;
 
 
@@ -919,7 +901,7 @@ function Reports() {
                     : Math.max(0, +((paidSum > 0 ? paidSum : orderTotal) - itemSubtotal).toFixed(2));
                   const displayTotal = Math.max(orderTotal, paidSum, +(itemSubtotal + tipSum).toFixed(2));
                   const methodLabel = (m: string) => m === "cash" ? "Bar" : m === "card_terminal" ? "Karte" : m === "twint" ? "TWINT" : m === "stripe" ? "Stripe" : m;
-                  const methods = orderPays.length ? [...new Set(orderPays.map(p => methodLabel(p.method)))].join(", ") : (fallbackPaidWithoutRow ? "Bar" : "—");
+                  const methods = orderPays.length ? [...new Set(orderPays.map(p => methodLabel(p.method)))].join(", ") : (fallbackPaidWithoutRow ? "Zahlungsart fehlt" : "—");
                   const isOpen = expandedOrder === o.id;
                   return (
                     <div key={o.id} className="px-2">
@@ -964,7 +946,7 @@ function Reports() {
                               fallbackPaidWithoutRow ? (
                                 <div className="flex items-center justify-between text-xs">
                                   <div className="truncate">
-                                    Bar <span className="text-muted-foreground">· automatisch aus Abschluss erkannt</span>
+                                    Zahlungsart fehlt <span className="text-muted-foreground">· bitte Zahlung prüfen</span>
                                     {tipSum > 0 ? <span className="text-muted-foreground"> · TG {tipSum.toFixed(2)}</span> : null}
                                   </div>
                                   <div className="tabular-nums">{displayTotal.toFixed(2)}</div>
