@@ -801,7 +801,11 @@ function Reports() {
                   const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
                   const orderItems = (items as any[]).filter((it) => it.order_id === o.id);
                   const orderPays = (payments as any[]).filter((p) => p.order_id === o.id);
-                  const tipSum = orderPays.reduce((s, p) => s + Number(p.tip || 0), 0);
+                  const itemSubtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
+                  const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
+                  const storedTipSum = orderPays.reduce((s, p) => s + Number(p.tip || 0), 0);
+                  const tipSum = storedTipSum > 0 ? storedTipSum : Math.max(0, +(paidSum - itemSubtotal).toFixed(2));
+                  const displayTotal = Math.max(Number(o.total ?? 0), paidSum, +(itemSubtotal + tipSum).toFixed(2));
                   const methodLabel = (m: string) => m === "cash" ? "Bar" : m === "card_terminal" ? "Karte" : m === "twint" ? "TWINT" : m === "stripe" ? "Stripe" : m;
                   const methods = orderPays.length ? [...new Set(orderPays.map(p => methodLabel(p.method)))].join(", ") : "—";
                   const isOpen = expandedOrder === o.id;
@@ -819,7 +823,7 @@ function Reports() {
                             {o.status === "paid" ? "Bezahlt" : o.status}{o.guests ? ` · ${o.guests} Gäste` : ""} · {methods}{tipSum > 0 ? ` · TG ${tipSum.toFixed(2)}` : ""}
                           </div>
                         </div>
-                        <div className="text-sm font-semibold tabular-nums">{Number(o.total ?? 0).toFixed(2)} CHF</div>
+                        <div className="text-sm font-semibold tabular-nums">{displayTotal.toFixed(2)} CHF</div>
                       </button>
                       {isOpen && (
                         <div className="ml-5 mb-3 mt-1 p-3 rounded-xl bg-white/5 space-y-3">
@@ -876,8 +880,6 @@ function Reports() {
                                 }
                                 const tbl = tables.find((t) => t.id === o.table_id);
                                 const tableName = tbl?.name || (o.table_id ? "Tisch" : "Walk-in");
-                                const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
-                                const subtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
                                 const primaryMethod = orderPays[0]?.method ?? null;
                                 const err = await printBill({
                                   printers: printers as PrinterConfig[],
@@ -888,8 +890,8 @@ function Reports() {
                                     unit_price: Number(it.unit_price),
                                     note: it.note ?? null,
                                   })),
-                                  subtotal,
-                                  total: Number(o.total ?? paidSum),
+                                  subtotal: itemSubtotal,
+                                  total: displayTotal,
                                   tip: tipSum,
                                   interim: false,
                                   paymentMethod: primaryMethod,
