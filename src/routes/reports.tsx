@@ -564,7 +564,7 @@ function Reports() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         <Kpi label="Umsatz gesamt" value={revenue} icon={<TrendingUp className="w-4 h-4" />} accent />
-        <Kpi label="Umsatz Karte" value={Math.max(0, revenue - paymentBreakdown.cash - paymentBreakdown.twint)} icon={<CreditCard className="w-4 h-4" />} sub={`inkl. ältere Bestellungen ohne Zahlungs-Detail${paymentBreakdown.twint > 0 ? ` · TWINT ${paymentBreakdown.twint.toFixed(2)}` : ""}`} />
+        <Kpi label="Umsatz Karte" value={paymentBreakdown.card + paymentBreakdown.twint} icon={<CreditCard className="w-4 h-4" />} sub={`${paymentBreakdown.cardCount} Karte${paymentBreakdown.twint > 0 ? ` · TWINT ${paymentBreakdown.twint.toFixed(2)}` : ""}`} />
         <Kpi label="Umsatz Bar" value={paymentBreakdown.cash} icon={<Banknote className="w-4 h-4" />} sub={`${paymentBreakdown.cashCount} Bar-Zahlungen`} />
         <Kpi label="Trinkgeld" value={paymentBreakdown.tips} icon={<Coins className="w-4 h-4 text-success" />} highlight={paymentBreakdown.tips > 0 ? "positive" : undefined} />
       </div>
