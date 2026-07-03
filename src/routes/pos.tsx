@@ -330,8 +330,8 @@ function POS() {
         modifiers: it.modifiers,
       }));
       const effectiveTip = +(tip + extraTip).toFixed(2);
-      const baseTotal = Number(activeOrder.total ?? subtotal);
-      const finalTotal = +(baseTotal + effectiveTip).toFixed(2);
+      const baseTotal = +subtotal.toFixed(2);
+      const finalTotal = +(baseTotal + paidTipSum + effectiveTip).toFixed(2);
       const outstandingAmt = Math.max(0, +(finalTotal - paidSum).toFixed(2));
       if (outstandingAmt > 0) {
         const { error: payErr } = await supabase.from("payment_requests").insert({
@@ -999,7 +999,7 @@ function POS() {
                 return;
               }
 
-              const updatedTotal = +(Number(activeOrder.total ?? subtotal) + paidTip).toFixed(2);
+              const updatedTotal = +(subtotal + paidTipSum + paidTip).toFixed(2);
               if (closeOrder) {
                 await supabase
                   .from("orders")
@@ -1405,6 +1405,11 @@ function SplitPaymentDialog({
           if (s.status === "SUCCESSFUL") {
             setSumupPhase("ok");
             setSumupMsg("Bezahlung erfolgreich");
+            const terminalAmount = typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
+              ? +Number(s.amount).toFixed(2)
+              : amount;
+            const terminalTip = Math.max(0, +(terminalAmount - amount).toFixed(2));
+            setSumupMsg(terminalTip > 0 ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}` : "Bezahlung erfolgreich");
             if (isDesktopApp()) {
               await printCardReceipt({
                 printers,
@@ -1415,7 +1420,9 @@ function SplitPaymentDialog({
                   cardLast4: s.cardLast4,
                   authCode: s.authCode,
                   entryMode: s.entryMode,
-                  amount,
+                  amount: terminalAmount,
+                  baseAmount: amount,
+                  tip: terminalTip,
                   currency: s.currency,
                   timestamp: s.timestamp,
                   merchantCode: s.merchantCode,
@@ -1423,7 +1430,7 @@ function SplitPaymentDialog({
                 },
               });
             }
-            await onPaid({ amount, method: "SumUp Terminal", closeOrder: closeAfter });
+            await onPaid({ amount: terminalAmount, method: "SumUp Terminal", closeOrder: closeAfter, tip: terminalTip });
             return;
           }
           if (s.status === "FAILED" || s.status === "CANCELLED") {
