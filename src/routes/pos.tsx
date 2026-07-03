@@ -336,18 +336,21 @@ function POS() {
       if (outstandingAmt > 0) {
         const { data: existingPayments, error: existingErr } = await supabase
           .from("payment_requests")
-          .select("id")
+          .select("amount, tip")
           .eq("order_id", activeOrderId)
-          .eq("status", "paid")
-          .limit(1);
+          .eq("status", "paid");
         if (existingErr) throw existingErr;
+        const existingPaid = (existingPayments ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+        const existingTip = (existingPayments ?? []).reduce((sum, row) => sum + Number(row.tip ?? 0), 0);
+        const remainingPaymentAmount = Math.max(0, +(finalTotal - existingPaid).toFixed(2));
+        const remainingTip = Math.max(0, +(effectiveTip - existingTip).toFixed(2));
 
-        if ((existingPayments ?? []).length === 0) {
+        if (remainingPaymentAmount > 0) {
           const { error: payErr } = await supabase.from("payment_requests").insert({
             order_id: activeOrderId,
             table_name: tableName,
-            amount: outstandingAmt,
-            tip: effectiveTip,
+            amount: remainingPaymentAmount,
+            tip: remainingTip,
             method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
             status: "paid",
             handled_at: new Date().toISOString(),
