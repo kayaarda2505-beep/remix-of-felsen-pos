@@ -86,7 +86,7 @@ function Reports() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status, guests, created_at, closed_at")
+        .select("id, table_id, total, status, guests, created_at, closed_at")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
         .limit(10000);
@@ -220,19 +220,102 @@ function Reports() {
   });
 
   const { data: payments = [] } = useQuery({
-    queryKey: ["payments_range_v3", isoFrom, isoToNext],
+    queryKey: ["payments_range_v4", isoFrom, isoToNext],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("payment_requests")
-        .select("id, order_id, amount, tip, method, status, note, created_at, handled_at")
-        .eq("status", "paid")
-        .gte("created_at", `${isoFrom}T00:00:00`)
-        .lt("created_at", `${isoToNext}T00:00:00`)
-        .limit(10000);
-      if (error) throw error;
-      return (data ?? []) as Array<{ id: string; order_id: string | null; amount: number; tip: number | null; method: string; status: string; note: string | null; created_at: string; handled_at: string | null }>;
+      const fromTs = `${isoFrom}T00:00:00`;
+      const toTs = `${isoToNext}T00:00:00`;
+      const [created, handled] = await Promise.all([
+        supabase
+          .from("payment_requests")
+          .select("id, order_id, amount, tip, method, status, note, created_at, handled_at")
+          .eq("status", "paid")
+          .gte("created_at", fromTs)
+          .lt("created_at", toTs)
+          .limit(10000),
+        supabase
+          .from("payment_requests")
+          .select("id, order_id, amount, tip, method, status, note, created_at, handled_at")
+          .eq("status", "paid")
+          .gte("handled_at", fromTs)
+          .lt("handled_at", toTs)
+          .limit(10000),
+      ]);
+      if (created.error) throw created.error;
+      if (handled.error) throw handled.error;
+      const merged = new Map<string, any>();
+      for (const row of [...(created.data ?? []), ...(handled.data ?? [])]) merged.set(row.id, row);
+      return [...merged.values()] as Array<{ id: string; order_id: string | null; amount: number; tip: number | null; method: string; status: string; note: string | null; created_at: string; handled_at: string | null }>;
     },
   });
+
+  const paymentOrderIds = useMemo(
+    () => [...new Set((payments as any[]).map((p) => p.order_id).filter(Boolean) as string[])],
+    [payments],
+  );
+
+  const { data: closedOrders = [] } = useQuery({
+    queryKey: ["orders_closed_range", isoFrom, isoToNext, useAggregates],
+    enabled: !useAggregates,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, table_id, total, status, guests, created_at, closed_at")
+        .eq("status", "paid")
+        .gte("closed_at", `${isoFrom}T00:00:00`)
+        .lt("closed_at", `${isoToNext}T00:00:00`)
+        .limit(10000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: paymentOrders = [] } = useQuery({
+    queryKey: ["orders_from_payments", paymentOrderIds, useAggregates],
+    enabled: !useAggregates && paymentOrderIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, table_id, total, status, guests, created_at, closed_at")
+        .in("id", paymentOrderIds)
+        .limit(10000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const reportOrders = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const o of [...(orders as any[]), ...(closedOrders as any[]), ...(paymentOrders as any[])]) m.set(o.id, o);
+    return [...m.values()];
+  }, [orders, closedOrders, paymentOrders]);
+
+  const extraItemOrderIds = useMemo(() => {
+    const baseIds = new Set((orders as any[]).map((o) => o.id));
+    return reportOrders.map((o: any) => o.id).filter((id: string) => !baseIds.has(id));
+  }, [orders, reportOrders]);
+
+  const { data: extraItems = [] } = useQuery({
+    queryKey: ["items_for_payment_orders", extraItemOrderIds, useAggregates],
+    enabled: !useAggregates && extraItemOrderIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_items")
+        .select("id, order_id, product_name, category, qty, unit_price, note, sent_at")
+        .in("order_id", extraItemOrderIds)
+        .limit(20000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const reportItems = useMemo(() => {
+    const m = new Map<string, any>();
+    let fallback = 0;
+    for (const it of [...(items as any[]), ...(extraItems as any[])]) {
+      m.set(it.id ?? `${it.order_id}-${it.product_name}-${it.sent_at}-${fallback++}`, it);
+    }
+    return [...m.values()];
+  }, [items, extraItems]);
 
 
   const { data: paymentMethodAgg = [] } = useQuery({
@@ -280,12 +363,12 @@ function Reports() {
 
   const itemTotalsByOrder = useMemo(() => {
     const m = new Map<string, number>();
-    for (const i of items as any[]) {
+    for (const i of reportItems as any[]) {
       if (!i.order_id) continue;
       m.set(i.order_id, (m.get(i.order_id) ?? 0) + Number(i.unit_price ?? 0) * Number(i.qty ?? 0));
     }
     return m;
-  }, [items]);
+  }, [reportItems]);
 
   // Umsatz nach Zahlungsart (aus payment_requests + paid orders ohne payment_requests → Bar)
   const paymentBreakdown = useMemo(() => {
@@ -320,8 +403,12 @@ function Reports() {
       }
     }
     const paidOrderIds = new Set((payments as any[]).map((p) => p.order_id).filter(Boolean));
-    for (const o of orders as any[]) {
+    const fromMs = new Date(`${isoFrom}T00:00:00`).getTime();
+    const toMs = new Date(`${isoToNext}T00:00:00`).getTime();
+    for (const o of reportOrders as any[]) {
       if (o.status === "paid" && !paidOrderIds.has(o.id)) {
+        const paidAt = new Date(o.closed_at ?? o.created_at).getTime();
+        if (paidAt < fromMs || paidAt >= toMs) continue;
         const orderTotal = Number(o.total ?? 0);
         const inferredTip = Math.max(0, +(orderTotal - Number(itemTotalsByOrder.get(o.id) ?? 0)).toFixed(2));
         cash += orderTotal;
@@ -331,7 +418,7 @@ function Reports() {
       }
     }
     return { cash, card, twint, other, tips, cashTips, cashCount, cardCount };
-  }, [payments, orders, itemTotalsByOrder]);
+  }, [payments, reportOrders, itemTotalsByOrder, isoFrom, isoToNext]);
 
 
   // Bar-Ausgaben (was aus der Kasse rausging)
@@ -492,7 +579,7 @@ function Reports() {
   const profit = revenue - totalCosts;
   const closedCount = useAggregates
     ? Number(ordersSummary?.closed_count ?? 0)
-    : orders.filter((o) => o.status === "paid").length;
+    : reportOrders.filter((o: any) => o.status === "paid").length;
   const avgTicket = closedCount ? revenue / closedCount : 0;
 
   const byCategory = useMemo(() => {
@@ -502,13 +589,13 @@ function Reports() {
         .sort((a, b) => b[1] - a[1]);
     }
     const m = new Map<string, number>();
-    for (const i of items) {
+    for (const i of reportItems) {
       const v = Number(i.unit_price ?? 0) * Number(i.qty ?? 0);
       const c = i.category ?? "Sonstiges";
       m.set(c, (m.get(c) ?? 0) + v);
     }
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [items, categoryAgg, useAggregates]);
+  }, [reportItems, categoryAgg, useAggregates]);
 
   const expByCat = useMemo(() => {
     if (useAggregates) {
@@ -530,9 +617,15 @@ function Reports() {
       if (useAggregates) {
         for (const h of hourlyAgg) arr[h.hour] = Number(h.total);
       } else {
-        for (const i of items) {
-          const h = new Date(i.sent_at as string).getHours();
-          arr[h] += Number(i.unit_price ?? 0) * Number(i.qty ?? 0);
+        const paidOrderIds = new Set((payments as any[]).map((p) => p.order_id).filter(Boolean));
+        for (const p of payments as any[]) {
+          const h = new Date(p.handled_at ?? p.created_at).getHours();
+          arr[h] += Number(p.amount ?? 0);
+        }
+        for (const o of reportOrders as any[]) {
+          if (o.status !== "paid" || paidOrderIds.has(o.id)) continue;
+          const h = new Date(o.closed_at ?? o.created_at).getHours();
+          arr[h] += Number(o.total ?? 0);
         }
       }
       return arr.map((v, h) => ({ label: `${h}`, value: v }));
@@ -559,14 +652,21 @@ function Reports() {
         if (idx !== undefined) days[idx].value = Number(row.total);
       }
     } else {
-      for (const o of orders) {
-        const k = fmtISO(new Date(o.created_at as string));
+      const paidOrderIds = new Set((payments as any[]).map((p) => p.order_id).filter(Boolean));
+      for (const p of payments as any[]) {
+        const k = fmtISO(new Date(p.handled_at ?? p.created_at));
+        const idx = map.get(k);
+        if (idx !== undefined) days[idx].value += Number(p.amount ?? 0);
+      }
+      for (const o of reportOrders as any[]) {
+        if (o.status !== "paid" || paidOrderIds.has(o.id)) continue;
+        const k = fmtISO(new Date(o.closed_at ?? o.created_at));
         const idx = map.get(k);
         if (idx !== undefined) days[idx].value += Number(o.total ?? 0);
       }
     }
     return days;
-  }, [items, orders, deferredFrom, deferredTo, singleDay, useAggregates, hourlyAgg, dailyAgg, compactTrend]);
+  }, [payments, reportOrders, deferredFrom, deferredTo, singleDay, useAggregates, hourlyAgg, dailyAgg, compactTrend]);
   const trendMax = Math.max(1, ...trend.map(t => t.value));
 
   const rangeLabel = singleDay
@@ -783,24 +883,31 @@ function Reports() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Einzelne Umsätze</div>
-              <div className="text-xl font-semibold tabular-nums mt-0.5">{orders.length} Bestellungen</div>
+              <div className="text-xl font-semibold tabular-nums mt-0.5">{reportOrders.length} Bestellungen</div>
             </div>
             <div className="text-xs text-muted-foreground">{revenue.toFixed(2)} CHF gesamt</div>
           </div>
-          {orders.length === 0 ? (
+          {reportOrders.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-6 flex flex-col items-center gap-2">
               <Receipt className="w-8 h-8 opacity-40" />
               Keine Bestellungen
             </div>
           ) : (
             <div className="divide-y divide-border/30 -mx-2 max-h-[560px] overflow-y-auto">
-              {[...orders]
-                .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+              {[...reportOrders]
+                .sort((a: any, b: any) => {
+                  const aPays = (payments as any[]).filter((p) => p.order_id === a.id);
+                  const bPays = (payments as any[]).filter((p) => p.order_id === b.id);
+                  const aTime = Math.max(...aPays.map((p) => new Date(p.handled_at ?? p.created_at).getTime()), new Date(a.closed_at ?? a.created_at).getTime());
+                  const bTime = Math.max(...bPays.map((p) => new Date(p.handled_at ?? p.created_at).getTime()), new Date(b.closed_at ?? b.created_at).getTime());
+                  return bTime - aTime;
+                })
                 .map((o: any) => {
-                  const dt = new Date(o.created_at);
-                  const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-                  const orderItems = (items as any[]).filter((it) => it.order_id === o.id);
                   const orderPays = (payments as any[]).filter((p) => p.order_id === o.id);
+                  const paidAt = Math.max(...orderPays.map((p) => new Date(p.handled_at ?? p.created_at).getTime()), new Date(o.closed_at ?? o.created_at).getTime());
+                  const dt = new Date(paidAt);
+                  const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+                  const orderItems = (reportItems as any[]).filter((it) => it.order_id === o.id);
                   const itemSubtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
                   const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
                   const storedTipSum = orderPays.reduce((s, p) => s + Number(p.tip || 0), 0);
