@@ -338,11 +338,25 @@ function POS() {
         });
         if (err) toast.error(`Druck: ${err}`);
       }
+      const finalTotal = Number(activeOrder.total) + tip;
       const { error } = await supabase
         .from("orders")
-        .update({ status: "paid", closed_at: new Date().toISOString() })
+        .update({ status: "paid", closed_at: new Date().toISOString(), total: finalTotal })
         .eq("id", activeOrderId);
       if (error) throw error;
+      const outstandingAmt = Math.max(0, +(finalTotal - paidSum).toFixed(2));
+      if (outstandingAmt > 0) {
+        await supabase.from("payment_requests").insert({
+          order_id: activeOrderId,
+          table_name: tableName,
+          amount: outstandingAmt,
+          tip,
+          method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
+          status: "paid",
+          handled_at: new Date().toISOString(),
+          note: `${tableName} · ${method}`,
+        });
+      }
       if (activeOrder.table_id) {
         await supabase
           .from("dining_tables")
