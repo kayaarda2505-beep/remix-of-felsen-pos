@@ -319,7 +319,7 @@ function POS() {
   });
 
   const payTab = useMutation({
-    mutationFn: async ({ method }: { method: string }) => {
+    mutationFn: async ({ method, extraTip = 0 }: { method: string; extraTip?: number }) => {
       if (!activeOrderId || !activeOrder) return;
       const tableName = activeOrder.dining_tables?.name ?? "Theke";
       const items: ReceiptItem[] = tabItems.map((it) => ({
@@ -328,17 +328,20 @@ function POS() {
         unit_price: Number(it.unit_price),
         modifiers: it.modifiers,
       }));
+      const effectiveTip = tip + extraTip;
+      const finalTotal = Number(activeOrder.total) + effectiveTip;
       if (isDesktopApp()) {
         const err = await printBill({
           printers,
           tableName,
           items,
-          total: Number(activeOrder.total) + tip,
+          subtotal: Number(activeOrder.total),
+          total: finalTotal,
+          tip: effectiveTip,
           paymentMethod: method,
         });
         if (err) toast.error(`Druck: ${err}`);
       }
-      const finalTotal = Number(activeOrder.total) + tip;
       const { error } = await supabase
         .from("orders")
         .update({ status: "paid", closed_at: new Date().toISOString(), total: finalTotal })
@@ -350,7 +353,7 @@ function POS() {
           order_id: activeOrderId,
           table_name: tableName,
           amount: outstandingAmt,
-          tip,
+          tip: effectiveTip,
           method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
           status: "paid",
           handled_at: new Date().toISOString(),
@@ -374,8 +377,9 @@ function POS() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
 
+
   const payWalkIn = useMutation({
-    mutationFn: async ({ method }: { method: string }) => {
+    mutationFn: async ({ method, extraTip = 0 }: { method: string; extraTip?: number }) => {
       if (walkInCart.length === 0) return;
       const { data: order, error: oErr } = await supabase
         .from("orders")
@@ -395,8 +399,9 @@ function POS() {
       }));
       const { error: iErr } = await supabase.from("order_items").insert(rows);
       if (iErr) throw iErr;
-      const totalAmt =
-        walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0) + tip;
+      const effectiveTip = tip + extraTip;
+      const itemsSubtotal = walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
+      const totalAmt = itemsSubtotal + effectiveTip;
       const { error: uErr } = await supabase
         .from("orders")
         .update({ status: "paid", closed_at: new Date().toISOString(), total: totalAmt })
@@ -415,8 +420,9 @@ function POS() {
           printers,
           tableName: "Theke",
           items,
+          subtotal: itemsSubtotal,
           total: totalAmt,
-          tip,
+          tip: effectiveTip,
           paymentMethod: method,
         });
         if (err) toast.error(`Druck: ${err}`);
@@ -425,7 +431,7 @@ function POS() {
         order_id: order.id,
         table_name: "Theke",
         amount: totalAmt,
-        tip,
+        tip: effectiveTip,
         method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
         status: "paid",
         handled_at: new Date().toISOString(),
@@ -442,6 +448,7 @@ function POS() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
+
 
   const isTab = !!activeOrderId;
   const pendingSubtotal = pendingCart.reduce((s, l) => s + l.product.price * l.qty, 0);
@@ -947,14 +954,16 @@ function POS() {
             printers={printers}
             tableName={isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : "Theke"}
             onClose={() => setPayMode(null)}
-            onConfirm={(method, _received, _diff, _diffType) => {
+            onConfirm={(method, _received, diff, diffType) => {
               setPayMode(null);
+              const extraTip = diffType === "tip" && diff > 0 ? diff : 0;
               if (isTab) {
-                payTab.mutate({ method });
+                payTab.mutate({ method, extraTip });
               } else if (walkInCart.length > 0) {
-                payWalkIn.mutate({ method });
+                payWalkIn.mutate({ method, extraTip });
               }
             }}
+
           />
         )}
         {splitOpen && isTab && activeOrder && (
