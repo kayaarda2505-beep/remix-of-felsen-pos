@@ -385,8 +385,16 @@ function Reports() {
 
 
 
-  // Umsatz gesamt = tatsächlich bezahlt (Karte + TWINT + Bar + Sonstige) aus payment_requests
-  const revenue = paymentBreakdown.card + paymentBreakdown.twint + paymentBreakdown.cash + paymentBreakdown.other;
+  // Umsatz gesamt = tatsächlich bezahlte Zahlungen (Karte + TWINT + Bar + Sonstige)
+  // + Bestellungen mit Status "paid" ohne payment_requests-Eintrag (z. B. direkt abgeschlossen)
+  const paidOrdersWithoutPayments = useMemo(() => {
+    const paidOrderIds = new Set((payments as any[]).map((p) => p.order_id).filter(Boolean));
+    return (orders as any[])
+      .filter((o) => o.status === "paid" && !paidOrderIds.has(o.id))
+      .reduce((s, o) => s + Number(o.total ?? 0), 0);
+  }, [orders, payments]);
+  const revenue = paymentBreakdown.card + paymentBreakdown.twint + paymentBreakdown.cash + paymentBreakdown.other + paidOrdersWithoutPayments;
+
 
   const expenseTotal = useAggregates
     ? Number(expenseSummary?.total ?? 0)
