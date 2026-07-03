@@ -323,8 +323,7 @@ function Reports() {
   // Kumulativ bis Ende gewählter Tag → für Soll-Berechnung
   const endOfDay = `${fmtISO(deferredTo)}T23:59:59.999`;
   const { data: cashMovementsCum = [] } = useQuery({
-    queryKey: ["cash_movements_cum", endOfDay, singleDay],
-    enabled: singleDay,
+    queryKey: ["cash_movements_cum", endOfDay],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("cash_movements")
@@ -334,6 +333,7 @@ function Reports() {
       return (data ?? []) as Array<{ amount: number }>;
     },
   });
+
   const movementsCumTotal = useMemo(
     () => cashMovementsCum.reduce((s, m) => s + Number(m.amount ?? 0), 0),
     [cashMovementsCum],
