@@ -483,13 +483,30 @@ function Reports() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-        <Kpi label="Umsatz" value={revenue} icon={<TrendingUp className="w-4 h-4" />} accent />
-        <Kpi label="Ausgaben" value={expenseTotal} icon={<TrendingDown className="w-4 h-4 text-destructive" />} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+        <Kpi label="Umsatz gesamt" value={revenue} icon={<TrendingUp className="w-4 h-4" />} accent />
+        <Kpi label="Umsatz Karte" value={paymentBreakdown.card + paymentBreakdown.twint} icon={<CreditCard className="w-4 h-4" />} sub={`${paymentBreakdown.cardCount} Karte · ${paymentBreakdown.twint > 0 ? `TWINT ${paymentBreakdown.twint.toFixed(2)}` : "keine TWINT"}`} />
+        <Kpi label="Umsatz Bar" value={paymentBreakdown.cash} icon={<Banknote className="w-4 h-4" />} sub={`${paymentBreakdown.cashCount} Bar-Zahlungen`} />
+        <Kpi label="Trinkgeld" value={paymentBreakdown.tips} icon={<Coins className="w-4 h-4 text-success" />} highlight={paymentBreakdown.tips > 0 ? "positive" : undefined} />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <Kpi label="Ausgaben" value={expenseTotal} icon={<TrendingDown className="w-4 h-4 text-destructive" />} sub={`${expenseCount} Belege`} />
         <Kpi label="Gebühren" value={feeTotal} icon={<CreditCard className="w-4 h-4 text-destructive/80" />} sub={`${feesByMethod.reduce((s, f) => s + f.count, 0)} Online-Zahlungen`} />
         <Kpi label="Gewinn" value={profit} icon={<Wallet className="w-4 h-4" />} highlight={profit >= 0 ? "positive" : "negative"} />
         <Kpi label="Ø Bon" value={avgTicket} icon={<ShoppingCart className="w-4 h-4" />} sub={`${closedCount} Abschlüsse`} />
       </div>
+
+      {/* Kassenbestand */}
+      <CashTillPanel
+        singleDay={singleDay}
+        isoDate={isoFrom}
+        cashRevenue={paymentBreakdown.cash}
+        cashExpenses={cashExpenseTotal}
+        tips={paymentBreakdown.tips}
+        cashCountRow={cashCountRow}
+      />
+
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* Trend chart */}
