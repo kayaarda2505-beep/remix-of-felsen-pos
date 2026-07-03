@@ -385,9 +385,9 @@ function Reports() {
 
 
 
-  const revenue = useAggregates
-    ? Number(ordersSummary?.revenue ?? 0)
-    : orders.reduce((s, o) => s + Number(o.total ?? 0), 0);
+  // Umsatz gesamt = tatsächlich bezahlt (Karte + TWINT + Bar + Sonstige) aus payment_requests
+  const revenue = paymentBreakdown.card + paymentBreakdown.twint + paymentBreakdown.cash + paymentBreakdown.other;
+
   const expenseTotal = useAggregates
     ? Number(expenseSummary?.total ?? 0)
     : expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
