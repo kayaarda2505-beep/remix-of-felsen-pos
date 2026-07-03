@@ -691,3 +691,144 @@ function Kpi({ label, value, icon, sub, accent, highlight }: {
     </motion.div>
   );
 }
+
+function CashTillPanel({
+  singleDay, isoDate, cashRevenue, cashExpenses, tips, cashCountRow,
+}: {
+  singleDay: boolean;
+  isoDate: string;
+  cashRevenue: number;
+  cashExpenses: number;
+  tips: number;
+  cashCountRow: { id: string; counted_amount: number; expected_amount: number; note: string | null; counted_by: string | null; created_at: string } | null | undefined;
+}) {
+  const qc = useQueryClient();
+  const expected = +(cashRevenue - cashExpenses).toFixed(2);
+  const [counted, setCounted] = useState<string>("");
+  const [note, setNote] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (cashCountRow) {
+      setCounted(String(cashCountRow.counted_amount ?? ""));
+      setNote(cashCountRow.note ?? "");
+    } else {
+      setCounted("");
+      setNote("");
+    }
+  }, [cashCountRow?.id, isoDate]);
+
+  const countedNum = Number(counted.replace(",", ".")) || 0;
+  const diff = +(countedNum - expected).toFixed(2);
+  const hasCount = counted !== "" && !isNaN(Number(counted.replace(",", ".")));
+
+  const save = async () => {
+    if (!singleDay) return;
+    setSaving(true);
+    const payload = {
+      count_date: isoDate,
+      counted_amount: countedNum,
+      expected_amount: expected,
+      note: note || null,
+    };
+    const { error } = await (supabase as any).from("cash_counts").insert(payload);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Kassenzählung gespeichert");
+    qc.invalidateQueries({ queryKey: ["cash_counts"] });
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl p-5 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Kassenbestand · Bargeld</div>
+          <div className="text-xl font-semibold tabular-nums mt-0.5">{expected.toFixed(2)} CHF <span className="text-xs text-muted-foreground font-normal">Soll</span></div>
+        </div>
+        <Banknote className="w-5 h-5 text-muted-foreground" />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-xs">
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Bar-Einnahmen</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5">+{cashRevenue.toFixed(2)}</div>
+        </div>
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Bar-Ausgaben</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5 text-destructive/90">−{cashExpenses.toFixed(2)}</div>
+        </div>
+        <div className="rounded-xl bg-white/5 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Trinkgeld (im Umsatz)</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5 text-success">+{tips.toFixed(2)}</div>
+        </div>
+        <div className="rounded-xl bg-accent/10 px-3 py-2">
+          <div className="text-[10px] uppercase text-muted-foreground">Soll in der Kasse</div>
+          <div className="text-sm font-semibold tabular-nums mt-0.5 text-accent">{expected.toFixed(2)}</div>
+        </div>
+      </div>
+
+      {!singleDay ? (
+        <div className="text-xs text-muted-foreground">Kassenzählung ist nur pro Tag möglich — wähle einen einzelnen Tag oben.</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
+            <label className="text-xs">
+              <div className="text-[10px] uppercase text-muted-foreground mb-1">Gezählt (Ist)</div>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={counted}
+                onChange={(e) => setCounted(e.target.value)}
+                placeholder="0.00"
+                className="w-full h-10 rounded-xl bg-white/5 px-3 outline-none tabular-nums focus:ring-2 focus:ring-accent/40"
+              />
+            </label>
+            <label className="text-xs md:col-span-2">
+              <div className="text-[10px] uppercase text-muted-foreground mb-1">Notiz</div>
+              <input
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="z. B. Wechselgeld ergänzt"
+                className="w-full h-10 rounded-xl bg-white/5 px-3 outline-none focus:ring-2 focus:ring-accent/40"
+              />
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">Ist</span>
+                <span className="font-semibold tabular-nums">{hasCount ? countedNum.toFixed(2) : "—"} CHF</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">Differenz</span>
+                {hasCount ? (
+                  <span className={`font-semibold tabular-nums flex items-center gap-1 ${Math.abs(diff) < 0.01 ? "text-success" : diff > 0 ? "text-accent" : "text-destructive"}`}>
+                    {Math.abs(diff) >= 0.01 && <AlertTriangle className="w-3.5 h-3.5" />}
+                    {diff > 0 ? "+" : ""}{diff.toFixed(2)} CHF
+                  </span>
+                ) : <span className="text-muted-foreground">—</span>}
+              </div>
+            </div>
+            <button
+              onClick={save}
+              disabled={!hasCount || saving}
+              className="glass rounded-xl px-3 h-10 text-xs flex items-center gap-2 hover:border-accent/40 disabled:opacity-50"
+            >
+              <Save className="w-3.5 h-3.5" />
+              {saving ? "Speichere…" : "Zählung speichern"}
+            </button>
+          </div>
+
+          {cashCountRow && (
+            <div className="text-[10px] text-muted-foreground mt-3">
+              Zuletzt gezählt: {new Date(cashCountRow.created_at).toLocaleString("de-CH")} · Soll damals {Number(cashCountRow.expected_amount).toFixed(2)} CHF · Ist {Number(cashCountRow.counted_amount).toFixed(2)} CHF
+            </div>
+          )}
+        </>
+      )}
+    </motion.div>
+  );
+}
+
