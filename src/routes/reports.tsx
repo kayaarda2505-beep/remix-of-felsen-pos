@@ -410,7 +410,8 @@ function Reports() {
         const paidAt = new Date(o.closed_at ?? o.created_at).getTime();
         if (paidAt < fromMs || paidAt >= toMs) continue;
         const orderTotal = Number(o.total ?? 0);
-        const inferredTip = Math.max(0, +(orderTotal - Number(itemTotalsByOrder.get(o.id) ?? 0)).toFixed(2));
+        const itemTotal = Number(itemTotalsByOrder.get(o.id) ?? 0);
+        const inferredTip = Math.max(0, +(orderTotal - itemTotal).toFixed(2));
         cash += orderTotal;
         tips += inferredTip;
         cashTips += inferredTip;
@@ -911,10 +912,14 @@ function Reports() {
                   const itemSubtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
                   const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
                   const storedTipSum = orderPays.reduce((s, p) => s + Number(p.tip || 0), 0);
-                  const tipSum = storedTipSum > 0 ? storedTipSum : Math.max(0, +(paidSum - itemSubtotal).toFixed(2));
-                  const displayTotal = Math.max(Number(o.total ?? 0), paidSum, +(itemSubtotal + tipSum).toFixed(2));
+                  const orderTotal = Number(o.total ?? 0);
+                  const fallbackPaidWithoutRow = o.status === "paid" && orderPays.length === 0;
+                  const tipSum = storedTipSum > 0
+                    ? storedTipSum
+                    : Math.max(0, +((paidSum > 0 ? paidSum : orderTotal) - itemSubtotal).toFixed(2));
+                  const displayTotal = Math.max(orderTotal, paidSum, +(itemSubtotal + tipSum).toFixed(2));
                   const methodLabel = (m: string) => m === "cash" ? "Bar" : m === "card_terminal" ? "Karte" : m === "twint" ? "TWINT" : m === "stripe" ? "Stripe" : m;
-                  const methods = orderPays.length ? [...new Set(orderPays.map(p => methodLabel(p.method)))].join(", ") : "—";
+                  const methods = orderPays.length ? [...new Set(orderPays.map(p => methodLabel(p.method)))].join(", ") : (fallbackPaidWithoutRow ? "Bar" : "—");
                   const isOpen = expandedOrder === o.id;
                   return (
                     <div key={o.id} className="px-2">
@@ -956,7 +961,17 @@ function Reports() {
                           <div>
                             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Zahlungen</div>
                             {orderPays.length === 0 ? (
-                              <div className="text-xs text-muted-foreground">Keine Zahlung erfasst</div>
+                              fallbackPaidWithoutRow ? (
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="truncate">
+                                    Bar <span className="text-muted-foreground">· automatisch aus Abschluss erkannt</span>
+                                    {tipSum > 0 ? <span className="text-muted-foreground"> · TG {tipSum.toFixed(2)}</span> : null}
+                                  </div>
+                                  <div className="tabular-nums">{displayTotal.toFixed(2)}</div>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-muted-foreground">Keine Zahlung erfasst</div>
+                              )
                             ) : (
                               <div className="space-y-1">
                                 {orderPays.map((p) => (
