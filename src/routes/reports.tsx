@@ -140,20 +140,7 @@ function Reports() {
     },
   });
 
-  // Aktive Drucker für "Beleg nachdrucken"
-  const { data: printers = [] } = useQuery<PrinterConfig[]>({
-    queryKey: ["printers", "active"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("printers")
-        .select("id, name, type, ip_address, port")
-        .eq("active", true);
-      if (error) throw error;
-      return (data ?? []) as PrinterConfig[];
-    },
-  });
-
-  // Tisch-Namen für Belegkopf
+  // Tisch-Namen für Belegkopf beim Nachdruck
   const { data: tables = [] } = useQuery<Array<{ id: string; name: string | null }>>({
     queryKey: ["dining_tables_names"],
     queryFn: async () => {
