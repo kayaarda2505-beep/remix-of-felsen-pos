@@ -569,6 +569,10 @@ function Reports() {
         cashExpenses={cashExpenseTotal}
         tips={paymentBreakdown.tips}
         cashCountRow={cashCountRow}
+        movementsTotal={movementsCumTotal}
+        cashInCum={Number(cashCumRow?.cashIn ?? 0)}
+        cashOutCum={Number(cashCumRow?.cashOut ?? 0)}
+        movementsDay={cashMovementsDay}
       />
 
 
