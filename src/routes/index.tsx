@@ -233,7 +233,9 @@ function ServiceTablet() {
       toast.success("Tisch abgeschlossen");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dining_tables"] });
-      qc.invalidateQueries({ queryKey: ["payments_range_v3"] });
+      qc.invalidateQueries({ queryKey: ["payments_range_v4"] });
+      qc.invalidateQueries({ queryKey: ["orders_closed_range"] });
+      qc.invalidateQueries({ queryKey: ["orders_from_payments"] });
       qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       reset();
       if (isDesktopApp()) setPendingReceipt(snapshot);
