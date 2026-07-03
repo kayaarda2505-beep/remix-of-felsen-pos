@@ -196,20 +196,20 @@ function Reports() {
   });
 
   const { data: payments = [] } = useQuery({
-    queryKey: ["payments_range", isoFrom, isoToNext, useAggregates],
-    enabled: !useAggregates,
+    queryKey: ["payments_range_v2", isoFrom, isoToNext],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payment_requests")
-        .select("amount, method, status, created_at, handled_at")
+        .select("amount, tip, method, status, created_at, handled_at")
         .eq("status", "paid")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
-        .limit(5000);
+        .limit(10000);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Array<{ amount: number; tip: number | null; method: string; status: string; created_at: string; handled_at: string | null }>;
     },
   });
+
 
   const { data: paymentMethodAgg = [] } = useQuery({
     queryKey: ["report_payment_method_totals", isoFrom, isoToNext, useAggregates],
