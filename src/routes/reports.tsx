@@ -363,9 +363,9 @@ function Reports() {
     },
   });
 
-  // Kumulative Bar-Einnahmen (inkl. Trinkgeld bar & direkt bezahlte Bestellungen ohne payment_request) und Bar-Ausgaben bis Ende Tag
+  // Kumulative Bar-Einnahmen (inkl. bar bezahltem Trinkgeld & direkt bezahlte Bestellungen ohne payment_request) und Bar-Ausgaben bis Ende Tag
   const { data: cashCumRow } = useQuery({
-    queryKey: ["cash_cum_v3", endOfDay],
+    queryKey: ["cash_cum_v4", endOfDay],
     queryFn: async () => {
       const [
         { data: cashPays, error: pErr },
@@ -409,7 +409,7 @@ function Reports() {
       const cashFromDirectPaid = (paidOrders ?? [])
         .filter((o: any) => !paidOrderIds.has(o.id))
         .reduce((s, o: any) => s + Number(o.total ?? 0), 0);
-      const cashIn = cashFromPays + cashTips + cashFromDirectPaid;
+      const cashIn = cashFromPays + cashFromDirectPaid;
       const cashOut = (exps ?? []).reduce((s, e: any) => s + Number(e.amount ?? 0), 0);
       return { cashIn, cashOut, cashTips };
     },
@@ -543,6 +543,7 @@ function Reports() {
       data: {
         rangeLabel: `${presetLabel} · ${rangeLabel}`,
         revenue,
+        tipTotal: paymentBreakdown.tips,
         expenseTotal,
         feeTotal,
         profit,
