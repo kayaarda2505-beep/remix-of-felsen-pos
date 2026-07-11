@@ -996,13 +996,13 @@ function POS() {
         )}
         {splitOpen && isTab && activeOrder && (
           <SplitPaymentDialog
-            outstanding={outstanding}
+            items={tabItems}
             tableName={activeOrder.dining_tables?.name ?? "Tisch"}
             orderId={activeOrder.id}
             tableId={activeOrder.table_id}
             printers={printers}
             onClose={() => setSplitOpen(false)}
-            onPaid={async ({ amount, method, closeOrder, tip: paidTip = 0 }) => {
+            onPaid={async ({ amount, method, tip: paidTip = 0, selections }) => {
               const { error: insErr } = await supabase.from("payment_requests").insert({
                 order_id: activeOrder.id,
                 table_id: activeOrder.table_id,
@@ -1019,11 +1019,31 @@ function POS() {
                 return;
               }
 
-              const updatedTotal = +(subtotal + paidTipSum + paidTip).toFixed(2);
+              // Ausgewählte Artikel aus dem Tab entfernen (bezahlt = weg)
+              for (const sel of selections) {
+                const item = tabItems.find((i) => i.id === sel.itemId);
+                if (!item || sel.qty <= 0) continue;
+                if (sel.qty >= item.qty) {
+                  await supabase.from("order_items").delete().eq("id", item.id);
+                } else {
+                  await supabase
+                    .from("order_items")
+                    .update({ qty: item.qty - sel.qty })
+                    .eq("id", item.id);
+                }
+              }
+
+              // Verbleibende Artikel prüfen → wenn 0, Order abschliessen
+              const remainingQty = tabItems.reduce((s, i) => {
+                const paidQ = selections.find((x) => x.itemId === i.id)?.qty ?? 0;
+                return s + Math.max(0, i.qty - paidQ);
+              }, 0);
+              const closeOrder = remainingQty <= 0;
+
               if (closeOrder) {
                 await supabase
                   .from("orders")
-                  .update({ status: "paid", closed_at: new Date().toISOString(), total: updatedTotal })
+                  .update({ status: "paid", closed_at: new Date().toISOString() })
                   .eq("id", activeOrder.id);
                 if (activeOrder.table_id) {
                   await supabase
@@ -1035,15 +1055,10 @@ function POS() {
                 setTip(0);
                 toast.success("Rechnung vollständig bezahlt");
               } else {
-                if (paidTip > 0) {
-                  await supabase
-                    .from("orders")
-                    .update({ total: updatedTotal })
-                    .eq("id", activeOrder.id);
-                }
                 toast.success(`Teilzahlung CHF ${amount.toFixed(2)} erfasst`);
               }
               setSplitOpen(false);
+              qc.invalidateQueries({ queryKey: ["order_items", activeOrder.id] });
               qc.invalidateQueries({ queryKey: ["partial_payments", activeOrder.id] });
               qc.invalidateQueries({ queryKey: ["orders", "open"] });
               qc.invalidateQueries({ queryKey: ["dining_tables"] });
@@ -1055,6 +1070,7 @@ function POS() {
             }}
           />
         )}
+
       </AnimatePresence>
 
 
