@@ -996,13 +996,13 @@ function POS() {
         )}
         {splitOpen && isTab && activeOrder && (
           <SplitPaymentDialog
-            outstanding={outstanding}
+            items={tabItems}
             tableName={activeOrder.dining_tables?.name ?? "Tisch"}
             orderId={activeOrder.id}
             tableId={activeOrder.table_id}
             printers={printers}
             onClose={() => setSplitOpen(false)}
-            onPaid={async ({ amount, method, closeOrder, tip: paidTip = 0 }) => {
+            onPaid={async ({ amount, method, tip: paidTip = 0, selections }) => {
               const { error: insErr } = await supabase.from("payment_requests").insert({
                 order_id: activeOrder.id,
                 table_id: activeOrder.table_id,
@@ -1019,11 +1019,31 @@ function POS() {
                 return;
               }
 
-              const updatedTotal = +(subtotal + paidTipSum + paidTip).toFixed(2);
+              // Ausgewählte Artikel aus dem Tab entfernen (bezahlt = weg)
+              for (const sel of selections) {
+                const item = tabItems.find((i) => i.id === sel.itemId);
+                if (!item || sel.qty <= 0) continue;
+                if (sel.qty >= item.qty) {
+                  await supabase.from("order_items").delete().eq("id", item.id);
+                } else {
+                  await supabase
+                    .from("order_items")
+                    .update({ qty: item.qty - sel.qty })
+                    .eq("id", item.id);
+                }
+              }
+
+              // Verbleibende Artikel prüfen → wenn 0, Order abschliessen
+              const remainingQty = tabItems.reduce((s, i) => {
+                const paidQ = selections.find((x) => x.itemId === i.id)?.qty ?? 0;
+                return s + Math.max(0, i.qty - paidQ);
+              }, 0);
+              const closeOrder = remainingQty <= 0;
+
               if (closeOrder) {
                 await supabase
                   .from("orders")
-                  .update({ status: "paid", closed_at: new Date().toISOString(), total: updatedTotal })
+                  .update({ status: "paid", closed_at: new Date().toISOString() })
                   .eq("id", activeOrder.id);
                 if (activeOrder.table_id) {
                   await supabase
@@ -1035,15 +1055,10 @@ function POS() {
                 setTip(0);
                 toast.success("Rechnung vollständig bezahlt");
               } else {
-                if (paidTip > 0) {
-                  await supabase
-                    .from("orders")
-                    .update({ total: updatedTotal })
-                    .eq("id", activeOrder.id);
-                }
                 toast.success(`Teilzahlung CHF ${amount.toFixed(2)} erfasst`);
               }
               setSplitOpen(false);
+              qc.invalidateQueries({ queryKey: ["order_items", activeOrder.id] });
               qc.invalidateQueries({ queryKey: ["partial_payments", activeOrder.id] });
               qc.invalidateQueries({ queryKey: ["orders", "open"] });
               qc.invalidateQueries({ queryKey: ["dining_tables"] });
@@ -1055,6 +1070,7 @@ function POS() {
             }}
           />
         )}
+
       </AnimatePresence>
 
 
@@ -1351,7 +1367,7 @@ function PaymentDialog({
 }
 
 function SplitPaymentDialog({
-  outstanding,
+  items,
   tableName,
   orderId,
   tableId,
@@ -1359,46 +1375,53 @@ function SplitPaymentDialog({
   onClose,
   onPaid,
 }: {
-  outstanding: number;
+  items: OrderItem[];
   tableName: string;
   orderId: string;
   tableId: string | null;
   printers: PrinterConfig[];
   onClose: () => void;
-  onPaid: (args: { amount: number; method: string; closeOrder: boolean; tip?: number }) => Promise<void> | void;
+  onPaid: (args: {
+    amount: number;
+    method: string;
+    tip?: number;
+    selections: { itemId: string; qty: number }[];
+  }) => Promise<void> | void;
 }) {
-  const [amountStr, setAmountStr] = useState<string>(outstanding.toFixed(2));
+  const [selQty, setSelQty] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [sumupPhase, setSumupPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
   const [sumupMsg, setSumupMsg] = useState<string>("");
   const sendToReader = useServerFn(sumupSendToReader);
   const getTxStatus = useServerFn(sumupGetTransactionStatus);
 
-  const amount = Math.max(0, +(Number(amountStr.replace(",", ".")) || 0).toFixed(2));
-  const valid = amount > 0 && amount <= outstanding + 0.001;
-  const closeAfter = Math.abs(amount - outstanding) < 0.005;
+  const selections = items
+    .map((i) => ({ itemId: i.id, qty: Math.min(i.qty, Math.max(0, selQty[i.id] ?? 0)) }))
+    .filter((s) => s.qty > 0);
 
-  const quick = Array.from(
-    new Set(
-      [
-        outstanding,
-        outstanding / 2,
-        outstanding / 3,
-        outstanding / 4,
-        10,
-        20,
-        50,
-      ]
-        .filter((v) => v > 0 && v <= outstanding + 0.001)
-        .map((v) => +v.toFixed(2)),
-    ),
-  ).slice(0, 6);
+  const amount = +selections
+    .reduce((s, sel) => {
+      const it = items.find((i) => i.id === sel.itemId)!;
+      return s + it.unit_price * sel.qty;
+    }, 0)
+    .toFixed(2);
+
+  const totalQty = items.reduce((s, i) => s + i.qty, 0);
+  const selectedQty = selections.reduce((s, x) => s + x.qty, 0);
+  const closeAfter = selectedQty >= totalQty && totalQty > 0;
+  const valid = amount > 0;
+
+  const setQty = (id: string, q: number) => setSelQty((prev) => ({ ...prev, [id]: q }));
+  const inc = (i: OrderItem) => setQty(i.id, Math.min(i.qty, (selQty[i.id] ?? 0) + 1));
+  const dec = (i: OrderItem) => setQty(i.id, Math.max(0, (selQty[i.id] ?? 0) - 1));
+  const selectAll = () => setSelQty(Object.fromEntries(items.map((i) => [i.id, i.qty])));
+  const clearAll = () => setSelQty({});
 
   const payCash = async () => {
     if (!valid || busy) return;
     setBusy(true);
     try {
-      await onPaid({ amount, method: "Bar", closeOrder: closeAfter });
+      await onPaid({ amount, method: "Bar", selections });
     } finally {
       setBusy(false);
     }
@@ -1415,23 +1438,24 @@ function SplitPaymentDialog({
       });
       setSumupPhase("waiting");
       setSumupMsg("Am Terminal bezahlen …");
-      if (!clientTransactionId) {
-        // Kein Polling möglich → als bezahlt annehmen nach manueller Bestätigung
-        return;
-      }
+      if (!clientTransactionId) return;
       const started = Date.now();
       while (Date.now() - started < 120_000) {
         await new Promise((r) => setTimeout(r, 2500));
         try {
           const s = await getTxStatus({ data: { clientTransactionId } });
           if (s.status === "SUCCESSFUL") {
-            setSumupPhase("ok");
-            setSumupMsg("Bezahlung erfolgreich");
-            const terminalAmount = typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
-              ? +Number(s.amount).toFixed(2)
-              : amount;
+            const terminalAmount =
+              typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
+                ? +Number(s.amount).toFixed(2)
+                : amount;
             const terminalTip = Math.max(0, +(terminalAmount - amount).toFixed(2));
-            setSumupMsg(terminalTip > 0 ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}` : "Bezahlung erfolgreich");
+            setSumupPhase("ok");
+            setSumupMsg(
+              terminalTip > 0
+                ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}`
+                : "Bezahlung erfolgreich",
+            );
             if (isDesktopApp()) {
               await printCardReceipt({
                 printers,
@@ -1452,7 +1476,7 @@ function SplitPaymentDialog({
                 },
               });
             }
-            await onPaid({ amount: terminalAmount, method: "SumUp Terminal", closeOrder: closeAfter, tip: terminalTip });
+            await onPaid({ amount: terminalAmount, method: "SumUp Terminal", tip: terminalTip, selections });
             return;
           }
           if (s.status === "FAILED" || s.status === "CANCELLED") {
@@ -1476,10 +1500,9 @@ function SplitPaymentDialog({
 
   const confirmCardManual = async () => {
     if (!valid) return;
-    await onPaid({ amount, method: "Karte manuell", closeOrder: closeAfter });
+    await onPaid({ amount, method: "Karte manuell", selections });
   };
 
-  // Referenzen "verwenden" um Lint-Warnungen zu vermeiden
   void orderId; void tableId;
 
   return (
@@ -1495,56 +1518,81 @@ function SplitPaymentDialog({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 10 }}
         onClick={(e) => e.stopPropagation()}
-        className="glass-strong rounded-3xl p-6 w-full max-w-md"
+        className="glass-strong rounded-3xl p-6 w-full max-w-lg flex flex-col max-h-[85vh]"
       >
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
               Teilzahlung · Tisch {tableName}
             </div>
-            <h2 className="text-xl font-semibold">Betrag eingeben</h2>
+            <h2 className="text-xl font-semibold">Artikel auswählen</h2>
           </div>
           <button onClick={onClose} className="w-9 h-9 rounded-xl glass flex items-center justify-center">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="flex items-center justify-between text-sm mb-3">
-          <span className="text-muted-foreground">Offen</span>
-          <span className="text-lg font-semibold tabular-nums">CHF {outstanding.toFixed(2)}</span>
+        <div className="flex items-center gap-2 mb-3">
+          <button onClick={selectAll} className="rounded-lg px-2.5 py-1.5 text-xs glass hover:border-accent/40">
+            Alle
+          </button>
+          <button onClick={clearAll} className="rounded-lg px-2.5 py-1.5 text-xs glass hover:border-accent/40">
+            Keine
+          </button>
         </div>
 
-        <div className="space-y-1.5 mb-3">
-          <label className="text-xs uppercase tracking-wider text-muted-foreground">Betrag (CHF)</label>
-          <input
-            type="number"
-            step="0.05"
-            min={0}
-            max={outstanding}
-            value={amountStr}
-            onChange={(e) => setAmountStr(e.target.value)}
-            className="glass rounded-xl px-3 py-3 text-2xl w-full outline-none bg-transparent tabular-nums font-semibold"
-          />
-          <div className="flex flex-wrap gap-2 pt-1">
-            {quick.map((v) => (
-              <button
-                key={v}
-                onClick={() => setAmountStr(v.toFixed(2))}
-                className="rounded-lg px-2.5 py-1.5 text-xs glass hover:border-accent/40 tabular-nums"
-              >
-                CHF {v.toFixed(2)}
-              </button>
-            ))}
-          </div>
-          {amount > 0 && (
-            <div className="text-xs text-muted-foreground pt-1 tabular-nums">
-              Verbleibt danach: CHF {Math.max(0, +(outstanding - amount).toFixed(2)).toFixed(2)}
-              {closeAfter && <span className="text-success ml-2">→ Rechnung wird abgeschlossen</span>}
-            </div>
+        <div className="flex-1 overflow-y-auto space-y-1.5 mb-3 pr-1">
+          {items.length === 0 && (
+            <div className="text-center text-sm text-muted-foreground py-8">Keine Artikel auf dem Tab</div>
           )}
+          {items.map((it) => {
+            const q = selQty[it.id] ?? 0;
+            const active = q > 0;
+            return (
+              <div
+                key={it.id}
+                className={`glass rounded-xl px-3 py-2 flex items-center gap-3 ${active ? "border-accent/50" : ""}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{it.product_name}</div>
+                  <div className="text-[11px] text-muted-foreground tabular-nums">
+                    {it.qty}× · CHF {it.unit_price.toFixed(2)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => dec(it)}
+                    disabled={q <= 0}
+                    className="w-8 h-8 rounded-lg glass flex items-center justify-center disabled:opacity-30"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="w-8 text-center text-sm font-semibold tabular-nums">{q}</div>
+                  <button
+                    onClick={() => inc(it)}
+                    disabled={q >= it.qty}
+                    className="w-8 h-8 rounded-lg glass flex items-center justify-center disabled:opacity-30"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="w-20 text-right text-sm tabular-nums">
+                  CHF {(it.unit_price * q).toFixed(2)}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 pt-2">
+        <div className="flex items-center justify-between border-t border-white/10 pt-3 mb-3">
+          <span className="text-sm text-muted-foreground">Zu zahlen</span>
+          <span className="text-2xl font-semibold tabular-nums">CHF {amount.toFixed(2)}</span>
+        </div>
+        {closeAfter && amount > 0 && (
+          <div className="text-xs text-success mb-2 text-center">→ Rechnung wird abgeschlossen</div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={payCash}
             disabled={!valid || busy}
@@ -1591,4 +1639,5 @@ function SplitPaymentDialog({
     </motion.div>
   );
 }
+
 
