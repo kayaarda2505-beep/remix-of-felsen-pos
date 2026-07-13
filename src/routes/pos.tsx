@@ -331,33 +331,20 @@ function POS() {
       }));
       const effectiveTip = +(tip + extraTip).toFixed(2);
       const baseTotal = +subtotal.toFixed(2);
-      const finalTotal = +(baseTotal + paidTipSum + effectiveTip).toFixed(2);
-      const outstandingAmt = Math.max(0, +(finalTotal - paidSum).toFixed(2));
-      if (outstandingAmt > 0) {
-        const { data: existingPayments, error: existingErr } = await supabase
-          .from("payment_requests")
-          .select("amount, tip")
-          .eq("order_id", activeOrderId)
-          .eq("status", "paid");
-        if (existingErr) throw existingErr;
-        const existingPaid = (existingPayments ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-        const existingTip = (existingPayments ?? []).reduce((sum, row) => sum + Number(row.tip ?? 0), 0);
-        const remainingPaymentAmount = Math.max(0, +(finalTotal - existingPaid).toFixed(2));
-        const remainingTip = Math.max(0, +(effectiveTip - existingTip).toFixed(2));
-
-        if (remainingPaymentAmount > 0) {
-          const { error: payErr } = await supabase.from("payment_requests").insert({
-            order_id: activeOrderId,
-            table_name: tableName,
-            amount: remainingPaymentAmount,
-            tip: remainingTip,
-            method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
-            status: "paid",
-            handled_at: new Date().toISOString(),
-            note: `${tableName} · ${method}`,
-          });
-          if (payErr) throw payErr;
-        }
+      const paymentAmount = +(baseTotal + effectiveTip).toFixed(2);
+      const finalTotal = +(paidSum + paymentAmount).toFixed(2);
+      if (paymentAmount > 0) {
+        const { error: payErr } = await supabase.from("payment_requests").insert({
+          order_id: activeOrderId,
+          table_name: tableName,
+          amount: paymentAmount,
+          tip: effectiveTip,
+          method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
+          status: "paid",
+          handled_at: new Date().toISOString(),
+          note: `${tableName} · ${method}${effectiveTip > 0 ? ` · Trinkgeld CHF ${effectiveTip.toFixed(2)}` : ""}`,
+        });
+        if (payErr) throw payErr;
       }
       const { error } = await supabase
         .from("orders")
@@ -372,8 +359,8 @@ function POS() {
           tableName,
           items,
           subtotal: baseTotal,
-          total: finalTotal,
-          tip: effectiveTip + paidTipSum,
+          total: paymentAmount,
+          tip: effectiveTip,
           paymentMethod: method,
         });
         if (err) toast.error(`Druck: ${err}`);
@@ -392,6 +379,7 @@ function POS() {
       qc.invalidateQueries({ queryKey: ["payments_range_v4"] });
       qc.invalidateQueries({ queryKey: ["orders_closed_range"] });
       qc.invalidateQueries({ queryKey: ["orders_from_payments"] });
+      qc.invalidateQueries({ queryKey: ["partial_payments"] });
       qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       setActiveOrderId(null);
       setTip(0);
@@ -483,8 +471,8 @@ function POS() {
   const subtotal = isTab
     ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0) + pendingSubtotal
     : walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
-  const total = subtotal + (isTab ? paidTipSum : 0) + tip;
-  const outstanding = isTab ? Math.max(0, +(total - paidSum).toFixed(2)) : total;
+  const total = subtotal + tip;
+  const outstanding = Math.max(0, +total.toFixed(2));
   const hasPending = pendingCart.length > 0;
   const showCart = isTab ? tabItems : walkInCart;
 
@@ -925,6 +913,12 @@ function POS() {
                   <span className="text-muted-foreground">Bereits bezahlt</span>
                   <span className="tabular-nums text-success">− CHF {paidSum.toFixed(2)}</span>
                 </div>
+                {paidTipSum > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Davon Trinkgeld bezahlt</span>
+                    <span className="tabular-nums text-success">CHF {paidTipSum.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Offen</span>
                   <span className="text-xl font-semibold tabular-nums">
@@ -1155,10 +1149,11 @@ function PaymentDialog({
           if (s.status === "SUCCESSFUL") {
             setSumupPhase("ok");
             setSumupMsg("Bezahlung erfolgreich");
+            const reportedTip = typeof s.tip === "number" && Number.isFinite(s.tip) && s.tip > 0 ? +Number(s.tip).toFixed(2) : undefined;
             const terminalAmount = typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
               ? +Number(s.amount).toFixed(2)
-              : total;
-            const terminalTip = Math.max(0, +(terminalAmount - total).toFixed(2));
+              : +(total + (reportedTip ?? 0)).toFixed(2);
+            const terminalTip = reportedTip ?? Math.max(0, +(terminalAmount - total).toFixed(2));
             setSumupMsg(terminalTip > 0 ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}` : "Bezahlung erfolgreich");
             if (isDesktopApp()) {
               const err = await printCardReceipt({
@@ -1445,11 +1440,12 @@ function SplitPaymentDialog({
         try {
           const s = await getTxStatus({ data: { clientTransactionId } });
           if (s.status === "SUCCESSFUL") {
+            const reportedTip = typeof s.tip === "number" && Number.isFinite(s.tip) && s.tip > 0 ? +Number(s.tip).toFixed(2) : undefined;
             const terminalAmount =
               typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
                 ? +Number(s.amount).toFixed(2)
-                : amount;
-            const terminalTip = Math.max(0, +(terminalAmount - amount).toFixed(2));
+                : +(amount + (reportedTip ?? 0)).toFixed(2);
+            const terminalTip = reportedTip ?? Math.max(0, +(terminalAmount - amount).toFixed(2));
             setSumupPhase("ok");
             setSumupMsg(
               terminalTip > 0

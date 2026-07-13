@@ -1056,10 +1056,11 @@ function PayChoiceDialog({
           const s = await getTxStatus({ data: { clientTransactionId } });
           if (s.status === "SUCCESSFUL") {
             setPhase("ok");
+            const reportedTip = typeof s.tip === "number" && Number.isFinite(s.tip) && s.tip > 0 ? +Number(s.tip).toFixed(2) : undefined;
             const terminalAmount = typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
               ? +Number(s.amount).toFixed(2)
-              : total;
-            const terminalTip = Math.max(0, +(terminalAmount - total).toFixed(2));
+              : +(total + (reportedTip ?? 0)).toFixed(2);
+            const terminalTip = reportedTip ?? Math.max(0, +(terminalAmount - total).toFixed(2));
             setMsg(terminalTip > 0 ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}` : "Bezahlung erfolgreich");
             if (isDesktopApp()) {
               const err = await printCardReceipt({
