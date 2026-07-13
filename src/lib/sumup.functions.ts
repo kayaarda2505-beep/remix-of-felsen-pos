@@ -140,7 +140,8 @@ export const sumupGetTransactionStatus = createServerFn({ method: "POST" })
     const baseAmount = normalizeMoney(tx?.amount);
     const tipAmount = normalizeMoney(tx?.tip_amount ?? tx?.tip);
     const explicitTotal = normalizeMoney(tx?.total_amount ?? tx?.amount_total);
-    const normalizedAmount = explicitTotal ?? (baseAmount != null && tipAmount != null ? baseAmount + tipAmount : baseAmount);
+    const normalizedTip = Number.isFinite(tipAmount) ? tipAmount : undefined;
+    const normalizedAmount = explicitTotal ?? (baseAmount != null && normalizedTip != null ? baseAmount + normalizedTip : baseAmount);
     return {
       status: status.toUpperCase() as "SUCCESSFUL" | "FAILED" | "CANCELLED" | "PENDING",
       transactionId: tx?.id as string | undefined,
@@ -150,6 +151,8 @@ export const sumupGetTransactionStatus = createServerFn({ method: "POST" })
       authCode: tx?.auth_code as string | undefined,
       entryMode: tx?.entry_mode as string | undefined,
       amount: Number.isFinite(normalizedAmount) ? normalizedAmount : undefined,
+      baseAmount: Number.isFinite(baseAmount) ? baseAmount : undefined,
+      tip: normalizedTip,
       currency: (tx?.currency ?? tx?.total_amount?.currency) as string | undefined,
       timestamp: (tx?.timestamp ?? tx?.transaction_timestamp) as string | undefined,
       merchantCode: (tx?.merchant_code ?? undefined) as string | undefined,

@@ -374,19 +374,28 @@ function Reports() {
   const paymentBreakdown = useMemo(() => {
     let cash = 0, card = 0, twint = 0, other = 0, tips = 0, cashTips = 0;
     let cashCount = 0, cardCount = 0;
-    const byOrder = new Map<string, { amount: number; tip: number; cashAmount: number; cashTip: number }>();
+    const byOrder = new Map<string, { amount: number; tip: number; cashAmount: number; cashTip: number; byMethod: Map<string, { amount: number; tip: number }> }>();
+    const addMethodRevenue = (method: string, amount: number) => {
+      if (method === "cash") cash += amount;
+      else if (method === "card_terminal" || method === "stripe" || method === "apple_pay" || method === "google_pay") card += amount;
+      else if (method === "twint") twint += amount;
+      else other += amount;
+    };
     for (const p of payments) {
       const amt = Number(p.amount ?? 0);
       const tip = Number(p.tip ?? 0);
       tips += tip;
-      if (p.method === "cash") { cash += amt; cashTips += tip; cashCount++; }
-      else if (p.method === "card_terminal" || p.method === "stripe" || p.method === "apple_pay" || p.method === "google_pay") { card += amt; cardCount++; }
-      else if (p.method === "twint") { twint += amt; }
-      else { other += amt; }
+      addMethodRevenue(p.method, amt);
+      if (p.method === "cash") { cashTips += tip; cashCount++; }
+      else if (p.method === "card_terminal" || p.method === "stripe" || p.method === "apple_pay" || p.method === "google_pay") { cardCount++; }
       if (p.order_id) {
-        const cur = byOrder.get(p.order_id) ?? { amount: 0, tip: 0, cashAmount: 0, cashTip: 0 };
+        const cur = byOrder.get(p.order_id) ?? { amount: 0, tip: 0, cashAmount: 0, cashTip: 0, byMethod: new Map<string, { amount: number; tip: number }>() };
         cur.amount += amt;
         cur.tip += tip;
+        const methodCur = cur.byMethod.get(p.method) ?? { amount: 0, tip: 0 };
+        methodCur.amount += amt;
+        methodCur.tip += tip;
+        cur.byMethod.set(p.method, methodCur);
         if (p.method === "cash") {
           cur.cashAmount += amt;
           cur.cashTip += tip;
@@ -395,8 +404,22 @@ function Reports() {
       }
     }
     for (const [orderId, row] of byOrder) {
-      if (row.tip > 0) continue;
-      const inferredTip = Math.max(0, +(row.amount - Number(itemTotalsByOrder.get(orderId) ?? 0)).toFixed(2));
+      const itemTotal = Number(itemTotalsByOrder.get(orderId) ?? 0);
+      if (itemTotal <= 0) continue;
+      if (row.tip > 0) {
+        const expectedPaid = +(itemTotal + row.tip).toFixed(2);
+        const missingTipInAmount = Math.max(0, +(expectedPaid - row.amount).toFixed(2));
+        if (missingTipInAmount > 0) {
+          for (const [method, part] of row.byMethod) {
+            const share = row.tip > 0 ? Number(part.tip ?? 0) / row.tip : Number(part.amount ?? 0) / row.amount;
+            const add = +(missingTipInAmount * (Number.isFinite(share) && share > 0 ? share : 0)).toFixed(2);
+            if (add > 0) addMethodRevenue(method, add);
+            if (method === "cash") cashTips += add;
+          }
+        }
+        continue;
+      }
+      const inferredTip = Math.max(0, +(row.amount - itemTotal).toFixed(2));
       if (inferredTip > 0) {
         tips += inferredTip;
         if (row.cashAmount > 0 && Math.abs(row.cashAmount - row.amount) < 0.005) cashTips += inferredTip;
@@ -411,7 +434,7 @@ function Reports() {
         if (paidAt < fromMs || paidAt >= toMs) continue;
         const orderTotal = Number(o.total ?? 0);
         const itemTotal = Number(itemTotalsByOrder.get(o.id) ?? 0);
-        const inferredTip = Math.max(0, +(orderTotal - itemTotal).toFixed(2));
+        const inferredTip = itemTotal > 0 ? Math.max(0, +(orderTotal - itemTotal).toFixed(2)) : 0;
         other += orderTotal;
         tips += inferredTip;
       }
@@ -525,7 +548,7 @@ function Reports() {
         if (!(i as any).order_id) continue;
         itemTotals.set((i as any).order_id, (itemTotals.get((i as any).order_id) ?? 0) + Number((i as any).qty ?? 0) * Number((i as any).unit_price ?? 0));
       }
-      const cashFromPays = (cashPays ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
+      let cashFromPays = (cashPays ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
       const cashByOrder = new Map<string, { amount: number; tip: number }>();
       for (const p of cashPays ?? []) {
         if (!(p as any).order_id) continue;
@@ -536,8 +559,14 @@ function Reports() {
       }
       let cashTips = (cashPays ?? []).reduce((s, p: any) => s + Number(p.tip ?? 0), 0);
       for (const [orderId, row] of cashByOrder) {
-        if (row.tip > 0) continue;
-        cashTips += Math.max(0, +(row.amount - Number(itemTotals.get(orderId) ?? 0)).toFixed(2));
+        const itemTotal = Number(itemTotals.get(orderId) ?? 0);
+        if (itemTotal <= 0) continue;
+        if (row.tip > 0) {
+          const missingTipInAmount = Math.max(0, +((itemTotal + row.tip) - row.amount).toFixed(2));
+          cashFromPays += missingTipInAmount;
+          continue;
+        }
+        cashTips += Math.max(0, +(row.amount - itemTotal).toFixed(2));
       }
       const cashIn = cashFromPays;
       const cashOut = (exps ?? []).reduce((s, e: any) => s + Number(e.amount ?? 0), 0);
