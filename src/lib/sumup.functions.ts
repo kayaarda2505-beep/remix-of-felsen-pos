@@ -137,11 +137,13 @@ export const sumupGetTransactionStatus = createServerFn({ method: "POST" })
       }
       return undefined;
     };
-    const baseAmount = normalizeMoney(tx?.amount);
+    const transactionAmount = normalizeMoney(tx?.amount);
     const tipAmount = normalizeMoney(tx?.tip_amount ?? tx?.tip);
     const explicitTotal = normalizeMoney(tx?.total_amount ?? tx?.amount_total);
     const normalizedTip = Number.isFinite(tipAmount) ? tipAmount : undefined;
-    const normalizedAmount = explicitTotal ?? (baseAmount != null && normalizedTip != null ? baseAmount + normalizedTip : baseAmount);
+    // SumUp's transaction `amount` is the captured total on the reader.
+    // Do not add `tip` again here, otherwise CHF 15 + CHF 5 tip becomes CHF 25.
+    const normalizedAmount = explicitTotal ?? transactionAmount;
     return {
       status: status.toUpperCase() as "SUCCESSFUL" | "FAILED" | "CANCELLED" | "PENDING",
       transactionId: tx?.id as string | undefined,
@@ -151,7 +153,9 @@ export const sumupGetTransactionStatus = createServerFn({ method: "POST" })
       authCode: tx?.auth_code as string | undefined,
       entryMode: tx?.entry_mode as string | undefined,
       amount: Number.isFinite(normalizedAmount) ? normalizedAmount : undefined,
-      baseAmount: Number.isFinite(baseAmount) ? baseAmount : undefined,
+      baseAmount: typeof transactionAmount === "number" && Number.isFinite(transactionAmount) && normalizedTip != null
+        ? +(transactionAmount - normalizedTip).toFixed(2)
+        : transactionAmount,
       tip: normalizedTip,
       currency: (tx?.currency ?? tx?.total_amount?.currency) as string | undefined,
       timestamp: (tx?.timestamp ?? tx?.transaction_timestamp) as string | undefined,
