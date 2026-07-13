@@ -153,7 +153,9 @@ export const sumupGetTransactionStatus = createServerFn({ method: "POST" })
       authCode: tx?.auth_code as string | undefined,
       entryMode: tx?.entry_mode as string | undefined,
       amount: Number.isFinite(normalizedAmount) ? normalizedAmount : undefined,
-      baseAmount: Number.isFinite(transactionAmount) && normalizedTip != null ? +(transactionAmount - normalizedTip).toFixed(2) : transactionAmount,
+      baseAmount: typeof transactionAmount === "number" && Number.isFinite(transactionAmount) && normalizedTip != null
+        ? +(transactionAmount - normalizedTip).toFixed(2)
+        : transactionAmount,
       tip: normalizedTip,
       currency: (tx?.currency ?? tx?.total_amount?.currency) as string | undefined,
       timestamp: (tx?.timestamp ?? tx?.transaction_timestamp) as string | undefined,
