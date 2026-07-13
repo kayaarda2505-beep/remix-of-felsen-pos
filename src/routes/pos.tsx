@@ -128,7 +128,6 @@ function POS() {
   });
   const paidSum = paidRows.reduce((s, r) => s + r.amount, 0);
   const paidTipSum = paidRows.reduce((s, r) => s + Number(r.tip ?? 0), 0);
-  const paidBaseSum = Math.max(0, +(paidSum - paidTipSum).toFixed(2));
 
 
   const { data: printers = [] } = useQuery({

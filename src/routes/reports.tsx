@@ -414,7 +414,6 @@ function Reports() {
             const share = row.tip > 0 ? Number(part.tip ?? 0) / row.tip : Number(part.amount ?? 0) / row.amount;
             const add = +(missingTipInAmount * (Number.isFinite(share) && share > 0 ? share : 0)).toFixed(2);
             if (add > 0) addMethodRevenue(method, add);
-            if (method === "cash") cashTips += add;
           }
         }
         continue;
