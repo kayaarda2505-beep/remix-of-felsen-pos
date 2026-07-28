@@ -266,28 +266,36 @@ function Lieferung() {
         if (upErr) throw upErr;
       }
 
-      if (isDesktopApp()) {
-        const { data: printers } = await supabase
-          .from("printers")
-          .select("id, name, type, ip_address, port")
-          .eq("active", true);
-        const items: ReceiptItem[] = cart.map((l) => ({
-          product_name: l.item.name,
-          qty: l.qty,
-          unit_price: l.item.price,
-          modifiers: [],
-        }));
-        await printBill({
-          printers: (printers ?? []) as any,
-          tableName: `LIEFERUNG · ${customerName(customer)} · ${address}${
-            customer.phone ? ` · ${customer.phone}` : ""
-          }${deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""}`,
-          items,
-          total: subtotal,
-          paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
-          interim: pay === "open",
-        });
+      try {
+        if (isDesktopApp()) {
+          const { data: printers } = await supabase
+            .from("printers")
+            .select("id, name, type, ip_address, port")
+            .eq("active", true);
+          const items: ReceiptItem[] = cart.map((l) => ({
+            product_name: l.item.name,
+            qty: l.qty,
+            unit_price: l.item.price,
+            modifiers: [],
+          }));
+          await printBill({
+            printers: (printers ?? []) as any,
+            tableName: `LIEFERUNG · ${customerName(customer)} · ${address}${
+              customer.phone ? ` · ${customer.phone}` : ""
+            }${deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""}`,
+            items,
+            total: subtotal,
+            paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
+            interim: pay === "open",
+          });
+        }
+      } catch (err) {
+        // Druckfehler darf die Bestellung nicht abbrechen
+        toast.error(
+          err instanceof Error ? `Druckfehler: ${err.message}` : "Druckfehler",
+        );
       }
+
       return {
         pay,
         receipt: {
