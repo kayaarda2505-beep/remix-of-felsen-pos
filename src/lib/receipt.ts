@@ -252,22 +252,27 @@ export function buildBill(opts: {
   // Fuss
   lines.push({ separator: true });
   lines.push({
-    text: opts.interim ? "Noch nicht bezahlt" : "Vielen Dank für Ihren Besuch!",
+    text:
+      opts.footerNote ??
+      (opts.interim ? "Noch nicht bezahlt" : "Vielen Dank für Ihren Besuch!"),
     align: "center",
     bold: !opts.interim,
   });
 
-  // Google-Bewertung als QR-Code (nur auf finaler Rechnung)
-  if (!opts.interim) {
+  // QR-Code: eigener (z.B. Kurier-Link) oder Google-Bewertung auf finaler Rechnung
+  if (opts.qrUrl) {
+    lines.push({ text: "" });
+    if (opts.qrLabel) lines.push({ text: opts.qrLabel, align: "center", bold: true });
+    lines.push({ text: "" });
+    lines.push({ qr: opts.qrUrl, size: 7 });
+    lines.push({ text: "" });
+  } else if (!opts.interim) {
     lines.push({ text: "" });
     lines.push({ text: "Bitte bewerten Sie uns auf Google", align: "center", bold: true });
     lines.push({ text: "" });
     lines.push({ qr: "https://share.google/r7ny129TOY9jlwj6E", size: 6 });
     lines.push({ text: "" });
   }
-
-  lines.push({ text: "", align: "center" });
-  lines.push({ text: s.businessName, align: "center" });
 
   return { lines, cut: true };
 }
