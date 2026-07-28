@@ -60,6 +60,20 @@ interface CartLine {
   note?: string;
 }
 
+interface DeliveryReceipt {
+  orderId: string;
+  customerName: string;
+  address: string;
+  phone: string;
+  note: string;
+  customerNote: string;
+  items: { name: string; qty: number; price: number }[];
+  total: number;
+  createdAt: string;
+  paid?: boolean;
+  payMethod?: "open" | "cash" | "card";
+}
+
 function customerName(c: Customer) {
   return [c.last_name, c.first_name].filter(Boolean).join(" ").trim() || "Ohne Namen";
 }
@@ -98,6 +112,7 @@ function Lieferung() {
   const [productSearch, setProductSearch] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [deliveryNote, setDeliveryNote] = useState("");
+  const [receipt, setReceipt] = useState<DeliveryReceipt | null>(null);
 
   const { data: customers = [], isFetching: searching } = useQuery({
     queryKey: ["customers", search],
@@ -273,12 +288,26 @@ function Lieferung() {
           interim: pay === "open",
         });
       }
-      return pay;
+      return {
+        pay,
+        receipt: {
+          orderId: order.id as string,
+          customerName: customerName(customer),
+          address,
+          phone: customer.phone,
+          note: deliveryNote.trim(),
+          customerNote: customer.note ?? "",
+          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: l.item.price })),
+          total: subtotal,
+          createdAt: new Date().toISOString(),
+        } as DeliveryReceipt,
+      };
     },
-    onSuccess: (pay) => {
+    onSuccess: ({ pay, receipt }) => {
       toast.success(pay === "open" ? "Lieferbestellung erfasst" : "Lieferung bezahlt");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order_items"] });
+      setReceipt({ ...receipt, paid: pay !== "open", payMethod: pay });
       resetAll();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
@@ -684,6 +713,84 @@ function Lieferung() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {receipt && <DeliveryReceiptOverlay receipt={receipt} onClose={() => setReceipt(null)} />}
+    </div>
+  );
+}
+
+function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt; onClose: () => void }) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const courierUrl = `${origin}/kurier/${receipt.orderId}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=6&data=${encodeURIComponent(
+    courierUrl,
+  )}`;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 print:bg-white print:p-0">
+      <div className="w-full max-w-sm max-h-[92vh] overflow-y-auto rounded-3xl glass-strong p-6 print:max-h-none print:rounded-none print:bg-white print:text-black">
+        <div className="text-center">
+          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground print:text-black">
+            Piratino Lieferung
+          </div>
+          <h2 className="text-xl font-semibold mt-1">Lieferschein</h2>
+          <div className="text-xs text-muted-foreground print:text-black">
+            #{receipt.orderId.slice(0, 8).toUpperCase()} ·{" "}
+            {new Date(receipt.createdAt).toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" })}
+          </div>
+        </div>
+
+        <div className="mt-4 text-sm space-y-0.5">
+          <div className="font-semibold">{receipt.customerName}</div>
+          <div>{receipt.address}</div>
+          {receipt.phone && <div className="text-muted-foreground print:text-black">Tel. {receipt.phone}</div>}
+          {receipt.customerNote && (
+            <div className="text-muted-foreground print:text-black">Kunde: {receipt.customerNote}</div>
+          )}
+          {receipt.note && <div className="text-accent print:text-black">Notiz: {receipt.note}</div>}
+        </div>
+
+        <div className="mt-4 border-t border-white/10 pt-3 space-y-1.5 text-sm">
+          {receipt.items.map((i, idx) => (
+            <div key={idx} className="flex gap-2">
+              <span className="w-7 tabular-nums">{i.qty}×</span>
+              <span className="flex-1 min-w-0">{i.name}</span>
+              <span className="tabular-nums">{(i.qty * i.price).toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 border-t border-white/10 pt-3 flex items-center justify-between">
+          <span className="text-sm text-muted-foreground print:text-black">Total</span>
+          <span className="text-2xl font-semibold tabular-nums">CHF {receipt.total.toFixed(2)}</span>
+        </div>
+        <div className="text-xs text-center mt-1 text-muted-foreground print:text-black">
+          {receipt.paid
+            ? `Bezahlt (${receipt.payMethod === "cash" ? "Bar" : "Karte"})`
+            : "Offen — beim Kunden kassieren"}
+        </div>
+
+        <div className="mt-5 flex flex-col items-center">
+          <img
+            src={qrSrc}
+            alt={`QR-Code zum Lieferauftrag ${receipt.orderId.slice(0, 8)}`}
+            className="w-40 h-40 rounded-xl bg-white p-2"
+          />
+          <div className="text-[11px] text-center text-muted-foreground mt-2 print:text-black">
+            QR scannen für Adresse, Navigation & Anruf
+          </div>
+          <div className="text-[10px] text-center text-muted-foreground break-all print:text-black">{courierUrl}</div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mt-5 print:hidden">
+          <button onClick={() => window.print()} className="rounded-xl py-3 glass text-sm">
+            Drucken
+          </button>
+          <button onClick={onClose} className="rounded-xl py-3 bg-accent/20 text-accent text-sm font-medium">
+            Fertig
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
