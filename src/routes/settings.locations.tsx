@@ -65,7 +65,7 @@ function LocationsPage() {
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Name (z. B. SAINTS Bar)"
+            placeholder="Name (z. B. Piratino Bar)"
             className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm md:col-span-2"
           />
           <input

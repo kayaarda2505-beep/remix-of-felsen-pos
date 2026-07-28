@@ -50,13 +50,13 @@ function buildIcs(memberName: string, shifts: ShiftRow[]): string {
       : s.shift_date;
     return [
       "BEGIN:VEVENT",
-      `UID:${s.id}@saintsthebar.ch`,
+      `UID:${s.id}@piratino.ch`,
       `DTSTAMP:${dtstamp}`,
       `DTSTART;TZID=Europe/Zurich:${toIcsDate(s.shift_date, s.start_time)}`,
       `DTEND;TZID=Europe/Zurich:${toIcsDate(endDate, s.end_time)}`,
-      `SUMMARY:${icsEscape("SAINTS – " + s.position)}`,
+      `SUMMARY:${icsEscape("Piratino – " + s.position)}`,
       `DESCRIPTION:${icsEscape(`Schicht: ${s.position}${s.notes ? "\n" + s.notes : ""}\nMitarbeiter: ${memberName}`)}`,
-      "LOCATION:SAINTS Bar",
+      "LOCATION:Piratino Bar",
       "END:VEVENT",
     ].join("\r\n");
   }).join("\r\n");
@@ -64,7 +64,7 @@ function buildIcs(memberName: string, shifts: ShiftRow[]): string {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//SAINTS POS//Schichtplan//DE",
+    "PRODID:-//Piratino POS//Schichtplan//DE",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VTIMEZONE",
@@ -150,19 +150,19 @@ export const publishShifts = createServerFn({ method: "POST" })
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-          <p style="margin-top:24px;color:#888;font-size:12px">SAINTS — bei Fragen melde dich bei deinem Manager.</p>
+          <p style="margin-top:24px;color:#888;font-size:12px">Piratino — bei Fragen melde dich bei deinem Manager.</p>
         </div></body></html>`;
       try {
         const text = `Hallo ${m.name},\n\nhier ist dein neuer Schichtplan:\n\n` +
           memberShifts.map((s) => `• ${formatDate(s.shift_date)} ${s.start_time.slice(0,5)}–${s.end_time.slice(0,5)} ${s.position}${s.notes ? " ("+s.notes+")" : ""}`).join("\n") +
-          `\n\nSAINTS`;
+          `\n\nPiratino`;
 
         const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
         const RESEND_API_KEY = process.env.RESEND_API_KEY;
         if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY fehlt");
         if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY fehlt");
 
-        const from = process.env.RESEND_FROM || "SAINTS <onboarding@resend.dev>";
+        const from = process.env.RESEND_FROM || "Piratino <onboarding@resend.dev>";
 
         const ics = buildIcs(m.name, memberShifts);
         const icsBase64 = Buffer.from(ics, "utf-8").toString("base64");

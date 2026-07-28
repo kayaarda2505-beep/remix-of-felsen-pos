@@ -66,7 +66,7 @@ export type ReceiptSettings = {
 };
 
 const DEFAULT_SETTINGS: ReceiptSettings = {
-  businessName: "SAINTS",
+  businessName: "Piratino",
   currency: "CHF",
   vatRate: 8.1,
   vatIncluded: true,

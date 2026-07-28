@@ -83,7 +83,7 @@ export function SpotifyBarSpeakerProvider({ children }: { children: ReactNode })
       window.onSpotifyWebPlaybackSDKReady = async () => {
         try {
           const player = new window.Spotify.Player({
-            name: "SAINTS POS – Bar Lautsprecher",
+            name: "Piratino POS – Bar Lautsprecher",
             getOAuthToken: async (cb: (t: string) => void) => {
               const { token } = await tokenFn();
               cb(token);

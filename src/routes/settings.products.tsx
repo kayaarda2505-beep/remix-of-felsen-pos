@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProducts, type Product, type ModifierGroup, type ModifierItem } from "@/hooks/use-products";
 
 export const Route = createFileRoute("/settings/products")({
-  head: () => ({ meta: [{ title: "Produkte — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Produkte — Piratino POS" }] }),
   component: ProductsAdmin,
 });
 

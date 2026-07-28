@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, Star } from "lucide-react";
-import { SaintsLogo } from "@/components/SaintsLogo";
+import { PiratinoLogo } from "@/components/PiratinoLogo";
 
 const REVIEW_URL = "https://share.google/mz2iRMKXm9jDlQol1";
 
@@ -16,7 +16,7 @@ function PaidPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
       <div className="glass-strong rounded-3xl p-10 max-w-md w-full text-center space-y-5">
-        <div className="flex justify-center"><SaintsLogo size={48} /></div>
+        <div className="flex justify-center"><PiratinoLogo size={48} /></div>
         <div className="w-16 h-16 mx-auto rounded-full bg-accent/20 text-accent flex items-center justify-center">
           <Check className="w-8 h-8" />
         </div>

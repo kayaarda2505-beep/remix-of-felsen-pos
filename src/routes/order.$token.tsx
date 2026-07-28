@@ -5,7 +5,7 @@ import { Plus, Minus, ShoppingBag, Check, Loader2, Utensils, X, Music, Banknote,
 import { toast } from "sonner";
 
 import { useProducts, type Product } from "@/hooks/use-products";
-import { SaintsLogo } from "@/components/SaintsLogo";
+import { PiratinoLogo } from "@/components/PiratinoLogo";
 import { getQrTable } from "@/lib/public-order.functions";
 import { ProductModifierDialog, type ProductCustomization } from "@/components/ProductModifierDialog";
 import { StripeTableCheckout } from "@/components/StripeTableCheckout";
@@ -228,7 +228,7 @@ function OrderPage() {
       {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/80 border-b border-border/40">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
-          <SaintsLogo size={32} />
+          <PiratinoLogo size={32} />
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Tisch</div>
             <div className="font-semibold truncate">{table.name}</div>

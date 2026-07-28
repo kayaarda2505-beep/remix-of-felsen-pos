@@ -11,7 +11,7 @@ import { printReceipt, isDesktopApp, getAgentPrinters, type PrinterConfig, type 
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/inventory")({
-  head: () => ({ meta: [{ title: "Lager — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Lager — Piratino POS" }] }),
   component: Inventory,
 });
 
@@ -288,7 +288,7 @@ function Inventory() {
       })
       .join("");
     const total = shoppingTotalCost().toFixed(2);
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Einkaufsliste SAINTS</title>
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Einkaufsliste Piratino</title>
       <style>
         body{font-family:-apple-system,Inter,Arial,sans-serif;padding:32px;color:#111}
         h1{margin:0 0 4px;font-size:22px}
@@ -300,7 +300,7 @@ function Inventory() {
         tfoot td{font-weight:700;border-top:2px solid #111;border-bottom:none}
         .check{width:24px;border:1px solid #999;display:inline-block;height:14px}
       </style></head><body>
-      <h1>SAINTS — Einkaufsliste</h1>
+      <h1>Piratino — Einkaufsliste</h1>
       <div class="meta">${dateStr}</div>
       <table>
         <thead><tr><th>Artikel</th><th style="text-align:right">Menge</th><th style="text-align:right">EK</th><th>✓</th></tr></thead>
@@ -334,7 +334,7 @@ function Inventory() {
     }
     const lines: ReceiptPayload["lines"] = [];
     lines.push({ text: "EINKAUFSLISTE", align: "center", bold: true, size: "large" });
-    lines.push({ text: "SAINTS", align: "center" });
+    lines.push({ text: "Piratino", align: "center" });
     lines.push({ text: new Date().toLocaleString("de-CH"), align: "center" });
     lines.push({ separator: true });
     const groups = new Map<string, typeof list>();

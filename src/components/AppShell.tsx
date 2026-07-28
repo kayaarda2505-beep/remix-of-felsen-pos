@@ -21,7 +21,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
-import { SaintsLogo } from "./SaintsLogo";
+import { PiratinoLogo } from "./PiratinoLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
@@ -550,7 +550,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex w-20 lg:w-60 flex-col p-3 lg:p-4 gap-1 border-r border-border/40 bg-sidebar/60 backdrop-blur-2xl overflow-y-auto">
 
         <div className="px-2 py-4 mb-2">
-          <SaintsLogo size={36} withWordmark />
+          <PiratinoLogo size={36} withWordmark />
         </div>
 
         {visibleNav.map((item) => {

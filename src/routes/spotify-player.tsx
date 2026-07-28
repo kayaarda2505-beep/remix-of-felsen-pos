@@ -36,7 +36,7 @@ function SpotifyPlayerPage() {
             <Speaker className="w-7 h-7 text-emerald-400" />
           </div>
           <div className="flex-1">
-            <div className="font-medium">SAINTS POS – Bar Lautsprecher</div>
+            <div className="font-medium">Piratino POS – Bar Lautsprecher</div>
             <div className="text-xs text-muted-foreground">
               {!enabled && "Deaktiviert"}
               {enabled && status === "loading" && "Verbinde…"}

@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { publishShifts } from "@/lib/shifts.functions";
 
 export const Route = createFileRoute("/schichtplan")({
-  head: () => ({ meta: [{ title: "Schichtplanung — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Schichtplanung — Piratino POS" }] }),
   component: SchedulePage,
 });
 

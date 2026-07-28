@@ -63,17 +63,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "SAINTS POS — Modernes Kassensystem" },
+      { title: "Piratino POS — Modernes Kassensystem" },
       {
         name: "description",
         content:
-          "SAINTS POS — Apple-inspiriertes Kassensystem für Bars, Restaurants und Cafés. Schnell, touch-optimiert, elegant.",
+          "Piratino POS — Apple-inspiriertes Kassensystem für Bars, Restaurants und Cafés. Schnell, touch-optimiert, elegant.",
       },
       { name: "theme-color", content: "#0a0a0a" },
-      { property: "og:title", content: "SAINTS POS — Modernes Kassensystem" },
+      { property: "og:title", content: "Piratino POS — Modernes Kassensystem" },
       { property: "og:description", content: "Felsen POS is a modern, touch-optimized point-of-sale system for bars, restaurants, and cafes." },
       { property: "og:type", content: "website" },
-      { name: "twitter:title", content: "SAINTS POS — Modernes Kassensystem" },
+      { name: "twitter:title", content: "Piratino POS — Modernes Kassensystem" },
       { name: "description", content: "Felsen POS is a modern, touch-optimized point-of-sale system for bars, restaurants, and cafes." },
       { name: "twitter:description", content: "Felsen POS is a modern, touch-optimized point-of-sale system for bars, restaurants, and cafes." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/eb16b3f4-06f0-4ef3-b7a8-8d6f936d963a/id-preview-8971f7c1--f212b137-89e0-4643-a3f9-8e9610390f92.lovable.app-1779364056265.png" },
@@ -82,7 +82,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "SAINTS POS" },
+      { name: "apple-mobile-web-app-title", content: "Piratino POS" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

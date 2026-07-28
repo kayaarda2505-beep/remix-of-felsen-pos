@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 
 export const Route = createFileRoute("/staff")({
-  head: () => ({ meta: [{ title: "Team — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Team — Piratino POS" }] }),
   component: TeamManagement,
 });
 

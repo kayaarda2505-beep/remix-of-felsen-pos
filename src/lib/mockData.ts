@@ -1,4 +1,4 @@
-// FELSEN POS — SAINTS Barkarte
+// FELSEN POS — Piratino Barkarte
 
 export type Category =
   | "Signatures"

@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { extractReceipt, type ExtractedExpense } from "@/lib/expenses-ai.functions";
 
 export const Route = createFileRoute("/expenses")({
-  head: () => ({ meta: [{ title: "Ausgaben — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Ausgaben — Piratino POS" }] }),
   component: ExpensesPage,
 });
 

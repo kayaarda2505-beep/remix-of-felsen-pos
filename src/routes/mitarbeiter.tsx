@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/mitarbeiter")({
-  head: () => ({ meta: [{ title: "Mitarbeiter — Lohn & Stunden — SAINTS" }] }),
+  head: () => ({ meta: [{ title: "Mitarbeiter — Lohn & Stunden — Piratino" }] }),
   component: MitarbeiterPage,
 });
 

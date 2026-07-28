@@ -9,7 +9,7 @@ import { routeForCategory } from "@/lib/receipt";
 import { getTutorial, type CocktailTutorial } from "@/lib/cocktailTutorials";
 
 export const Route = createFileRoute("/kitchen")({
-  head: () => ({ meta: [{ title: "Küche & Bar — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Küche & Bar — Piratino POS" }] }),
   component: KitchenView,
 });
 

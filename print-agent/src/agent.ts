@@ -1,5 +1,5 @@
 /**
- * SAINTS Print-Agent
+ * Piratino Print-Agent
  * ------------------
  * Kleiner lokaler HTTP-Server, der von der POS-App Druck-Aufträge
  * entgegennimmt und per ESC/POS an einen am PC installierten Drucker
@@ -289,7 +289,7 @@ public class SaintsRawPrinter {
   public static void SendBytesToPrinter(string printerName, byte[] bytes) {
     IntPtr hPrinter;
     DOCINFOA di = new DOCINFOA();
-    di.pDocName = "SAINTS POS Bon";
+    di.pDocName = "Piratino POS Bon";
     di.pDataType = "RAW";
 
     if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
@@ -359,7 +359,7 @@ async function main() {
     if (!name) return reply.code(400).send({ ok: false, error: "Druckername fehlt" });
     try {
       const buf = buildPayload({
-        title: "SAINTS POS — Testdruck",
+        title: "Piratino POS — Testdruck",
         lines: [
           { text: new Date().toLocaleString("de-CH"), align: "center" },
           { separator: true },
@@ -405,7 +405,7 @@ async function main() {
   const printers = await listPrinters();
   console.log("");
   console.log("==========================================");
-  console.log(`  SAINTS Print-Agent v${VERSION}`);
+  console.log(`  Piratino Print-Agent v${VERSION}`);
   console.log(`  Hört auf  http://0.0.0.0:${PORT}`);
   console.log(`  Drucker:  ${printers.length}`);
   for (const p of printers) {

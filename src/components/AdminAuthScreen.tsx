@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { SaintsLogo } from "./SaintsLogo";
+import { PiratinoLogo } from "./PiratinoLogo";
 
 type Mode = "login" | "signup";
 
@@ -43,11 +43,11 @@ export function AdminAuthScreen() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <SaintsLogo size={72} />
+          <PiratinoLogo size={72} />
         </div>
 
         <h1 className="text-3xl font-semibold tracking-tight text-center mb-1">
-          SAINTS POS
+          Piratino POS
         </h1>
         <p className="text-sm text-muted-foreground text-center mb-8">
           {mode === "login" ? "Admin-Anmeldung" : "Erstes Admin-Konto einrichten"}
@@ -66,7 +66,7 @@ export function AdminAuthScreen() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@saints.bar"
+                placeholder="admin@piratino.ch"
                 className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
                 autoComplete="off"
                 autoCorrect="off"

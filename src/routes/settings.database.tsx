@@ -41,7 +41,7 @@ function DatabasePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `saints-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `piratino-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     setBusy(false);
@@ -57,7 +57,7 @@ function DatabasePage() {
       if (!locationId) {
         const { data: newLoc } = await supabase
           .from("locations")
-          .insert({ name: "SAINTS Bar", address: "Hauptstandort" })
+          .insert({ name: "Piratino Bar", address: "Hauptstandort" })
           .select("id")
           .single();
         locationId = newLoc?.id;

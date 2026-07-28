@@ -4,7 +4,7 @@ import { Delete, ShieldCheck, LogOut, UserPlus, ArrowRight, ArrowLeft } from "lu
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type Operator } from "@/hooks/use-auth";
-import { SaintsLogo } from "./SaintsLogo";
+import { PiratinoLogo } from "./PiratinoLogo";
 
 type Step = "account" | "pin";
 
@@ -82,7 +82,7 @@ export function TeamPinScreen() {
         className="w-full max-w-sm"
       >
         <div className="flex justify-center mb-6">
-          <SaintsLogo size={56} />
+          <PiratinoLogo size={56} />
         </div>
 
         <h1 className="text-2xl font-semibold tracking-tight text-center mb-1">

@@ -1,7 +1,7 @@
 {
-  "name": "SAINTS POS",
-  "short_name": "SAINTS",
-  "description": "SAINTS POS — Modernes Kassensystem für Bars, Restaurants und Cafés.",
+  "name": "Piratino POS",
+  "short_name": "Piratino",
+  "description": "Piratino POS — Modernes Kassensystem für Bars, Restaurants und Cafés.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -3,7 +3,7 @@
 // Frühere Version: window.printerBridge (nur in der Electron .exe).
 // Neue Version: die App läuft als Web-URL, daher gibt es keinen Node-Zugriff
 // im Browser mehr. Statt dessen läuft ein kleines Hilfsprogramm
-// ("SAINTS Print-Agent") im lokalen Netz auf einem Rechner und nimmt
+// ("Piratino Print-Agent") im lokalen Netz auf einem Rechner und nimmt
 // Druckaufträge per HTTP entgegen.
 //
 // Erwartete Endpunkte am Agent (Basis-URL z.B. http://192.168.1.10:9110):

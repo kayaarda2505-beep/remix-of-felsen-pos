@@ -2,10 +2,10 @@
 // We don't render images, so we just provide a no-op surface.
 module.exports = {
   createCanvas() {
-    throw new Error("canvas not bundled in SAINTS Print-Agent");
+    throw new Error("canvas not bundled in Piratino Print-Agent");
   },
   Image: class {},
   loadImage() {
-    throw new Error("canvas not bundled in SAINTS Print-Agent");
+    throw new Error("canvas not bundled in Piratino Print-Agent");
   },
 };
