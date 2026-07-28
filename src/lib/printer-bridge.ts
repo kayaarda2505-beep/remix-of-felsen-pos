@@ -159,6 +159,42 @@ export function getAgentUrlIssue(url: string): string | null {
   return null;
 }
 
+/**
+ * Zusatz-Hinweis, wenn der Agent trotz gültiger URL nicht antwortet.
+ * Häufigster Fall: `localhost` wird von einem anderen Gerät (Tablet) aus
+ * eingetragen — dort zeigt localhost auf das Tablet selbst, nicht auf den PC.
+ */
+export function getAgentUnreachableHint(url: string): string | null {
+  const v = (url ?? "").trim();
+  if (!v || typeof window === "undefined") return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(/^https?:\/\//i.test(v) ? v : `http://${v}`);
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname;
+  const isLocal =
+    host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
+  if (!isLocal) {
+    return (
+      "Prüfe: Läuft der Print-Agent auf dem PC? Sind Tablet und PC im selben WLAN? " +
+      "Blockiert die Windows-Firewall Port 9110?"
+    );
+  }
+  const browserIsLocal =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  return (
+    "„localhost“ funktioniert nur direkt auf dem PC, auf dem der Print-Agent läuft. " +
+    (browserIsLocal ? "" : "Du bist offenbar auf einem anderen Gerät — ") +
+    "trage stattdessen die IP-Adresse des Drucker-PCs ein, z. B. http://192.168.1.10:9110 " +
+    "(IP am PC mit „ipconfig“ ermitteln). Zusätzlich muss Port 9110 in der Windows-Firewall freigegeben sein." +
+    (window.location.protocol === "https:"
+      ? " Hinweis: In Safari blockiert HTTPS zudem http-Aufrufe — dort hilft nur die Desktop-App oder HTTPS am Agent."
+      : "")
+  );
+}
+
 
 async function callAgent<T>(
   path: string,

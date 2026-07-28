@@ -15,6 +15,7 @@ import {
   isAutoPrintEnabled,
   setAutoPrintEnabled,
   getAgentUrlIssue,
+  getAgentUnreachableHint,
   normalizeAgentUrl,
 
 
@@ -320,6 +321,11 @@ function PrintersPage() {
         {agentIssue && (
           <div className="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-xs text-destructive">
             {agentIssue}
+          </div>
+        )}
+        {!agentIssue && agentOnline === false && getAgentUnreachableHint(agentUrl) && (
+          <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-500">
+            {getAgentUnreachableHint(agentUrl)}
           </div>
         )}
       </div>
