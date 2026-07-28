@@ -60,6 +60,20 @@ interface CartLine {
   note?: string;
 }
 
+interface DeliveryReceipt {
+  orderId: string;
+  customerName: string;
+  address: string;
+  phone: string;
+  note: string;
+  customerNote: string;
+  items: { name: string; qty: number; price: number }[];
+  total: number;
+  createdAt: string;
+  paid?: boolean;
+  payMethod?: "open" | "cash" | "card";
+}
+
 function customerName(c: Customer) {
   return [c.last_name, c.first_name].filter(Boolean).join(" ").trim() || "Ohne Namen";
 }
