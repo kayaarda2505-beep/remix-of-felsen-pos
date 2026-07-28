@@ -104,6 +104,51 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          city: string
+          created_at: string
+          first_name: string
+          house_no: string
+          id: string
+          last_name: string
+          note: string | null
+          phone: string
+          phone2: string | null
+          street: string
+          updated_at: string
+          zip: string
+        }
+        Insert: {
+          city?: string
+          created_at?: string
+          first_name?: string
+          house_no?: string
+          id?: string
+          last_name?: string
+          note?: string | null
+          phone?: string
+          phone2?: string | null
+          street?: string
+          updated_at?: string
+          zip?: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          first_name?: string
+          house_no?: string
+          id?: string
+          last_name?: string
+          note?: string | null
+          phone?: string
+          phone2?: string | null
+          street?: string
+          updated_at?: string
+          zip?: string
+        }
+        Relationships: []
+      }
       dining_tables: {
         Row: {
           area: Database["public"]["Enums"]["table_area"]
@@ -602,11 +647,15 @@ export type Database = {
         Row: {
           closed_at: string | null
           created_at: string
+          customer_id: string | null
+          delivery_address: string | null
+          delivery_note: string | null
           guests: number | null
           id: string
           location_id: string | null
           opened_at: string
           opened_by_name: string | null
+          order_type: string
           status: Database["public"]["Enums"]["order_status"]
           table_id: string | null
           total: number
@@ -614,11 +663,15 @@ export type Database = {
         Insert: {
           closed_at?: string | null
           created_at?: string
+          customer_id?: string | null
+          delivery_address?: string | null
+          delivery_note?: string | null
           guests?: number | null
           id?: string
           location_id?: string | null
           opened_at?: string
           opened_by_name?: string | null
+          order_type?: string
           status?: Database["public"]["Enums"]["order_status"]
           table_id?: string | null
           total?: number
@@ -626,16 +679,27 @@ export type Database = {
         Update: {
           closed_at?: string | null
           created_at?: string
+          customer_id?: string | null
+          delivery_address?: string | null
+          delivery_note?: string | null
           guests?: number | null
           id?: string
           location_id?: string | null
           opened_at?: string
           opened_by_name?: string | null
+          order_type?: string
           status?: Database["public"]["Enums"]["order_status"]
           table_id?: string | null
           total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_location_id_fkey"
             columns: ["location_id"]

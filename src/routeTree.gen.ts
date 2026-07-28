@@ -21,6 +21,7 @@ import { Route as PosRouteImport } from './routes/pos'
 import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as MusikRouteImport } from './routes/musik'
 import { Route as MitarbeiterRouteImport } from './routes/mitarbeiter'
+import { Route as LieferungRouteImport } from './routes/lieferung'
 import { Route as KitchenRouteImport } from './routes/kitchen'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as ExpensesRouteImport } from './routes/expenses'
@@ -106,6 +107,11 @@ const MusikRoute = MusikRouteImport.update({
 const MitarbeiterRoute = MitarbeiterRouteImport.update({
   id: '/mitarbeiter',
   path: '/mitarbeiter',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LieferungRoute = LieferungRouteImport.update({
+  id: '/lieferung',
+  path: '/lieferung',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KitchenRoute = KitchenRouteImport.update({
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/kitchen': typeof KitchenRoute
+  '/lieferung': typeof LieferungRoute
   '/mitarbeiter': typeof MitarbeiterRoute
   '/musik': typeof MusikRoute
   '/payments': typeof PaymentsRoute
@@ -287,6 +294,7 @@ export interface FileRoutesByTo {
   '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/kitchen': typeof KitchenRoute
+  '/lieferung': typeof LieferungRoute
   '/mitarbeiter': typeof MitarbeiterRoute
   '/musik': typeof MusikRoute
   '/payments': typeof PaymentsRoute
@@ -327,6 +335,7 @@ export interface FileRoutesById {
   '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/kitchen': typeof KitchenRoute
+  '/lieferung': typeof LieferungRoute
   '/mitarbeiter': typeof MitarbeiterRoute
   '/musik': typeof MusikRoute
   '/payments': typeof PaymentsRoute
@@ -369,6 +378,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/inventory'
     | '/kitchen'
+    | '/lieferung'
     | '/mitarbeiter'
     | '/musik'
     | '/payments'
@@ -409,6 +419,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/inventory'
     | '/kitchen'
+    | '/lieferung'
     | '/mitarbeiter'
     | '/musik'
     | '/payments'
@@ -448,6 +459,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/inventory'
     | '/kitchen'
+    | '/lieferung'
     | '/mitarbeiter'
     | '/musik'
     | '/payments'
@@ -489,6 +501,7 @@ export interface RootRouteChildren {
   ExpensesRoute: typeof ExpensesRoute
   InventoryRoute: typeof InventoryRoute
   KitchenRoute: typeof KitchenRoute
+  LieferungRoute: typeof LieferungRoute
   MitarbeiterRoute: typeof MitarbeiterRoute
   MusikRoute: typeof MusikRoute
   PaymentsRoute: typeof PaymentsRoute
@@ -597,6 +610,13 @@ declare module '@tanstack/react-router' {
       path: '/mitarbeiter'
       fullPath: '/mitarbeiter'
       preLoaderRoute: typeof MitarbeiterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lieferung': {
+      id: '/lieferung'
+      path: '/lieferung'
+      fullPath: '/lieferung'
+      preLoaderRoute: typeof LieferungRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kitchen': {
@@ -833,6 +853,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExpensesRoute: ExpensesRoute,
   InventoryRoute: InventoryRoute,
   KitchenRoute: KitchenRoute,
+  LieferungRoute: LieferungRoute,
   MitarbeiterRoute: MitarbeiterRoute,
   MusikRoute: MusikRoute,
   PaymentsRoute: PaymentsRoute,
