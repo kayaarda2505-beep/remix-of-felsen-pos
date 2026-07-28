@@ -12,6 +12,8 @@ import {
   getAgentPrinters,
   testPrinter,
   discoverPrintersOnNetwork,
+  isAutoPrintEnabled,
+  setAutoPrintEnabled,
 } from "@/lib/printer-bridge";
 
 export const Route = createFileRoute("/settings/printers")({
@@ -39,6 +41,12 @@ function PrintersPage() {
   const [agentOnline, setAgentOnline] = useState<boolean | null>(null);
   const [pinging, setPinging] = useState(false);
   const [loadingAgentPrinters, setLoadingAgentPrinters] = useState(false);
+
+  const [autoPrint, setAutoPrint] = useState(true);
+
+  useEffect(() => {
+    setAutoPrint(isAutoPrintEnabled());
+  }, []);
 
   const load = async () => {
     const { data } = await supabase.from("printers").select("*").order("created_at");
@@ -233,6 +241,36 @@ function PrintersPage() {
           Testdruck
         </button>
       </div>
+
+      <div className="glass rounded-3xl p-6 mb-4 flex items-center gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium">Direktdruck (ohne Druckdialog)</div>
+          <div className="text-xs text-muted-foreground">
+            Quittungen werden sofort an den Print-Agent bzw. Drucker gesendet. Ohne Print-Agent öffnet sich
+            ersatzweise der Browser-Druckdialog. Wird nur in diesem Browser gespeichert.
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            const next = !autoPrint;
+            setAutoPrint(next);
+            setAutoPrintEnabled(next);
+            toast.success(next ? "Direktdruck aktiviert" : "Direktdruck deaktiviert");
+          }}
+          role="switch"
+          aria-checked={autoPrint}
+          className={`w-14 h-8 rounded-full p-1 transition-colors shrink-0 ${
+            autoPrint ? "bg-success/60" : "bg-white/10"
+          }`}
+        >
+          <span
+            className={`block w-6 h-6 rounded-full bg-white transition-transform ${
+              autoPrint ? "translate-x-6" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+
 
       <div className="glass rounded-3xl p-6 mb-4">
         <div className="text-sm font-medium mb-1">Print-Agent URL</div>

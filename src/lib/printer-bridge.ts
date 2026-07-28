@@ -80,6 +80,31 @@ export function isDesktopApp(): boolean {
 /** Alias mit aussagekräftigerem Namen für neue Aufrufer. */
 export const isPrintAgentConfigured = isDesktopApp;
 
+const AUTO_PRINT_KEY = "auto_print_receipts";
+
+/**
+ * Direktdruck: Quittungen werden ohne Browser-Druckdialog direkt an den
+ * Print-Agent / Drucker gesendet. Standard: aktiv.
+ */
+export function isAutoPrintEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(AUTO_PRINT_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+export function setAutoPrintEnabled(enabled: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(AUTO_PRINT_KEY, enabled ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+
 async function callAgent<T>(
   path: string,
   body: unknown,

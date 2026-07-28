@@ -21,7 +21,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { DELIVERY_MENU, type DeliveryMenuItem } from "@/lib/delivery-menu";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
-import { isDesktopApp } from "@/lib/printer-bridge";
+import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
 
 export const Route = createFileRoute("/lieferung")({
   head: () => ({
@@ -267,7 +267,7 @@ function Lieferung() {
       }
 
       try {
-        if (isDesktopApp()) {
+        if (isDesktopApp() && isAutoPrintEnabled()) {
           const { data: printers } = await supabase
             .from("printers")
             .select("id, name, type, ip_address, port")
@@ -734,9 +734,10 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
     courierUrl,
   )}`;
 
-  // Ohne Print-Agent: Quittung direkt über den Browser-Druckdialog ausgeben.
+  // Ohne Print-Agent (kein Direktdruck möglich): Browser-Druckdialog öffnen.
   useEffect(() => {
     if (isDesktopApp()) return;
+    if (!isAutoPrintEnabled()) return;
     const t = setTimeout(() => window.print(), 600);
     return () => clearTimeout(t);
   }, []);
