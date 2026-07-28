@@ -58,15 +58,34 @@ export function getPrintAgentUrl(): string | null {
   }
 }
 
+/**
+ * Normalisiert eine eingegebene Agent-URL.
+ * `0.0.0.0` ist nur die Lausch-Adresse des Agents und vom Browser NICHT
+ * erreichbar — auf demselben PC ist das `localhost`.
+ */
+export function normalizeAgentUrl(url: string): string {
+  let v = (url ?? "").trim().replace(/\/+$/, "");
+  if (!v) return "";
+  if (!/^https?:\/\//i.test(v)) v = `http://${v}`;
+  try {
+    const u = new URL(v);
+    if (u.hostname === "0.0.0.0" || u.hostname === "[::]") u.hostname = "localhost";
+    return u.toString().replace(/\/+$/, "");
+  } catch {
+    return v;
+  }
+}
+
 export function setPrintAgentUrl(url: string | null) {
   if (typeof window === "undefined") return;
   try {
     if (!url) window.localStorage.removeItem(STORAGE_KEY);
-    else window.localStorage.setItem(STORAGE_KEY, url.trim().replace(/\/+$/, ""));
+    else window.localStorage.setItem(STORAGE_KEY, normalizeAgentUrl(url));
   } catch {
     /* ignore */
   }
 }
+
 
 /**
  * True, sobald eine Print-Agent-URL hinterlegt ist.
