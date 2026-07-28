@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bike, Loader2, MapPin, Navigation, Phone, StickyNote } from "lucide-react";
+import { Bike, Check, Loader2, MapPin, Navigation, Phone, StickyNote } from "lucide-react";
 
-import { getCourierOrder } from "@/lib/courier.functions";
+import { getCourierOrder, startCourierDelivery } from "@/lib/courier.functions";
 
 export const Route = createFileRoute("/kurier/$id")({
   head: () => ({
@@ -27,6 +27,13 @@ function isApple() {
 function CourierPage() {
   const { id } = Route.useParams();
   const fetchOrder = useServerFn(getCourierOrder);
+  const startDelivery = useServerFn(startCourierDelivery);
+  const qc = useQueryClient();
+
+  const start = useMutation({
+    mutationFn: () => startDelivery({ data: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["courier-order", id] }),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["courier-order", id],
@@ -159,6 +166,21 @@ function CourierPage() {
               CHF {(order.total || order.items.reduce((s, i) => s + i.qty * i.unit_price, 0)).toFixed(2)}
             </span>
           </div>
+          {order.courier_started_at ? (
+            <div className="mt-4 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm px-3 py-3 text-center flex items-center justify-center gap-2">
+              <Check className="w-4 h-4" /> Lieferung gestartet
+            </div>
+          ) : (
+            <button
+              onClick={() => start.mutate()}
+              disabled={start.isPending}
+              className="mt-4 w-full rounded-2xl py-4 bg-accent text-accent-foreground font-semibold text-base flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {start.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bike className="w-4 h-4" />}
+              Lieferung beginnen
+            </button>
+          )}
+
           {order.paid <= 0 && (
             <div className="mt-3 rounded-xl bg-amber-500/10 text-amber-400 text-sm px-3 py-2 text-center">
               Betrag beim Kunden kassieren
