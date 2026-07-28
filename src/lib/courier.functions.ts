@@ -8,7 +8,7 @@ const IdSchema = z.object({ id: z.string().uuid() });
 export const getCourierOrder = createServerFn({ method: "GET" })
   .inputValidator((input) => IdSchema.parse(input))
   .handler(async ({ data }) => {
-    const { data: order, error } = await supabaseAdmin
+    const { data: order, error } = await (supabaseAdmin as any)
       .from("orders")
       .select("id, status, total, opened_at, order_type, delivery_address, delivery_note, customer_id, courier_started_at")
       .eq("id", data.id)
