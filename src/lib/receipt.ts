@@ -164,6 +164,10 @@ export function buildBill(opts: {
   paymentMethod?: string | null;
   settings?: ReceiptSettings;
   orderNo?: string;
+  title?: string;            // z.B. "LIEFERSCHEIN"
+  qrUrl?: string;            // eigener QR-Code (statt Google-Bewertung)
+  qrLabel?: string;
+  footerNote?: string;
 }): ReceiptPayload {
   const s = opts.settings ?? DEFAULT_SETTINGS;
   const cur = s.currency;
@@ -176,7 +180,11 @@ export function buildBill(opts: {
   lines.push({ text: "4300 Zofingen", align: "center" });
 
   lines.push({ text: "", align: "center" });
-  lines.push({ text: opts.interim ? "ZWISCHENRECHNUNG" : "RECHNUNG", align: "center", bold: true });
+  lines.push({
+    text: opts.title ?? (opts.interim ? "ZWISCHENRECHNUNG" : "RECHNUNG"),
+    align: "center",
+    bold: true,
+  });
   lines.push({ text: "", align: "center" });
   lines.push({ cols: ["Tisch", opts.tableName] });
   lines.push({ cols: ["Datum", nowStr()] });
@@ -244,13 +252,21 @@ export function buildBill(opts: {
   // Fuss
   lines.push({ separator: true });
   lines.push({
-    text: opts.interim ? "Noch nicht bezahlt" : "Vielen Dank für Ihren Besuch!",
+    text:
+      opts.footerNote ??
+      (opts.interim ? "Noch nicht bezahlt" : "Vielen Dank für Ihren Besuch!"),
     align: "center",
     bold: !opts.interim,
   });
 
-  // Google-Bewertung als QR-Code (nur auf finaler Rechnung)
-  if (!opts.interim) {
+  // QR-Code: eigener (z.B. Kurier-Link) oder Google-Bewertung auf finaler Rechnung
+  if (opts.qrUrl) {
+    lines.push({ text: "" });
+    if (opts.qrLabel) lines.push({ text: opts.qrLabel, align: "center", bold: true });
+    lines.push({ text: "" });
+    lines.push({ qr: opts.qrUrl, size: 7 });
+    lines.push({ text: "" });
+  } else if (!opts.interim) {
     lines.push({ text: "" });
     lines.push({ text: "Bitte bewerten Sie uns auf Google", align: "center", bold: true });
     lines.push({ text: "" });
@@ -396,6 +412,10 @@ export async function printBill(opts: {
   tip?: number;
   interim?: boolean;
   paymentMethod?: string | null;
+  title?: string;
+  qrUrl?: string;
+  qrLabel?: string;
+  footerNote?: string;
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => p.type === "rechnung") ??

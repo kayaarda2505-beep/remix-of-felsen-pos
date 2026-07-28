@@ -287,6 +287,11 @@ function Lieferung() {
             total: subtotal,
             paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
             interim: pay === "open",
+            title: "LIEFERSCHEIN",
+            footerNote:
+              pay === "open" ? "Offen — beim Kunden kassieren" : "Bezahlt — vielen Dank!",
+            qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
+            qrLabel: "QR scannen: Adresse, Navigation & Anruf",
           });
         }
       } catch (err) {
