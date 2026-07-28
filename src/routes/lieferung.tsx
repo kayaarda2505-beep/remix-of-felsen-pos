@@ -112,6 +112,7 @@ function Lieferung() {
   const [productSearch, setProductSearch] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [deliveryNote, setDeliveryNote] = useState("");
+  const [receipt, setReceipt] = useState<DeliveryReceipt | null>(null);
 
   const { data: customers = [], isFetching: searching } = useQuery({
     queryKey: ["customers", search],
