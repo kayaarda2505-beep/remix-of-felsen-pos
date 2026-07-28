@@ -298,9 +298,7 @@ function PrintersPage() {
             onChange={(e) => setAgentUrl(e.target.value)}
             placeholder="http://192.168.1.10:9110"
             className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm flex-1"
-            className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm flex-1"
           />
-
           <button
             onClick={saveAgentUrl}
             className="rounded-xl bg-accent text-accent-foreground font-medium px-4 py-2.5 text-sm hover:opacity-90 flex items-center justify-center gap-2"
@@ -308,7 +306,13 @@ function PrintersPage() {
             <Save className="w-4 h-4" /> Speichern
           </button>
         </div>
+        {agentIssue && (
+          <div className="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-xs text-destructive">
+            {agentIssue}
+          </div>
+        )}
       </div>
+
 
       <div className="glass rounded-3xl p-6 mb-4">
         <div className="flex items-center justify-between gap-3 mb-3">
