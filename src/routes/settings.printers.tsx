@@ -42,6 +42,12 @@ function PrintersPage() {
   const [pinging, setPinging] = useState(false);
   const [loadingAgentPrinters, setLoadingAgentPrinters] = useState(false);
 
+  const [autoPrint, setAutoPrint] = useState(true);
+
+  useEffect(() => {
+    setAutoPrint(isAutoPrintEnabled());
+  }, []);
+
   const load = async () => {
     const { data } = await supabase.from("printers").select("*").order("created_at");
     setItems(data ?? []);
