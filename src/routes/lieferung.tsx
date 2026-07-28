@@ -734,6 +734,15 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
     courierUrl,
   )}`;
 
+  // Ohne Print-Agent: Quittung direkt über den Browser-Druckdialog ausgeben.
+  useEffect(() => {
+    if (isDesktopApp()) return;
+    const t = setTimeout(() => window.print(), 600);
+    return () => clearTimeout(t);
+  }, []);
+
+
+
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 print:bg-white print:p-0">
       <div className="w-full max-w-sm max-h-[92vh] overflow-y-auto rounded-3xl glass-strong p-6 print:max-h-none print:rounded-none print:bg-white print:text-black">
