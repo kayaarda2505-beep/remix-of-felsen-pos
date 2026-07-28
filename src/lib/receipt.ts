@@ -412,6 +412,10 @@ export async function printBill(opts: {
   tip?: number;
   interim?: boolean;
   paymentMethod?: string | null;
+  title?: string;
+  qrUrl?: string;
+  qrLabel?: string;
+  footerNote?: string;
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => p.type === "rechnung") ??
