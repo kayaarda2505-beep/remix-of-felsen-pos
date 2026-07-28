@@ -646,6 +646,7 @@ export type Database = {
       orders: {
         Row: {
           closed_at: string | null
+          courier_started_at: string | null
           created_at: string
           customer_id: string | null
           delivery_address: string | null
@@ -662,6 +663,7 @@ export type Database = {
         }
         Insert: {
           closed_at?: string | null
+          courier_started_at?: string | null
           created_at?: string
           customer_id?: string | null
           delivery_address?: string | null
@@ -678,6 +680,7 @@ export type Database = {
         }
         Update: {
           closed_at?: string | null
+          courier_started_at?: string | null
           created_at?: string
           customer_id?: string | null
           delivery_address?: string | null
