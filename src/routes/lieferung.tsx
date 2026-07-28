@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -266,28 +266,36 @@ function Lieferung() {
         if (upErr) throw upErr;
       }
 
-      if (isDesktopApp()) {
-        const { data: printers } = await supabase
-          .from("printers")
-          .select("id, name, type, ip_address, port")
-          .eq("active", true);
-        const items: ReceiptItem[] = cart.map((l) => ({
-          product_name: l.item.name,
-          qty: l.qty,
-          unit_price: l.item.price,
-          modifiers: [],
-        }));
-        await printBill({
-          printers: (printers ?? []) as any,
-          tableName: `LIEFERUNG · ${customerName(customer)} · ${address}${
-            customer.phone ? ` · ${customer.phone}` : ""
-          }${deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""}`,
-          items,
-          total: subtotal,
-          paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
-          interim: pay === "open",
-        });
+      try {
+        if (isDesktopApp()) {
+          const { data: printers } = await supabase
+            .from("printers")
+            .select("id, name, type, ip_address, port")
+            .eq("active", true);
+          const items: ReceiptItem[] = cart.map((l) => ({
+            product_name: l.item.name,
+            qty: l.qty,
+            unit_price: l.item.price,
+            modifiers: [],
+          }));
+          await printBill({
+            printers: (printers ?? []) as any,
+            tableName: `LIEFERUNG · ${customerName(customer)} · ${address}${
+              customer.phone ? ` · ${customer.phone}` : ""
+            }${deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""}`,
+            items,
+            total: subtotal,
+            paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
+            interim: pay === "open",
+          });
+        }
+      } catch (err) {
+        // Druckfehler darf die Bestellung nicht abbrechen
+        toast.error(
+          err instanceof Error ? `Druckfehler: ${err.message}` : "Druckfehler",
+        );
       }
+
       return {
         pay,
         receipt: {
@@ -725,6 +733,15 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=6&data=${encodeURIComponent(
     courierUrl,
   )}`;
+
+  // Ohne Print-Agent: Quittung direkt über den Browser-Druckdialog ausgeben.
+  useEffect(() => {
+    if (isDesktopApp()) return;
+    const t = setTimeout(() => window.print(), 600);
+    return () => clearTimeout(t);
+  }, []);
+
+
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 print:bg-white print:p-0">
