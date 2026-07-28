@@ -28,7 +28,7 @@ const EscPosEncoder = require("esc-pos-encoder");
 import { LOGO_B64, LOGO_WIDTH, LOGO_HEIGHT } from "./logo";
 import qrcode from "qrcode-generator";
 
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 const PORT = Number(process.env.PORT ?? 9110);
 const HOST = "0.0.0.0";
 
@@ -86,6 +86,29 @@ function printRaster(enc: any, width: number, height: number, bytes: Buffer) {
   enc.raw([0x0a, 0x1b, 0x61, 0x00]); // newline + left
 }
 
+function printNativeQr(enc: any, value: string, size = 7) {
+  const data = Buffer.from(value, "utf8");
+  const clampedSize = Math.max(3, Math.min(10, Math.round(size)));
+  const storeLen = data.length + 3;
+
+  enc.raw([0x1b, 0x61, 0x01]); // center
+
+  // Epson ESC/POS QR-Code: model 2, module size, error correction M,
+  // store data, then print. This is more reliable than raster QR on many
+  // Windows printer drivers because the printer firmware renders the code.
+  enc.raw([0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00]);
+  enc.raw([0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, clampedSize]);
+  enc.raw([0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31]);
+  enc.raw([
+    0x1d, 0x28, 0x6b,
+    storeLen & 0xff, (storeLen >> 8) & 0xff,
+    0x31, 0x50, 0x30,
+    ...Array.from(data),
+  ]);
+  enc.raw([0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30]);
+  enc.raw([0x0a, 0x1b, 0x61, 0x00]); // newline + left
+}
+
 function qrRaster(value: string, scale = 6, margin = 4) {
   const qr = qrcode(0, "M");
   qr.addData(value, "Byte");
@@ -129,10 +152,18 @@ function buildPayload(payload: ReceiptPayload): Buffer {
     if ("qr" in line && line.qr) {
       enc.align("center").size("normal").bold(false);
       try {
-        const qr = qrRaster(line.qr, line.size ?? 6);
-        printRaster(enc, qr.width, qr.height, qr.bytes);
-      } catch (e) {
+        printNativeQr(enc, line.qr, line.size ?? 7);
+        enc.align("center").size("normal").bold(false).line("Kurier-Link:");
         enc.line(line.qr);
+      } catch (e) {
+        try {
+          const qr = qrRaster(line.qr, line.size ?? 6);
+          printRaster(enc, qr.width, qr.height, qr.bytes);
+          enc.align("center").size("normal").bold(false).line("Kurier-Link:");
+          enc.line(line.qr);
+        } catch {
+          enc.line(line.qr);
+        }
       }
       continue;
     }
@@ -365,6 +396,9 @@ async function main() {
           { separator: true },
           { text: "Drucker:", bold: true },
           { text: name },
+          { separator: true },
+          { text: "QR-Code Test", align: "center", bold: true },
+          { qr: "https://felsens-pos-glow.lovable.app/kurier/test", size: 7 },
           { separator: true },
           { text: "Wenn du das lesen kannst,", align: "center" },
           { text: "ist alles bereit.", align: "center" },
