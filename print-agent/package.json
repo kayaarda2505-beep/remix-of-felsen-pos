@@ -1,6 +1,6 @@
 {
-  "name": "saints-print-agent",
-  "version": "1.0.0",
+  "name": "piratino-print-agent",
+  "version": "1.0.1",
   "private": true,
   "description": "Local HTTP bridge that forwards POS print jobs to a Windows-installed thermal printer (Epson TM-T20III etc.) via ESC/POS.",
   "main": "dist/agent.cjs",
