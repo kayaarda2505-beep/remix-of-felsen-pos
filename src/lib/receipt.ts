@@ -180,7 +180,11 @@ export function buildBill(opts: {
   lines.push({ text: "4300 Zofingen", align: "center" });
 
   lines.push({ text: "", align: "center" });
-  lines.push({ text: opts.interim ? "ZWISCHENRECHNUNG" : "RECHNUNG", align: "center", bold: true });
+  lines.push({
+    text: opts.title ?? (opts.interim ? "ZWISCHENRECHNUNG" : "RECHNUNG"),
+    align: "center",
+    bold: true,
+  });
   lines.push({ text: "", align: "center" });
   lines.push({ cols: ["Tisch", opts.tableName] });
   lines.push({ cols: ["Datum", nowStr()] });
