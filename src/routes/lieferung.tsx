@@ -1,0 +1,564 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "motion/react";
+import { useMemo, useState } from "react";
+import {
+  Banknote,
+  Bike,
+  CheckCircle2,
+  CreditCard,
+  Loader2,
+  Minus,
+  Phone,
+  Plus,
+  Search,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/AppShell";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { DELIVERY_MENU, type DeliveryMenuItem } from "@/lib/delivery-menu";
+import { printBill, type ReceiptItem } from "@/lib/receipt";
+import { isDesktopApp } from "@/lib/printer-bridge";
+
+export const Route = createFileRoute("/lieferung")({
+  head: () => ({
+    meta: [
+      { title: "Lieferung — Piratino POS" },
+      { name: "description", content: "Lieferbestellungen mit Kundenadresse und Lieferkarte erfassen." },
+      { property: "og:title", content: "Lieferung — Piratino POS" },
+      { property: "og:description", content: "Lieferbestellungen mit Kundenadresse und Lieferkarte erfassen." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: Lieferung,
+});
+
+interface Customer {
+  id: string;
+  last_name: string;
+  first_name: string;
+  street: string;
+  house_no: string;
+  zip: string;
+  city: string;
+  phone: string;
+  phone2: string | null;
+  note: string | null;
+}
+
+interface CartLine {
+  key: string;
+  item: DeliveryMenuItem;
+  category: string;
+  qty: number;
+  note?: string;
+}
+
+function customerName(c: Customer) {
+  return [c.last_name, c.first_name].filter(Boolean).join(" ").trim() || "Ohne Namen";
+}
+function customerAddress(c: Customer) {
+  return `${c.street} ${c.house_no}, ${c.zip} ${c.city}`.replace(/\s+/g, " ").trim();
+}
+
+const EMPTY_FORM = {
+  last_name: "",
+  first_name: "",
+  street: "",
+  house_no: "",
+  zip: "",
+  city: "",
+  phone: "",
+  note: "",
+};
+
+function Lieferung() {
+  const qc = useQueryClient();
+  const { operator } = useAuth();
+
+  const [search, setSearch] = useState("");
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ ...EMPTY_FORM });
+
+  const [activeCategory, setActiveCategory] = useState(DELIVERY_MENU[0]?.category ?? "");
+  const [productSearch, setProductSearch] = useState("");
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [deliveryNote, setDeliveryNote] = useState("");
+
+  const { data: customers = [], isFetching: searching } = useQuery({
+    queryKey: ["customers", search],
+    enabled: search.trim().length >= 2,
+    queryFn: async (): Promise<Customer[]> => {
+      const term = search.trim();
+      const like = `%${term}%`;
+      const { data, error } = await supabase
+        .from("customers")
+        .select("id, last_name, first_name, street, house_no, zip, city, phone, phone2, note")
+        .or(
+          `last_name.ilike.${like},first_name.ilike.${like},street.ilike.${like},phone.ilike.${like},city.ilike.${like},zip.ilike.${like}`,
+        )
+        .order("last_name")
+        .limit(30);
+      if (error) throw error;
+      return (data ?? []) as Customer[];
+    },
+  });
+
+  const { data: openDeliveries = [] } = useQuery({
+    queryKey: ["orders", "delivery", "open"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, total, opened_at, delivery_address, delivery_note, customer_id, opened_by_name")
+        .eq("order_type", "delivery")
+        .eq("status", "open")
+        .order("opened_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 10000,
+  });
+
+  const createCustomer = useMutation({
+    mutationFn: async () => {
+      if (!form.street.trim() || !form.zip.trim() || !form.city.trim())
+        throw new Error("Strasse, PLZ und Ort sind Pflicht");
+      const { data, error } = await supabase
+        .from("customers")
+        .insert({
+          last_name: form.last_name.trim(),
+          first_name: form.first_name.trim(),
+          street: form.street.trim(),
+          house_no: form.house_no.trim(),
+          zip: form.zip.trim(),
+          city: form.city.trim(),
+          phone: form.phone.trim(),
+          note: form.note.trim() || null,
+        })
+        .select("id, last_name, first_name, street, house_no, zip, city, phone, phone2, note")
+        .single();
+      if (error) throw error;
+      return data as Customer;
+    },
+    onSuccess: (c) => {
+      setCustomer(c);
+      setShowForm(false);
+      setForm({ ...EMPTY_FORM });
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      toast.success("Kunde gespeichert");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
+  });
+
+  const menuItems = useMemo(() => {
+    const term = productSearch.trim().toLowerCase();
+    if (term) {
+      return DELIVERY_MENU.flatMap((c) => c.items.map((i) => ({ ...i, category: c.category }))).filter((i) =>
+        i.name.toLowerCase().includes(term),
+      );
+    }
+    const cat = DELIVERY_MENU.find((c) => c.category === activeCategory);
+    return (cat?.items ?? []).map((i) => ({ ...i, category: cat!.category }));
+  }, [activeCategory, productSearch]);
+
+  const addItem = (item: DeliveryMenuItem & { category: string }) =>
+    setCart((prev) => {
+      const found = prev.find((l) => l.item.id === item.id && !l.note);
+      if (found) return prev.map((l) => (l.key === found.key ? { ...l, qty: l.qty + 1 } : l));
+      return [
+        ...prev,
+        { key: `${item.id}-${Date.now()}`, item, category: item.category, qty: 1 },
+      ];
+    });
+
+  const changeQty = (key: string, delta: number) =>
+    setCart((prev) => prev.map((l) => (l.key === key ? { ...l, qty: l.qty + delta } : l)).filter((l) => l.qty > 0));
+
+  const subtotal = cart.reduce((s, l) => s + l.item.price * l.qty, 0);
+
+  const saveOrder = useMutation({
+    mutationFn: async ({ pay }: { pay: "open" | "cash" | "card" }) => {
+      if (!customer) throw new Error("Bitte zuerst eine Kundenadresse erfassen");
+      if (cart.length === 0) throw new Error("Keine Produkte gewählt");
+
+      const address = customerAddress(customer);
+      const { data: order, error } = await supabase
+        .from("orders")
+        .insert({
+          status: "open",
+          order_type: "delivery",
+          customer_id: customer.id,
+          delivery_address: `${customerName(customer)} · ${address}${customer.phone ? ` · ${customer.phone}` : ""}`,
+          delivery_note: deliveryNote.trim() || null,
+          total: 0,
+          opened_by_name: operator?.name ?? null,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+
+      const { error: itemErr } = await supabase.from("order_items").insert(
+        cart.map((l) => ({
+          order_id: order.id,
+          product_id: l.item.id,
+          product_name: l.item.name,
+          category: l.category,
+          unit_price: l.item.price,
+          qty: l.qty,
+          modifiers: [],
+          note: l.note ?? null,
+        })),
+      );
+      if (itemErr) throw itemErr;
+
+      if (pay !== "open") {
+        const { error: payErr } = await supabase.from("payment_requests").insert({
+          order_id: order.id,
+          table_name: `Lieferung · ${customerName(customer)}`,
+          amount: subtotal,
+          tip: 0,
+          method: pay === "cash" ? "cash" : "card_terminal",
+          status: "paid",
+          handled_at: new Date().toISOString(),
+          note: `Lieferung · ${address}`,
+        });
+        if (payErr) throw payErr;
+        const { error: upErr } = await supabase
+          .from("orders")
+          .update({ status: "paid", closed_at: new Date().toISOString(), total: subtotal })
+          .eq("id", order.id);
+        if (upErr) throw upErr;
+      }
+
+      if (isDesktopApp()) {
+        const { data: printers } = await supabase
+          .from("printers")
+          .select("id, name, type, ip_address, port")
+          .eq("active", true);
+        const items: ReceiptItem[] = cart.map((l) => ({
+          product_name: l.item.name,
+          qty: l.qty,
+          unit_price: l.item.price,
+          modifiers: [],
+        }));
+        await printBill({
+          printers: (printers ?? []) as any,
+          tableName: `LIEFERUNG · ${customerName(customer)} · ${address}${
+            customer.phone ? ` · ${customer.phone}` : ""
+          }${deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""}`,
+          items,
+          total: subtotal,
+          paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
+          interim: pay === "open",
+        });
+      }
+      return pay;
+    },
+    onSuccess: (pay) => {
+      toast.success(pay === "open" ? "Lieferbestellung erfasst" : "Lieferung bezahlt");
+      setCart([]);
+      setDeliveryNote("");
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["order_items"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
+  });
+
+  return (
+    <div className="p-4 lg:p-6 pb-28 md:pb-6 max-w-[1800px] mx-auto">
+      <PageHeader
+        title="Lieferung"
+        subtitle={customer ? `${customerName(customer)} · ${customerAddress(customer)}` : "Kundenadresse erfassen"}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-4 lg:gap-6">
+        <div className="space-y-4 min-w-0">
+          {/* Schritt 1: Kundenadresse */}
+          <section className="glass-strong rounded-3xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold flex items-center gap-2">
+                <Bike className="w-4 h-4 text-accent" /> 1. Kundenadresse
+              </h2>
+              <button
+                onClick={() => setShowForm((v) => !v)}
+                className="text-xs glass rounded-lg px-3 py-1.5 flex items-center gap-1.5 hover:border-accent/40"
+              >
+                <UserPlus className="w-3 h-3" /> Neuer Kunde
+              </button>
+            </div>
+
+            <div className="glass rounded-xl flex items-center gap-2 px-3 py-2">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Name, Telefon, Strasse oder Ort suchen…"
+                className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
+              />
+              {searching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            </div>
+
+            {customer && (
+              <div className="mt-3 rounded-xl border-2 border-accent/50 bg-accent/5 p-3 flex items-start justify-between gap-3">
+                <div className="text-sm min-w-0">
+                  <div className="font-medium">{customerName(customer)}</div>
+                  <div className="text-muted-foreground">{customerAddress(customer)}</div>
+                  {customer.phone && (
+                    <div className="text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <Phone className="w-3 h-3" /> {customer.phone}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setCustomer(null)}
+                  className="text-xs text-muted-foreground hover:text-destructive shrink-0"
+                >
+                  ändern
+                </button>
+              </div>
+            )}
+
+            {search.trim().length >= 2 && (
+              <div className="mt-3 max-h-64 overflow-y-auto space-y-1.5">
+                {customers.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      setCustomer(c);
+                      setSearch("");
+                    }}
+                    className="w-full text-left glass rounded-xl px-3 py-2 hover:border-accent/40 transition-colors"
+                  >
+                    <div className="text-sm font-medium">{customerName(c)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {customerAddress(c)}
+                      {c.phone ? ` · ${c.phone}` : ""}
+                    </div>
+                  </button>
+                ))}
+                {customers.length === 0 && !searching && (
+                  <div className="text-xs text-muted-foreground px-1 py-2">Keine Kunden gefunden</div>
+                )}
+              </div>
+            )}
+
+            <AnimatePresence>
+              {showForm && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-2 gap-2 mt-4">
+                    {(
+                      [
+                        ["last_name", "Name"],
+                        ["first_name", "Vorname"],
+                        ["street", "Strasse"],
+                        ["house_no", "Nr."],
+                        ["zip", "PLZ"],
+                        ["city", "Ort"],
+                        ["phone", "Telefon"],
+                        ["note", "Notiz"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <div key={key} className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</label>
+                        <input
+                          value={(form as any)[key]}
+                          onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                          className="glass rounded-xl px-3 py-2 w-full text-sm outline-none bg-transparent"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => createCustomer.mutate()}
+                    disabled={createCustomer.isPending}
+                    className="mt-3 w-full rounded-xl py-2.5 bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40"
+                  >
+                    {createCustomer.isPending ? "Speichern…" : "Kunde speichern & übernehmen"}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </section>
+
+          {/* Schritt 2: Bestellung */}
+          <section className="glass-strong rounded-3xl p-5">
+            <h2 className="font-semibold mb-3">2. Bestellung</h2>
+            <div className="glass rounded-xl flex items-center gap-2 px-3 py-2 mb-3 max-w-sm">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <input
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="Produkt suchen…"
+                className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
+              />
+            </div>
+            {!productSearch && (
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                {DELIVERY_MENU.map((c) => (
+                  <button
+                    key={c.category}
+                    onClick={() => setActiveCategory(c.category)}
+                    className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      activeCategory === c.category
+                        ? "bg-primary text-primary-foreground shadow-lg"
+                        : "glass text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {c.category}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 mt-3">
+              {menuItems.map((item) => (
+                <motion.button
+                  key={item.id}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => addItem(item)}
+                  className="glass rounded-2xl p-4 text-left min-h-24 flex flex-col justify-between hover:border-accent/40 transition-colors"
+                >
+                  <div>
+                    <div className="text-sm font-medium leading-tight">{item.name}</div>
+                    {item.description && (
+                      <div className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{item.description}</div>
+                    )}
+                  </div>
+                  <div className="text-base font-semibold tabular-nums mt-2">CHF {item.price.toFixed(2)}</div>
+                </motion.button>
+              ))}
+            </div>
+          </section>
+
+          {openDeliveries.length > 0 && (
+            <section className="glass-strong rounded-3xl p-5">
+              <h2 className="font-semibold mb-3">Offene Lieferungen</h2>
+              <div className="space-y-2">
+                {openDeliveries.map((o: any) => (
+                  <div key={o.id} className="glass rounded-xl px-3 py-2 flex items-center justify-between gap-3">
+                    <div className="text-sm min-w-0">
+                      <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
+                      {o.delivery_note && (
+                        <div className="text-xs text-muted-foreground truncate">{o.delivery_note}</div>
+                      )}
+                    </div>
+                    <div className="text-sm font-semibold tabular-nums shrink-0">
+                      CHF {Number(o.total).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+
+        {/* Warenkorb */}
+        <aside className="glass-strong rounded-3xl p-5 flex flex-col h-fit lg:sticky lg:top-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">Lieferbestellung</h3>
+            {cart.length > 0 && (
+              <button
+                onClick={() => setCart([])}
+                className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" /> Leeren
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-2 max-h-[45vh] overflow-y-auto -mx-1 px-1">
+            {cart.length === 0 && (
+              <div className="text-center text-sm text-muted-foreground py-10">Produkte antippen zum Hinzufügen</div>
+            )}
+            {cart.map((l) => (
+              <div key={l.key} className="flex items-start gap-3 p-2 rounded-xl bg-white/[0.03]">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{l.item.name}</div>
+                  <div className="text-xs text-muted-foreground tabular-nums">CHF {l.item.price.toFixed(2)}</div>
+                </div>
+                <div className="flex items-center gap-1 glass rounded-lg p-0.5 shrink-0">
+                  <button
+                    onClick={() => changeQty(l.key, -1)}
+                    className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="w-6 text-center text-sm tabular-nums">{l.qty}</span>
+                  <button
+                    onClick={() => changeQty(l.key, 1)}
+                    className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
+                  {(l.item.price * l.qty).toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-border/40 pt-4 mt-4 space-y-3">
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Liefernotiz</label>
+              <input
+                value={deliveryNote}
+                onChange={(e) => setDeliveryNote(e.target.value)}
+                placeholder="z.B. 3. Stock, klingeln bei Meier"
+                className="glass rounded-xl px-3 py-2 w-full text-sm outline-none bg-transparent"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Gesamt</span>
+              <span className="text-2xl font-semibold tabular-nums text-gradient-gold">
+                CHF {subtotal.toFixed(2)}
+              </span>
+            </div>
+
+            <button
+              onClick={() => saveOrder.mutate({ pay: "open" })}
+              disabled={!customer || cart.length === 0 || saveOrder.isPending}
+              className="w-full rounded-2xl py-3 glass text-sm font-medium hover:border-accent/40 disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {saveOrder.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bike className="w-4 h-4" />}
+              Bestellung senden (offen)
+            </button>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => saveOrder.mutate({ pay: "cash" })}
+                disabled={!customer || cart.length === 0 || saveOrder.isPending}
+                className="rounded-xl py-3 glass flex flex-col items-center gap-1 text-xs hover:border-accent/40 disabled:opacity-40"
+              >
+                <Banknote className="w-4 h-4" /> Bar bezahlt
+              </button>
+              <button
+                onClick={() => saveOrder.mutate({ pay: "card" })}
+                disabled={!customer || cart.length === 0 || saveOrder.isPending}
+                className="rounded-xl py-3 glass flex flex-col items-center gap-1 text-xs hover:border-accent/40 disabled:opacity-40"
+              >
+                <CreditCard className="w-4 h-4" /> Karte bezahlt
+              </button>
+            </div>
+
+            {!customer && (
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Zuerst Kundenadresse wählen
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}

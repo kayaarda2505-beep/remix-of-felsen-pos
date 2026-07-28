@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  Bike,
   Tablet,
   ScanLine,
   Grid3x3,
@@ -116,6 +117,7 @@ async function autoPrintPaidBill(r: any) {
 }
 
 const nav = [
+  { to: "/lieferung", label: "Lieferung", icon: Bike },
   { to: "/", label: "Service", icon: Tablet },
   { to: "/pos", label: "Kasse", icon: ScanLine },
   { to: "/tables", label: "Tische", icon: Grid3x3 },
@@ -132,6 +134,7 @@ const nav = [
 ] as const;
 
 const BARKEEPER_ALLOWED = new Set<string>([
+  "/lieferung",
   "/kitchen",
   "/mitarbeiter",
   "/inventory",
@@ -144,6 +147,7 @@ const BARKEEPER_ALLOWED = new Set<string>([
 
 const SERVICE_ALLOWED = new Set<string>([
   "/",
+  "/lieferung",
   "/tables",
   "/mitarbeiter",
   "/inventory",
