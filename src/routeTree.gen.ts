@@ -38,6 +38,7 @@ import { Route as SettingsLocationsRouteImport } from './routes/settings.locatio
 import { Route as SettingsHappyHourRouteImport } from './routes/settings.happy-hour'
 import { Route as SettingsDatabaseRouteImport } from './routes/settings.database'
 import { Route as OrderTokenRouteImport } from './routes/order.$token'
+import { Route as KurierIdRouteImport } from './routes/kurier.$id'
 import { Route as OrderTokenPaidRouteImport } from './routes/order.$token.paid'
 import { Route as ApiPublicSpotifySearchRouteImport } from './routes/api/public/spotify-search'
 import { Route as ApiPublicSongRequestRouteImport } from './routes/api/public/song-request'
@@ -194,6 +195,11 @@ const OrderTokenRoute = OrderTokenRouteImport.update({
   path: '/order/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KurierIdRoute = KurierIdRouteImport.update({
+  id: '/kurier/$id',
+  path: '/kurier/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrderTokenPaidRoute = OrderTokenPaidRouteImport.update({
   id: '/paid',
   path: '/paid',
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/spotify-player': typeof SpotifyPlayerRoute
   '/staff': typeof StaffRoute
   '/tables': typeof TablesRoute
+  '/kurier/$id': typeof KurierIdRoute
   '/order/$token': typeof OrderTokenRouteWithChildren
   '/settings/database': typeof SettingsDatabaseRoute
   '/settings/happy-hour': typeof SettingsHappyHourRoute
@@ -306,6 +313,7 @@ export interface FileRoutesByTo {
   '/spotify-player': typeof SpotifyPlayerRoute
   '/staff': typeof StaffRoute
   '/tables': typeof TablesRoute
+  '/kurier/$id': typeof KurierIdRoute
   '/order/$token': typeof OrderTokenRouteWithChildren
   '/settings/database': typeof SettingsDatabaseRoute
   '/settings/happy-hour': typeof SettingsHappyHourRoute
@@ -348,6 +356,7 @@ export interface FileRoutesById {
   '/spotify-player': typeof SpotifyPlayerRoute
   '/staff': typeof StaffRoute
   '/tables': typeof TablesRoute
+  '/kurier/$id': typeof KurierIdRoute
   '/order/$token': typeof OrderTokenRouteWithChildren
   '/settings/database': typeof SettingsDatabaseRoute
   '/settings/happy-hour': typeof SettingsHappyHourRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/spotify-player'
     | '/staff'
     | '/tables'
+    | '/kurier/$id'
     | '/order/$token'
     | '/settings/database'
     | '/settings/happy-hour'
@@ -431,6 +441,7 @@ export interface FileRouteTypes {
     | '/spotify-player'
     | '/staff'
     | '/tables'
+    | '/kurier/$id'
     | '/order/$token'
     | '/settings/database'
     | '/settings/happy-hour'
@@ -472,6 +483,7 @@ export interface FileRouteTypes {
     | '/spotify-player'
     | '/staff'
     | '/tables'
+    | '/kurier/$id'
     | '/order/$token'
     | '/settings/database'
     | '/settings/happy-hour'
@@ -514,6 +526,7 @@ export interface RootRouteChildren {
   SpotifyPlayerRoute: typeof SpotifyPlayerRoute
   StaffRoute: typeof StaffRoute
   TablesRoute: typeof TablesRoute
+  KurierIdRoute: typeof KurierIdRoute
   OrderTokenRoute: typeof OrderTokenRouteWithChildren
   ApiPublicOrderRoute: typeof ApiPublicOrderRoute
   ApiPublicPaymentRequestRoute: typeof ApiPublicPaymentRequestRoute
@@ -731,6 +744,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrderTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/kurier/$id': {
+      id: '/kurier/$id'
+      path: '/kurier/$id'
+      fullPath: '/kurier/$id'
+      preLoaderRoute: typeof KurierIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/order/$token/paid': {
       id: '/order/$token/paid'
       path: '/paid'
@@ -866,6 +886,7 @@ const rootRouteChildren: RootRouteChildren = {
   SpotifyPlayerRoute: SpotifyPlayerRoute,
   StaffRoute: StaffRoute,
   TablesRoute: TablesRoute,
+  KurierIdRoute: KurierIdRoute,
   OrderTokenRoute: OrderTokenRouteWithChildren,
   ApiPublicOrderRoute: ApiPublicOrderRoute,
   ApiPublicPaymentRequestRoute: ApiPublicPaymentRequestRoute,
