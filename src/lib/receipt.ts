@@ -164,6 +164,10 @@ export function buildBill(opts: {
   paymentMethod?: string | null;
   settings?: ReceiptSettings;
   orderNo?: string;
+  title?: string;            // z.B. "LIEFERSCHEIN"
+  qrUrl?: string;            // eigener QR-Code (statt Google-Bewertung)
+  qrLabel?: string;
+  footerNote?: string;
 }): ReceiptPayload {
   const s = opts.settings ?? DEFAULT_SETTINGS;
   const cur = s.currency;
