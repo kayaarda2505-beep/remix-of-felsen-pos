@@ -267,7 +267,7 @@ function Lieferung() {
       }
 
       try {
-        if (isDesktopApp()) {
+        if (isDesktopApp() && isAutoPrintEnabled()) {
           const { data: printers } = await supabase
             .from("printers")
             .select("id, name, type, ip_address, port")
