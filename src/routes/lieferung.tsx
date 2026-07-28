@@ -273,12 +273,26 @@ function Lieferung() {
           interim: pay === "open",
         });
       }
-      return pay;
+      return {
+        pay,
+        receipt: {
+          orderId: order.id as string,
+          customerName: customerName(customer),
+          address,
+          phone: customer.phone,
+          note: deliveryNote.trim(),
+          customerNote: customer.note ?? "",
+          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: l.item.price })),
+          total: subtotal,
+          createdAt: new Date().toISOString(),
+        } as DeliveryReceipt,
+      };
     },
-    onSuccess: (pay) => {
+    onSuccess: ({ pay, receipt }) => {
       toast.success(pay === "open" ? "Lieferbestellung erfasst" : "Lieferung bezahlt");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order_items"] });
+      setReceipt({ ...receipt, paid: pay !== "open", payMethod: pay });
       resetAll();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
