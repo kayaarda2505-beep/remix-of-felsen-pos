@@ -145,16 +145,25 @@ export function getAgentUrlIssue(url: string): string | null {
   const host = parsed.hostname;
   const isLocal =
     host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
-  if (
-    window.location.protocol === "https:" &&
-    parsed.protocol === "http:" &&
-    !isLocal
-  ) {
-    return (
-      "Diese Seite läuft über HTTPS, der Print-Agent über http:// — der Browser blockiert das (Mixed Content). " +
-      "Lösung: den Agent auf demselben Gerät nutzen (http://localhost:9110), die Desktop-App verwenden, " +
-      "oder den Agent per HTTPS erreichbar machen."
-    );
+  const ua = navigator.userAgent;
+  const isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|Edg|CriOS|FxiOS/i.test(ua);
+  const isIOS = /iPad|iPhone|iPod/i.test(ua) || (/Macintosh/i.test(ua) && "ontouchend" in document);
+  if (window.location.protocol === "https:" && parsed.protocol === "http:") {
+    if (!isLocal) {
+      return (
+        "Diese Seite läuft über HTTPS, der Print-Agent über http:// — der Browser blockiert das (Mixed Content). " +
+        "Lösung: den Agent auf demselben Gerät nutzen (http://localhost:9110 in Chrome), die Desktop-App verwenden, " +
+        "oder den Agent per HTTPS erreichbar machen."
+      );
+    }
+    if (isSafari || isIOS) {
+      return (
+        "Safari/iPad blockiert http-Verbindungen aus einer HTTPS-Seite — auch zu localhost. " +
+        "Deshalb schlägt der Zugriff auf den Print-Agent hier immer fehl. " +
+        "Lösung: die App in Google Chrome auf dem Drucker-PC öffnen (dort funktioniert http://localhost:9110), " +
+        "die Desktop-App nutzen, oder den Agent per HTTPS bereitstellen. Sonst über den Druckdialog drucken."
+      );
+    }
   }
   return null;
 }
