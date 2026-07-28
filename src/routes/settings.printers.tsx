@@ -12,6 +12,8 @@ import {
   getAgentPrinters,
   testPrinter,
   discoverPrintersOnNetwork,
+  isAutoPrintEnabled,
+  setAutoPrintEnabled,
 } from "@/lib/printer-bridge";
 
 export const Route = createFileRoute("/settings/printers")({
