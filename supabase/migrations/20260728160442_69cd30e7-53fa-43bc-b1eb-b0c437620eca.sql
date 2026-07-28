@@ -1,0 +1,1 @@
+UPDATE public.app_settings SET business_name='Piratino' WHERE id=1;
