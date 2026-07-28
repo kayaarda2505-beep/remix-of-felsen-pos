@@ -73,13 +73,20 @@ function PrintersPage() {
 
   const saveAgentUrl = async () => {
     const v = agentUrl.trim();
-    if (v && !/^https?:\/\//i.test(v)) {
-      return toast.error("URL muss mit http:// oder https:// beginnen");
+    const issue = getAgentUrlIssue(v);
+    if (issue && !/^https?:\/\//i.test(v)) {
+      return toast.error(issue);
     }
     setPrintAgentUrl(v || null);
-    toast.success(v ? "Print-Agent gespeichert" : "Print-Agent entfernt");
+    if (issue) {
+      toast.error("Print-Agent gespeichert, aber nicht nutzbar", { description: issue, duration: 10000 });
+    } else {
+      toast.success(v ? "Print-Agent gespeichert" : "Print-Agent entfernt");
+    }
+    setAgentIssue(v ? issue : null);
     await refreshPing();
   };
+
 
   const scan = async () => {
     if (!isPrintAgentConfigured()) {
