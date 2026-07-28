@@ -15,6 +15,8 @@ import {
   isAutoPrintEnabled,
   setAutoPrintEnabled,
   getAgentUrlIssue,
+  normalizeAgentUrl,
+
 
 } from "@/lib/printer-bridge";
 
