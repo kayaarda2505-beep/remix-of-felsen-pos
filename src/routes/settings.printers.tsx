@@ -14,6 +14,8 @@ import {
   discoverPrintersOnNetwork,
   isAutoPrintEnabled,
   setAutoPrintEnabled,
+  getAgentUrlIssue,
+
 } from "@/lib/printer-bridge";
 
 export const Route = createFileRoute("/settings/printers")({
@@ -41,6 +43,12 @@ function PrintersPage() {
   const [agentOnline, setAgentOnline] = useState<boolean | null>(null);
   const [pinging, setPinging] = useState(false);
   const [loadingAgentPrinters, setLoadingAgentPrinters] = useState(false);
+  const [agentIssue, setAgentIssue] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAgentIssue(getAgentUrlIssue(getPrintAgentUrl() ?? ""));
+  }, []);
+
 
   const [autoPrint, setAutoPrint] = useState(true);
 
@@ -73,13 +81,20 @@ function PrintersPage() {
 
   const saveAgentUrl = async () => {
     const v = agentUrl.trim();
-    if (v && !/^https?:\/\//i.test(v)) {
-      return toast.error("URL muss mit http:// oder https:// beginnen");
+    const issue = getAgentUrlIssue(v);
+    if (issue && !/^https?:\/\//i.test(v)) {
+      return toast.error(issue);
     }
     setPrintAgentUrl(v || null);
-    toast.success(v ? "Print-Agent gespeichert" : "Print-Agent entfernt");
+    if (issue) {
+      toast.error("Print-Agent gespeichert, aber nicht nutzbar", { description: issue, duration: 10000 });
+    } else {
+      toast.success(v ? "Print-Agent gespeichert" : "Print-Agent entfernt");
+    }
+    setAgentIssue(v ? issue : null);
     await refreshPing();
   };
+
 
   const scan = async () => {
     if (!isPrintAgentConfigured()) {
@@ -291,7 +306,13 @@ function PrintersPage() {
             <Save className="w-4 h-4" /> Speichern
           </button>
         </div>
+        {agentIssue && (
+          <div className="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-xs text-destructive">
+            {agentIssue}
+          </div>
+        )}
       </div>
+
 
       <div className="glass rounded-3xl p-6 mb-4">
         <div className="flex items-center justify-between gap-3 mb-3">

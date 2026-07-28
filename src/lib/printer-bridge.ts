@@ -104,6 +104,42 @@ export function setAutoPrintEnabled(enabled: boolean) {
   }
 }
 
+/**
+ * Prüft, ob eine Agent-URL vom aktuellen Browser-Kontext überhaupt
+ * aufgerufen werden darf. Wichtigster Fall: Diese App läuft über HTTPS,
+ * der Print-Agent aber über http:// im lokalen Netz — das blockiert der
+ * Browser als "Mixed Content", noch bevor eine Anfrage rausgeht.
+ */
+export function getAgentUrlIssue(url: string): string | null {
+  const v = (url ?? "").trim();
+  if (!v) return null;
+  if (!/^https?:\/\//i.test(v)) {
+    return "URL muss mit http:// oder https:// beginnen (z. B. http://192.168.1.10:9110).";
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(v);
+  } catch {
+    return "Die URL ist ungültig. Beispiel: http://192.168.1.10:9110";
+  }
+  if (typeof window === "undefined") return null;
+  const host = parsed.hostname;
+  const isLocal =
+    host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
+  if (
+    window.location.protocol === "https:" &&
+    parsed.protocol === "http:" &&
+    !isLocal
+  ) {
+    return (
+      "Diese Seite läuft über HTTPS, der Print-Agent über http:// — der Browser blockiert das (Mixed Content). " +
+      "Lösung: den Agent auf demselben Gerät nutzen (http://localhost:9110), die Desktop-App verwenden, " +
+      "oder den Agent per HTTPS erreichbar machen."
+    );
+  }
+  return null;
+}
+
 
 async function callAgent<T>(
   path: string,
