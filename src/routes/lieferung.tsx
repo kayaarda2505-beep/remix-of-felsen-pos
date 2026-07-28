@@ -734,9 +734,10 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
     courierUrl,
   )}`;
 
-  // Ohne Print-Agent: Quittung direkt über den Browser-Druckdialog ausgeben.
+  // Ohne Print-Agent (kein Direktdruck möglich): Browser-Druckdialog öffnen.
   useEffect(() => {
     if (isDesktopApp()) return;
+    if (!isAutoPrintEnabled()) return;
     const t = setTimeout(() => window.print(), 600);
     return () => clearTimeout(t);
   }, []);
