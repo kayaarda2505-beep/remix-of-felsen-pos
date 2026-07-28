@@ -137,14 +137,50 @@ function Lieferung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, opened_at, delivery_address, delivery_note")
+        .select("id, total, opened_at, delivery_address, delivery_note, courier_started_at")
         .eq("order_type", "delivery")
         .eq("status", "open")
+        .is("courier_started_at", null)
         .order("opened_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
     refetchInterval: 10000,
+  });
+
+  // Tageshistorie: alle Lieferungen von heute
+  const { data: todayDeliveries = [] } = useQuery({
+    queryKey: ["orders", "delivery", "today"],
+    queryFn: async () => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, total, status, opened_at, delivery_address, delivery_note, customer_id, courier_started_at")
+        .eq("order_type", "delivery")
+        .gte("opened_at", start.toISOString())
+        .order("opened_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 15000,
+  });
+
+  // Kundenhistorie: letzte Lieferungen des gewählten Kunden
+  const { data: customerHistory = [] } = useQuery({
+    queryKey: ["orders", "delivery", "customer", customer?.id],
+    enabled: !!customer?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, total, status, opened_at, delivery_note")
+        .eq("order_type", "delivery")
+        .eq("customer_id", customer!.id)
+        .order("opened_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
   });
 
   const createCustomer = useMutation({
@@ -503,6 +539,67 @@ function Lieferung() {
                   </div>
                 </section>
               )}
+
+              {customer && customerHistory.length > 0 && (
+                <section className="glass-strong rounded-3xl p-5">
+                  <h2 className="font-semibold mb-3">Kundenhistorie — {customerName(customer)}</h2>
+                  <div className="space-y-2">
+                    {customerHistory.map((o) => (
+                      <div key={o.id} className="glass rounded-xl px-3 py-2 flex items-center justify-between gap-3">
+                        <div className="text-sm min-w-0">
+                          <div>
+                            {new Date(o.opened_at).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                            {" · "}
+                            {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
+                          </div>
+                          {o.delivery_note && (
+                            <div className="text-xs text-muted-foreground truncate">{o.delivery_note}</div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className={`text-[10px] uppercase tracking-wider ${o.status === "paid" ? "text-emerald-400" : "text-amber-400"}`}>
+                            {o.status === "paid" ? "Bezahlt" : o.status === "cancelled" ? "Storniert" : "Offen"}
+                          </span>
+                          <span className="text-sm font-semibold tabular-nums">CHF {Number(o.total).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section className="glass-strong rounded-3xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-semibold">Tageshistorie</h2>
+                  <div className="text-xs text-muted-foreground tabular-nums">
+                    {todayDeliveries.length} Lieferungen · CHF{" "}
+                    {todayDeliveries.reduce((s2, o) => s2 + Number(o.total || 0), 0).toFixed(2)}
+                  </div>
+                </div>
+                {todayDeliveries.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Heute noch keine Lieferungen.</div>
+                ) : (
+                  <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                    {todayDeliveries.map((o) => (
+                      <div key={o.id} className="glass rounded-xl px-3 py-2 flex items-center justify-between gap-3">
+                        <div className="text-sm min-w-0">
+                          <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
+                            {o.courier_started_at ? " · unterwegs" : ""}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className={`text-[10px] uppercase tracking-wider ${o.status === "paid" ? "text-emerald-400" : "text-amber-400"}`}>
+                            {o.status === "paid" ? "Bezahlt" : o.status === "cancelled" ? "Storniert" : "Offen"}
+                          </span>
+                          <span className="text-sm font-semibold tabular-nums">CHF {Number(o.total).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
             </div>
           </motion.div>
         )}
