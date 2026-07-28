@@ -21,7 +21,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { DELIVERY_MENU, type DeliveryMenuItem } from "@/lib/delivery-menu";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
-import { isDesktopApp } from "@/lib/printer-bridge";
+import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
 
 export const Route = createFileRoute("/lieferung")({
   head: () => ({
