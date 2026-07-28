@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { SaintsLogo } from "./SaintsLogo";
+import { PiratinoLogo } from "./PiratinoLogo";
 
 type Mode = "login" | "signup";
 
@@ -43,7 +43,7 @@ export function AdminAuthScreen() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <SaintsLogo size={72} />
+          <PiratinoLogo size={72} />
         </div>
 
         <h1 className="text-3xl font-semibold tracking-tight text-center mb-1">
