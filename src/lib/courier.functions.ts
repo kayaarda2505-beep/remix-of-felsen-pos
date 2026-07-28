@@ -8,9 +8,9 @@ const IdSchema = z.object({ id: z.string().uuid() });
 export const getCourierOrder = createServerFn({ method: "GET" })
   .inputValidator((input) => IdSchema.parse(input))
   .handler(async ({ data }) => {
-    const { data: order, error } = await supabaseAdmin
+    const { data: order, error } = await (supabaseAdmin as any)
       .from("orders")
-      .select("id, status, total, opened_at, order_type, delivery_address, delivery_note, customer_id")
+      .select("id, status, total, opened_at, order_type, delivery_address, delivery_note, customer_id, courier_started_at")
       .eq("id", data.id)
       .eq("order_type", "delivery")
       .maybeSingle();
@@ -67,6 +67,7 @@ export const getCourierOrder = createServerFn({ method: "GET" })
         status: order.status,
         total: Number(order.total),
         opened_at: order.opened_at,
+        courier_started_at: (order as any).courier_started_at as string | null,
         delivery_address: order.delivery_address,
         delivery_note: order.delivery_note,
         items: (items ?? []).map((i) => ({
@@ -81,4 +82,17 @@ export const getCourierOrder = createServerFn({ method: "GET" })
         payment_method: payments?.[0]?.method ?? null,
       },
     };
+  });
+
+export const startCourierDelivery = createServerFn({ method: "POST" })
+  .inputValidator((input) => IdSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { error } = await (supabaseAdmin as any)
+      .from("orders")
+      .update({ courier_started_at: new Date().toISOString() })
+      .eq("id", data.id)
+      .eq("order_type", "delivery")
+      .is("courier_started_at", null);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

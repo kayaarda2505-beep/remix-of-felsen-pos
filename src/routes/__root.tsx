@@ -13,7 +13,6 @@ import { AppShell } from "@/components/AppShell";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AuthGate } from "@/components/AuthGate";
 import { Toaster } from "@/components/ui/sonner";
-import { OnScreenKeyboard } from "@/components/OnScreenKeyboard";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
@@ -140,7 +139,7 @@ function RootComponent() {
           </AuthGate>
         )}
         <Toaster position="top-center" theme="dark" richColors />
-        <OnScreenKeyboard />
+        
       </AuthProvider>
     </QueryClientProvider>
   );
