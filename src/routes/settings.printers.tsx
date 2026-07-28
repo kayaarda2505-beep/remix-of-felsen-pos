@@ -298,7 +298,9 @@ function PrintersPage() {
             onChange={(e) => setAgentUrl(e.target.value)}
             placeholder="http://192.168.1.10:9110"
             className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm flex-1"
+            className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm flex-1"
           />
+
           <button
             onClick={saveAgentUrl}
             className="rounded-xl bg-accent text-accent-foreground font-medium px-4 py-2.5 text-sm hover:opacity-90 flex items-center justify-center gap-2"
