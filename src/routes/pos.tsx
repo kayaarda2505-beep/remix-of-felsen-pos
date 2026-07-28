@@ -36,7 +36,7 @@ import { isDesktopApp, type PrinterConfig } from "@/lib/printer-bridge";
 import { sumupSendToReader, sumupGetTransactionStatus, sumupListReaders } from "@/lib/sumup.functions";
 
 export const Route = createFileRoute("/pos")({
-  head: () => ({ meta: [{ title: "Kasse — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Kasse — Piratino POS" }] }),
   component: POS,
 });
 

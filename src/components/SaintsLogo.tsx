@@ -13,7 +13,7 @@ export function SaintsLogo({
     <div className={`flex items-center gap-2.5 ${className}`}>
       <img
         src={logoUrl}
-        alt="SAINTS Logo"
+        alt="Piratino Logo"
         width={size}
         height={size}
         className="rounded-xl object-cover ring-1 ring-white/10"
@@ -21,7 +21,7 @@ export function SaintsLogo({
       />
       {withWordmark && (
         <div className="leading-tight">
-          <div className="text-sm font-semibold tracking-[0.18em]">SAINTS</div>
+          <div className="text-sm font-semibold tracking-[0.18em]">Piratino</div>
           <div className="text-[9px] text-muted-foreground tracking-[0.25em] -mt-0.5">
             POS SYSTEM
           </div>

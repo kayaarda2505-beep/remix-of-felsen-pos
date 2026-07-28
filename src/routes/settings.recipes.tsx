@@ -10,7 +10,7 @@ import { useProducts, type Product } from "@/hooks/use-products";
 import { generateRecipes } from "@/lib/recipes-ai.functions";
 
 export const Route = createFileRoute("/settings/recipes")({
-  head: () => ({ meta: [{ title: "Rezepturen — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Rezepturen — Piratino POS" }] }),
   component: Recipes,
 });
 

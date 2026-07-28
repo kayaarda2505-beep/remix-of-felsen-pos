@@ -20,7 +20,7 @@ const LANGS = [
 
 function RegionPage() {
   const [form, setForm] = useState({
-    business_name: "SAINTS",
+    business_name: "Piratino",
     language: "de-CH",
     currency: "CHF",
     region: "CH",

@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/tables")({
-  head: () => ({ meta: [{ title: "Tische — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Tische — Piratino POS" }] }),
   component: Tables,
 });
 

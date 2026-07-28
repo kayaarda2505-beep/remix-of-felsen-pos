@@ -12,7 +12,7 @@ import { isDesktopApp, type PrinterConfig } from "@/lib/printer-bridge";
 
 
 export const Route = createFileRoute("/reports")({
-  head: () => ({ meta: [{ title: "Reports — SAINTS POS" }] }),
+  head: () => ({ meta: [{ title: "Reports — Piratino POS" }] }),
   component: Reports,
 });
 
