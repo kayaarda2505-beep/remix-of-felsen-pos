@@ -79,7 +79,7 @@ export const Route = createFileRoute("/")({
   component: ServiceTablet,
 });
 
-type Step = "tables" | "tab" | "menu" | "sent";
+type Step = "tables" | "tab" | "menu";
 interface CartLine {
   id: string;
   product: Product;
@@ -347,7 +347,10 @@ function ServiceTablet() {
         });
         errs.forEach((e) => toast.error(e));
       }
-      setStep("sent");
+      toast.success(
+        `Bestellung gesendet · Tisch ${selectedTable?.name ?? ""} · ${cart.reduce((n, l) => n + l.qty, 0)} Artikel`,
+      );
+      reset();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler beim Senden"),
   });
@@ -443,7 +446,7 @@ function ServiceTablet() {
     <div className="min-h-screen h-screen flex flex-col bg-background overflow-hidden">
       {/* Header — schlank, immer sichtbar */}
       <header className="glass-strong border-b border-border/40 px-4 py-3 flex items-center gap-3 shrink-0">
-        {step !== "tables" && step !== "sent" && (
+        {step !== "tables" && (
           <button
             onClick={() => setStep(step === "menu" && activeTableOrder ? "tab" : "tables")}
             className="w-11 h-11 rounded-xl glass flex items-center justify-center tap-highlight-none active:scale-95 transition-transform"
@@ -459,7 +462,6 @@ function ServiceTablet() {
             {step === "tables" && "Tisch wählen"}
             {step === "tab" && selectedTable && `Tisch ${selectedTable.name} · Offene Rechnung`}
             {step === "menu" && selectedTable && `Tisch ${selectedTable.name} · ${guests} Gäste`}
-            {step === "sent" && "Bestellung gesendet"}
           </div>
         </div>
         {(operator?.role === "manager" || operator?.role === "barkeeper") && (
@@ -830,39 +832,6 @@ function ServiceTablet() {
           </motion.div>
         )}
 
-        {/* ── SENT ───────────────────────────────────── */}
-        {step === "sent" && (
-          <motion.div
-            key="sent"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 flex items-center justify-center p-6"
-          >
-            <div className="text-center max-w-sm">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.1, type: "spring", damping: 12 }}
-                className="w-24 h-24 rounded-full bg-gradient-to-br from-accent to-neutral-300 mx-auto flex items-center justify-center shadow-[var(--shadow-gold)] mb-6"
-              >
-                <Check className="w-12 h-12 text-accent-foreground" strokeWidth={3} />
-              </motion.div>
-              <h2 className="text-2xl font-semibold mb-2">Bestellung gesendet</h2>
-              <p className="text-sm text-muted-foreground mb-8">
-                Tisch {selectedTable?.name} · {itemCount} Artikel · CHF {total.toFixed(2)}
-                <br />
-                Bar & Küche wurden benachrichtigt.
-              </p>
-              <button
-                onClick={reset}
-                className="w-full rounded-2xl py-4 bg-primary text-primary-foreground font-semibold tap-highlight-none active:scale-95 transition-transform"
-              >
-                Nächster Tisch
-              </button>
-            </div>
-          </motion.div>
-        )}
       </AnimatePresence>
 
       {/* Sticky cart bar — sichtbar im menu step */}
