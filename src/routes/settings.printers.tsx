@@ -15,6 +15,8 @@ import {
   isAutoPrintEnabled,
   setAutoPrintEnabled,
   getAgentUrlIssue,
+  normalizeAgentUrl,
+
 
 } from "@/lib/printer-bridge";
 
@@ -80,11 +82,19 @@ function PrintersPage() {
   }, []);
 
   const saveAgentUrl = async () => {
-    const v = agentUrl.trim();
-    const issue = getAgentUrlIssue(v);
-    if (issue && !/^https?:\/\//i.test(v)) {
-      return toast.error(issue);
+    const raw = agentUrl.trim();
+    const v = normalizeAgentUrl(raw);
+    if (v !== raw) {
+      setAgentUrl(v);
+      if (/0\.0\.0\.0/.test(raw)) {
+        toast.message("URL korrigiert", {
+          description:
+            "0.0.0.0 ist nur die Lausch-Adresse des Agents. Auf dem Drucker-PC ist das http://localhost:9110, von anderen Geräten die IP des PCs (z. B. http://192.168.1.10:9110).",
+          duration: 10000,
+        });
+      }
     }
+    const issue = getAgentUrlIssue(v);
     setPrintAgentUrl(v || null);
     if (issue) {
       toast.error("Print-Agent gespeichert, aber nicht nutzbar", { description: issue, duration: 10000 });
@@ -93,6 +103,7 @@ function PrintersPage() {
     }
     setAgentIssue(v ? issue : null);
     await refreshPing();
+
   };
 
 
