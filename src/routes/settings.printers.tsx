@@ -43,6 +43,12 @@ function PrintersPage() {
   const [agentOnline, setAgentOnline] = useState<boolean | null>(null);
   const [pinging, setPinging] = useState(false);
   const [loadingAgentPrinters, setLoadingAgentPrinters] = useState(false);
+  const [agentIssue, setAgentIssue] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAgentIssue(getAgentUrlIssue(getPrintAgentUrl() ?? ""));
+  }, []);
+
 
   const [autoPrint, setAutoPrint] = useState(true);
 
