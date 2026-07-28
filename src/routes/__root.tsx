@@ -140,7 +140,7 @@ function RootComponent() {
           </AuthGate>
         )}
         <Toaster position="top-center" theme="dark" richColors />
-        <OnScreenKeyboard />
+        
       </AuthProvider>
     </QueryClientProvider>
   );
