@@ -274,6 +274,9 @@ export function buildBill(opts: {
     lines.push({ text: "" });
   }
 
+  lines.push({ text: "", align: "center" });
+  lines.push({ text: s.businessName, align: "center" });
+
   return { lines, cut: true };
 }
 
