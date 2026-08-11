@@ -22,6 +22,27 @@ export function TeamPinScreen() {
     setStep("account");
   };
 
+  const submitAccount = async (acc: string) => {
+    if (!acc || checking) return;
+    setChecking(true);
+    try {
+      const { data, error } = await supabase.rpc("login_without_pin", {
+        _account_number: Number(acc),
+      });
+      if (error) throw error;
+      const row = (data as Operator[] | null)?.[0];
+      if (row) {
+        setOperator(row);
+        return;
+      }
+    } catch {
+      /* fallback auf PIN */
+    } finally {
+      setChecking(false);
+    }
+    setStep("pin");
+  };
+
   const pressAccount = (n: string) => {
     setError(false);
     if (n === "del") {
@@ -29,12 +50,13 @@ export function TeamPinScreen() {
       return;
     }
     if (n === "ok") {
-      if (account.length > 0) setStep("pin");
+      void submitAccount(account);
       return;
     }
     if (account.length >= 4) return;
     setAccount((a) => a + n);
   };
+
 
   const pressPin = async (n: string) => {
     setError(false);
