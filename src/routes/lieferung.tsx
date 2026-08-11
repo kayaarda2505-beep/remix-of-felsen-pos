@@ -1004,7 +1004,235 @@ function Lieferung() {
       {receipt && <DeliveryReceiptOverlay receipt={receipt} onClose={() => setReceipt(null)} />}
     </div>
   );
+
+  return (
+    <div className="h-screen flex flex-col max-w-[1800px] mx-auto w-full">
+      {/* Kopf */}
+      <header className="flex items-center gap-3 px-4 lg:px-6 pt-4 pb-3 shrink-0">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Piratino</div>
+          <h1 className="text-xl font-semibold">Lieferkarte</h1>
+        </div>
+        <div className="hidden sm:flex items-center gap-4 text-xs">
+          <Legend color="bg-amber-500" label={`Zu erledigen (${todoOrders.length})`} />
+          <Legend color="bg-sky-400" label={`Unterwegs (${enrouteOrders.length})`} />
+          <Legend color="bg-emerald-400" label={`Kuriere (${courierLocations.length})`} />
+        </div>
+        <button
+          onClick={() => {
+            resetAll();
+            setShowWizard(true);
+          }}
+          className="rounded-2xl px-4 py-3 text-sm font-semibold bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground flex items-center gap-2 active:scale-95 transition-transform"
+        >
+          <Plus className="w-4 h-4" /> Neue Bestellung
+        </button>
+      </header>
+
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 px-4 lg:px-6 pb-4">
+        {/* Karte */}
+        <div className="relative rounded-3xl overflow-hidden glass-strong min-h-[45vh]">
+          <DeliveryMap pins={pins} className="absolute inset-0" />
+          {pins.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-sm text-muted-foreground">
+              Noch keine Lieferungen auf der Karte
+            </div>
+          )}
+          <div className="absolute bottom-3 left-3 flex gap-2 sm:hidden">
+            <Legend color="bg-amber-500" label={`${todoOrders.length}`} />
+            <Legend color="bg-sky-400" label={`${enrouteOrders.length}`} />
+            <Legend color="bg-emerald-400" label={`${courierLocations.length}`} />
+          </div>
+        </div>
+
+        {/* Listen */}
+        <div className="min-h-0 overflow-y-auto space-y-4 pb-24 lg:pb-0">
+          <OrderGroup
+            title="Zu erledigen"
+            dot="bg-amber-500"
+            orders={todoOrders}
+            couriers={couriers}
+            onAssign={(orderId, courierId) => assignCourier.mutate({ orderId, courierId })}
+          />
+          <OrderGroup
+            title="Unterwegs"
+            dot="bg-sky-400"
+            orders={enrouteOrders}
+            couriers={couriers}
+            onAssign={(orderId, courierId) => assignCourier.mutate({ orderId, courierId })}
+          />
+          <section className="glass-strong rounded-3xl p-4">
+            <h2 className="font-semibold mb-3 text-sm">Kuriere</h2>
+            {courierLocations.length === 0 ? (
+              <div className="text-xs text-muted-foreground">
+                Noch keine Standorte. Kuriere müssen die Kurier-Seite offen haben und den Standort freigeben.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {courierLocations.map((l: any) => {
+                  const load = enrouteOrders.filter((o) => o.courier_id === l.member_id);
+                  return (
+                    <div key={l.member_id} className="glass rounded-xl px-3 py-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium flex items-center gap-1.5">
+                          <Bike className="w-3.5 h-3.5 text-emerald-400" />
+                          {l.team_members?.name ?? "Kurier"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(l.updated_at).toLocaleTimeString("de-CH", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {load.length === 0
+                          ? "Keine aktive Lieferung"
+                          : load.map((o: any) => o.delivery_address ?? "Lieferung").join(" · ")}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section className="glass-strong rounded-3xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-sm">Heute erledigt</h2>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {doneOrders.length} · CHF {doneOrders.reduce((s, o) => s + Number(o.total || 0), 0).toFixed(2)}
+              </span>
+            </div>
+            {doneOrders.length === 0 ? (
+              <div className="text-xs text-muted-foreground">Heute noch nichts geliefert.</div>
+            ) : (
+              <div className="space-y-2">
+                {doneOrders.map((o: any) => (
+                  <div key={o.id} className="glass rounded-xl px-3 py-2 text-sm flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
+                        {o.courier_name ? ` · ${o.courier_name}` : ""}
+                      </div>
+                    </div>
+                    <span className="tabular-nums font-semibold shrink-0">CHF {Number(o.total).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+
+      {/* Mobile: neue Bestellung unten */}
+      <button
+        onClick={() => {
+          resetAll();
+          setShowWizard(true);
+        }}
+        className="lg:hidden fixed bottom-20 right-4 z-30 rounded-full px-5 py-4 shadow-2xl bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold flex items-center gap-2"
+      >
+        <Plus className="w-4 h-4" /> Bestellung
+      </button>
+
+      {/* Wizard als Overlay */}
+      <AnimatePresence>
+        {showWizard && (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            className="fixed inset-0 z-40 bg-background/95 backdrop-blur-md"
+          >
+            <button
+              onClick={() => setShowWizard(false)}
+              className="absolute top-4 right-4 z-50 w-11 h-11 rounded-xl glass flex items-center justify-center"
+              aria-label="Schliessen"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            {wizard}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 glass rounded-full px-2.5 py-1 text-xs">
+      <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
+      {label}
+    </span>
+  );
+}
+
+function OrderGroup({
+  title,
+  dot,
+  orders,
+  couriers,
+  onAssign,
+}: {
+  title: string;
+  dot: string;
+  orders: any[];
+  couriers: any[];
+  onAssign: (orderId: string, courierId: string | null) => void;
+}) {
+  return (
+    <section className="glass-strong rounded-3xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
+        <h2 className="font-semibold text-sm">
+          {title} ({orders.length})
+        </h2>
+      </div>
+      {orders.length === 0 ? (
+        <div className="text-xs text-muted-foreground">Nichts vorhanden.</div>
+      ) : (
+        <div className="space-y-2">
+          {orders.map((o) => (
+            <div key={o.id} className="glass rounded-xl px-3 py-2 space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="text-sm min-w-0">
+                  <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
+                  {o.delivery_note && (
+                    <div className="text-xs text-muted-foreground truncate">{o.delivery_note}</div>
+                  )}
+                  {o.customers && o.customers.lat == null && (
+                    <div className="text-[10px] text-amber-400 flex items-center gap-1">
+                      <MapPinIcon className="w-3 h-3" /> Adresse nicht auf Karte
+                    </div>
+                  )}
+                </div>
+                <span className="text-sm font-semibold tabular-nums shrink-0">
+                  CHF {Number(o.total).toFixed(2)}
+                </span>
+              </div>
+              <select
+                value={o.courier_id ?? ""}
+                onChange={(e) => onAssign(o.id, e.target.value || null)}
+                className="glass rounded-lg px-2 py-1.5 text-xs bg-transparent outline-none w-full"
+              >
+                <option value="">Kurier zuweisen…</option>
+                {couriers.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 
 function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt; onClose: () => void }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
