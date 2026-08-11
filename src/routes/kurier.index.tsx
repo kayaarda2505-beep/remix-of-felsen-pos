@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useEffect } from "react";
 import { Bike, Loader2, LogOut, MapPin } from "lucide-react";
 
 import { listMyCourierOrders } from "@/lib/courier.functions";
 import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/kurier/")({
   ssr: false,
