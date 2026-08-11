@@ -123,45 +123,58 @@ function KitchenView() {
     const map = new Map<string, Ticket>();
     // sortiert nach sent_at (kommt schon sortiert aus der Query)
     for (const it of rawItems) {
-      const station: Station = routeForCategory(it.category);
       const sentMs = new Date(it.sent_at).getTime();
-      // Suche existierendes Ticket für (order, station) das im Batch-Fenster liegt
-      let ticket: Ticket | undefined;
-      for (const t of map.values()) {
-        if (t.orderId === it.order_id && t.station === station &&
-            Math.abs(sentMs - t.batch) <= BATCH_WINDOW_MS) {
-          ticket = t;
-          break;
+      const mods = Array.isArray(it.modifiers) ? (it.modifiers as string[]) : [];
+      const isMenu = (it.category ?? "").toLowerCase().includes("mittagsmenü");
+
+      // Mittagsmenü: Hauptgang an Pizza/Küche, Salat & Getränk zusätzlich an die Bar
+      const entries: Array<{ station: Station; name: string; suffixId: string }> = [
+        { station: routeForItem(it.category, it.product_name), name: it.product_name, suffixId: "" },
+      ];
+      if (isMenu) {
+        entries.push({ station: "bar", name: `${it.product_name} — Menüsalat & Getränk`, suffixId: "-bar" });
+      }
+
+      for (const entry of entries) {
+        const station = entry.station;
+        let ticket: Ticket | undefined;
+        for (const t of map.values()) {
+          if (t.orderId === it.order_id && t.station === station &&
+              Math.abs(sentMs - t.batch) <= BATCH_WINDOW_MS) {
+            ticket = t;
+            break;
+          }
         }
+        const batch = ticket ? ticket.batch : sentMs;
+        const key = `${it.order_id}-${station}-${batch}`;
+        if (acked[key] && batch <= acked[key]) continue;
+        if (!ticket) {
+          ticket = {
+            key,
+            orderId: it.order_id,
+            station,
+            tableName: orderMap[it.order_id] ?? "…",
+            items: [],
+            firstSent: sentMs,
+            batch,
+          };
+          map.set(key, ticket);
+        }
+        ticket.items.push({
+          id: it.id + entry.suffixId,
+          product_id: it.product_id,
+          product_name: entry.name,
+          qty: it.qty,
+          note: it.note,
+          modifiers: mods,
+          category: it.category,
+        });
+        ticket.firstSent = Math.min(ticket.firstSent, sentMs);
       }
-      const batch = ticket ? ticket.batch : sentMs;
-      const key = `${it.order_id}-${station}-${batch}`;
-      if (acked[key] && batch <= acked[key]) continue;
-      if (!ticket) {
-        ticket = {
-          key,
-          orderId: it.order_id,
-          station,
-          tableName: orderMap[it.order_id] ?? "…",
-          items: [],
-          firstSent: sentMs,
-          batch,
-        };
-        map.set(key, ticket);
-      }
-      ticket.items.push({
-        id: it.id,
-        product_id: it.product_id,
-        product_name: it.product_name,
-        qty: it.qty,
-        note: it.note,
-        modifiers: Array.isArray(it.modifiers) ? (it.modifiers as string[]) : [],
-        category: it.category,
-      });
-      ticket.firstSent = Math.min(ticket.firstSent, sentMs);
     }
     return Array.from(map.values()).sort((a, b) => a.firstSent - b.firstSent);
   }, [rawItems, orderMap, acked]);
+
 
   const visible = tickets.filter((t) => filter === "all" || t.station === filter);
 
