@@ -398,7 +398,9 @@ function Lieferung() {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order_items"] });
       setReceipt({ ...receipt, paid: pay !== "open", payMethod: pay });
+      setShowWizard(false);
       resetAll();
+
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
