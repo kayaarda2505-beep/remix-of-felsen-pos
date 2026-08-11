@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useServerFn } from "@tanstack/react-start";
+import { createCourierAccount } from "@/lib/courier.functions";
 
 export const Route = createFileRoute("/mitarbeiter")({
   head: () => ({ meta: [{ title: "Mitarbeiter — Lohn & Stunden — Piratino" }] }),
@@ -797,4 +799,54 @@ function renderPayslipHTML(p: Payroll, m: Member): string {
 
   <p class="muted" style="margin-top:1.5rem">Erstellt am ${new Date(p.created_at).toLocaleString("de-CH")}. Sozialversicherungs-Abzüge nach Schweizer Standard (Arbeitnehmer-Anteil). NBU-Satz kann je nach Versicherer abweichen. Diese Abrechnung dient als Übersicht und ersetzt keine Lohnausweis-Bescheinigung.</p>
 </body></html>`;
+}
+
+function CourierAccountCard({ memberId, defaultEmail }: { memberId: string; defaultEmail: string }) {
+  const [email, setEmail] = useState(defaultEmail);
+  const [password, setPassword] = useState("");
+  const create = useServerFn(createCourierAccount);
+
+  const mut = useMutation({
+    mutationFn: () => create({ data: { memberId, email: email.trim(), password } }),
+    onSuccess: () => {
+      setPassword("");
+      toast.success("Login erstellt — Kurier kann sich unter /kurier anmelden");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
+  });
+
+  return (
+    <div className="glass rounded-3xl p-6">
+      <div className="flex items-center gap-3 mb-4">
+        <UserIcon className="w-4 h-4 text-accent" />
+        <h2 className="font-semibold">Kurier-Login (E-Mail & Passwort)</h2>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="E-Mail"
+          className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm md:col-span-1"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Passwort (min. 8 Zeichen)"
+          className="rounded-xl bg-white/5 border border-border/40 px-4 py-2.5 text-sm"
+        />
+        <button
+          onClick={() => mut.mutate()}
+          disabled={mut.isPending || !email || password.length < 8}
+          className="rounded-xl bg-accent text-accent-foreground font-medium py-2.5 text-sm disabled:opacity-40"
+        >
+          {mut.isPending ? "Erstelle…" : "Login erstellen"}
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground mt-3">
+        Der Kurier meldet sich damit unter <b>/kurier</b> an und sieht nur seine zugewiesenen Lieferungen und die Historie.
+      </p>
+    </div>
+  );
 }
