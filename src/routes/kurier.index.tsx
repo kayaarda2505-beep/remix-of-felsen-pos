@@ -110,6 +110,26 @@ function CourierHome() {
         </button>
       </div>
 
+      {courier && (
+        <div className="glass rounded-2xl p-3 mb-4 flex items-center gap-3 text-xs">
+          <MapPin className={`w-4 h-4 ${geoState === "on" ? "text-accent" : "text-muted-foreground"}`} />
+          <div className="flex-1">
+            <div className="font-medium">
+              {geoState === "on" ? "Standort wird geteilt" : "Standort nicht aktiv"}
+            </div>
+            {geoMsg && <div className="text-muted-foreground mt-0.5">{geoMsg}</div>}
+          </div>
+          {geoState !== "on" && (
+            <button
+              onClick={() => setGeoTick((t) => t + 1)}
+              className="glass-strong rounded-xl px-3 py-2 font-medium"
+            >
+              Standort freigeben
+            </button>
+          )}
+        </div>
+      )}
+
       {isLoading && (
         <div className="flex justify-center py-10">
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
