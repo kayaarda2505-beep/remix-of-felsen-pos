@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Bike, Loader2, LogOut, MapPin } from "lucide-react";
 
 import { listMyCourierOrders } from "@/lib/courier.functions";
@@ -38,10 +38,30 @@ function CourierHome() {
   const history = data?.history ?? [];
 
   // Live-Standort an die Lieferkarte senden
+  const [geoState, setGeoState] = useState<"idle" | "on" | "denied" | "error" | "unsupported">("idle");
+  const [geoMsg, setGeoMsg] = useState<string | null>(null);
+  const [geoTick, setGeoTick] = useState(0);
+
   useEffect(() => {
     if (!courier?.id) return;
-    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoState("unsupported");
+      setGeoMsg("Dieses Gerät/Browser unterstützt keine Standortfreigabe.");
+      return;
+    }
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setGeoState("error");
+      setGeoMsg("Standort geht nur über eine sichere HTTPS-Verbindung.");
+      return;
+    }
+    if (typeof window !== "undefined" && window.self !== window.top && geoTick === 0) {
+      // In der Vorschau (iframe) fragt der Browser oft nicht — Seite direkt im Browser öffnen
+      setGeoMsg("Tipp: Seite direkt im Browser (nicht in der Vorschau) öffnen, sonst fragt das Handy nicht nach dem Standort.");
+    }
+
     const send = (pos: GeolocationPosition) => {
+      setGeoState("on");
+      setGeoMsg(null);
       void (supabase.from("courier_locations") as any).upsert(
         {
           member_id: courier.id,
@@ -53,13 +73,24 @@ function CourierHome() {
         { onConflict: "member_id" },
       );
     };
-    const watchId = navigator.geolocation.watchPosition(send, () => {}, {
+    const onErr = (err: GeolocationPositionError) => {
+      if (err.code === err.PERMISSION_DENIED) {
+        setGeoState("denied");
+        setGeoMsg("Standort wurde blockiert. In den Browser-Einstellungen für diese Seite erlauben.");
+      } else {
+        setGeoState("error");
+        setGeoMsg(err.message || "Standort konnte nicht ermittelt werden.");
+      }
+    };
+    navigator.geolocation.getCurrentPosition(send, onErr, { enableHighAccuracy: true, timeout: 20_000 });
+    const watchId = navigator.geolocation.watchPosition(send, onErr, {
       enableHighAccuracy: true,
       maximumAge: 20_000,
       timeout: 20_000,
     });
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [courier?.id]);
+  }, [courier?.id, geoTick]);
+
 
 
   const logout = async () => {
@@ -78,6 +109,26 @@ function CourierHome() {
           <LogOut className="w-3.5 h-3.5" /> Abmelden
         </button>
       </div>
+
+      {courier && (
+        <div className="glass rounded-2xl p-3 mb-4 flex items-center gap-3 text-xs">
+          <MapPin className={`w-4 h-4 ${geoState === "on" ? "text-accent" : "text-muted-foreground"}`} />
+          <div className="flex-1">
+            <div className="font-medium">
+              {geoState === "on" ? "Standort wird geteilt" : "Standort nicht aktiv"}
+            </div>
+            {geoMsg && <div className="text-muted-foreground mt-0.5">{geoMsg}</div>}
+          </div>
+          {geoState !== "on" && (
+            <button
+              onClick={() => setGeoTick((t) => t + 1)}
+              className="glass-strong rounded-xl px-3 py-2 font-medium"
+            >
+              Standort freigeben
+            </button>
+          )}
+        </div>
+      )}
 
       {isLoading && (
         <div className="flex justify-center py-10">
