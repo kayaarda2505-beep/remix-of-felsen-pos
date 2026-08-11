@@ -37,6 +37,31 @@ function CourierHome() {
   const active = data?.active ?? [];
   const history = data?.history ?? [];
 
+  // Live-Standort an die Lieferkarte senden
+  useEffect(() => {
+    if (!courier?.id) return;
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    const send = (pos: GeolocationPosition) => {
+      void (supabase.from("courier_locations") as any).upsert(
+        {
+          member_id: courier.id,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy ?? null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "member_id" },
+      );
+    };
+    const watchId = navigator.geolocation.watchPosition(send, () => {}, {
+      enableHighAccuracy: true,
+      maximumAge: 20_000,
+      timeout: 20_000,
+    });
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [courier?.id]);
+
+
   const logout = async () => {
     await supabase.auth.signOut();
     qc.clear();
