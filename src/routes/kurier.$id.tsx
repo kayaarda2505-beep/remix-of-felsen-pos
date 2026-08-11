@@ -184,11 +184,52 @@ function CourierPage() {
             </button>
           )}
 
-          {order.paid <= 0 && (
-            <div className="mt-3 rounded-xl bg-amber-500/10 text-amber-400 text-sm px-3 py-2 text-center">
-              Betrag beim Kunden kassieren
+          {order.status === "paid" ? (
+            <div className="mt-3 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm px-3 py-3 text-center">
+              Lieferung abgeschlossen
+            </div>
+          ) : (
+            <div className="mt-4">
+              {!showPay ? (
+                <button
+                  onClick={() => setShowPay(true)}
+                  className="w-full rounded-2xl py-4 glass-strong font-semibold text-base flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" /> Lieferung abschliessen
+                </button>
+              ) : (
+                <div className="rounded-2xl glass p-3">
+                  <div className="text-xs text-muted-foreground mb-2 text-center">Womit hat der Kunde bezahlt?</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["cash", "card", "twint"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => complete.mutate(m)}
+                        disabled={complete.isPending}
+                        className="rounded-xl py-3 bg-accent/15 text-accent text-sm font-medium disabled:opacity-50"
+                      >
+                        {m === "cash" ? "Bar" : m === "card" ? "Karte" : "TWINT"}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setShowPay(false)} className="w-full text-xs text-muted-foreground mt-2 py-1">
+                    Abbrechen
+                  </button>
+                  {complete.isPending && (
+                    <div className="flex justify-center pt-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              )}
+              {order.paid <= 0 && !showPay && (
+                <div className="mt-3 rounded-xl bg-amber-500/10 text-amber-400 text-sm px-3 py-2 text-center">
+                  Betrag beim Kunden kassieren
+                </div>
+              )}
             </div>
           )}
+
         </section>
       </div>
     </div>
