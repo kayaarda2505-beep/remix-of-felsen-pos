@@ -97,3 +97,39 @@ export const startCourierDelivery = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const LoginSchema = z.object({
+  accountNumber: z.number().int().positive(),
+  pin: z.string().regex(/^\d{4,6}$/),
+});
+
+export const courierLogin = createServerFn({ method: "POST" })
+  .inputValidator((input) => LoginSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { data: rows, error } = await (supabaseAdmin as any).rpc("verify_team_pin", {
+      _account_number: data.accountNumber,
+      _pin: data.pin,
+    });
+    if (error) throw new Error(error.message);
+    const m = Array.isArray(rows) ? rows[0] : rows;
+    if (!m) return { courier: null };
+    return { courier: { id: m.id as string, name: m.name as string, role: m.role as string } };
+  });
+
+export const listCourierOrders = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ courierId: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const { data: rows, error } = await (supabaseAdmin as any)
+      .from("orders")
+      .select("id, status, total, opened_at, closed_at, delivery_address, delivery_note, courier_started_at, courier_assigned_at")
+      .eq("order_type", "delivery")
+      .eq("courier_id", data.courierId)
+      .order("opened_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    const all = (rows ?? []) as any[];
+    return {
+      active: all.filter((o) => o.status === "open"),
+      history: all.filter((o) => o.status !== "open"),
+    };
+  });

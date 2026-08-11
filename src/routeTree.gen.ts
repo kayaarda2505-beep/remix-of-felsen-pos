@@ -27,6 +27,7 @@ import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
+import { Route as KurierIndexRouteImport } from './routes/kurier.index'
 import { Route as SettingsSpotifyRouteImport } from './routes/settings.spotify'
 import { Route as SettingsRegionRouteImport } from './routes/settings.region'
 import { Route as SettingsRecipesRouteImport } from './routes/settings.recipes'
@@ -139,6 +140,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsRoute,
+} as any)
+const KurierIndexRoute = KurierIndexRouteImport.update({
+  id: '/kurier/',
+  path: '/kurier/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsSpotifyRoute = SettingsSpotifyRouteImport.update({
   id: '/spotify',
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/settings/recipes': typeof SettingsRecipesRoute
   '/settings/region': typeof SettingsRegionRoute
   '/settings/spotify': typeof SettingsSpotifyRoute
+  '/kurier/': typeof KurierIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/order': typeof ApiPublicOrderRoute
   '/api/public/payment-request': typeof ApiPublicPaymentRequestRoute
@@ -325,6 +332,7 @@ export interface FileRoutesByTo {
   '/settings/recipes': typeof SettingsRecipesRoute
   '/settings/region': typeof SettingsRegionRoute
   '/settings/spotify': typeof SettingsSpotifyRoute
+  '/kurier': typeof KurierIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/api/public/order': typeof ApiPublicOrderRoute
   '/api/public/payment-request': typeof ApiPublicPaymentRequestRoute
@@ -368,6 +376,7 @@ export interface FileRoutesById {
   '/settings/recipes': typeof SettingsRecipesRoute
   '/settings/region': typeof SettingsRegionRoute
   '/settings/spotify': typeof SettingsSpotifyRoute
+  '/kurier/': typeof KurierIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/order': typeof ApiPublicOrderRoute
   '/api/public/payment-request': typeof ApiPublicPaymentRequestRoute
@@ -412,6 +421,7 @@ export interface FileRouteTypes {
     | '/settings/recipes'
     | '/settings/region'
     | '/settings/spotify'
+    | '/kurier/'
     | '/settings/'
     | '/api/public/order'
     | '/api/public/payment-request'
@@ -453,6 +463,7 @@ export interface FileRouteTypes {
     | '/settings/recipes'
     | '/settings/region'
     | '/settings/spotify'
+    | '/kurier'
     | '/settings'
     | '/api/public/order'
     | '/api/public/payment-request'
@@ -495,6 +506,7 @@ export interface FileRouteTypes {
     | '/settings/recipes'
     | '/settings/region'
     | '/settings/spotify'
+    | '/kurier/'
     | '/settings/'
     | '/api/public/order'
     | '/api/public/payment-request'
@@ -528,6 +540,7 @@ export interface RootRouteChildren {
   TablesRoute: typeof TablesRoute
   KurierIdRoute: typeof KurierIdRoute
   OrderTokenRoute: typeof OrderTokenRouteWithChildren
+  KurierIndexRoute: typeof KurierIndexRoute
   ApiPublicOrderRoute: typeof ApiPublicOrderRoute
   ApiPublicPaymentRequestRoute: typeof ApiPublicPaymentRequestRoute
   ApiPublicServiceCallRoute: typeof ApiPublicServiceCallRoute
@@ -666,6 +679,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof SettingsRoute
+    }
+    '/kurier/': {
+      id: '/kurier/'
+      path: '/kurier'
+      fullPath: '/kurier/'
+      preLoaderRoute: typeof KurierIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/settings/spotify': {
       id: '/settings/spotify'
@@ -888,6 +908,7 @@ const rootRouteChildren: RootRouteChildren = {
   TablesRoute: TablesRoute,
   KurierIdRoute: KurierIdRoute,
   OrderTokenRoute: OrderTokenRouteWithChildren,
+  KurierIndexRoute: KurierIndexRoute,
   ApiPublicOrderRoute: ApiPublicOrderRoute,
   ApiPublicPaymentRequestRoute: ApiPublicPaymentRequestRoute,
   ApiPublicServiceCallRoute: ApiPublicServiceCallRoute,
