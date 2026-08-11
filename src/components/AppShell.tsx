@@ -122,7 +122,7 @@ const nav = [
   { to: "/pos", label: "Kasse", icon: ScanLine },
   { to: "/kurier", label: "Kurier", icon: Bike },
   { to: "/tables", label: "Tische", icon: Grid3x3 },
-  { to: "/kitchen", label: "Küche/Bar", icon: ChefHat },
+  { to: "/kitchen", label: "Küche/Bar/Pizza", icon: ChefHat },
   { to: "/staff", label: "Team", icon: Users },
   { to: "/schichtplan", label: "Schichtplan", icon: CalendarDays },
   { to: "/mitarbeiter", label: "Lohn", icon: Banknote },
