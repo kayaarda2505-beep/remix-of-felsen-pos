@@ -1,9 +1,18 @@
 // Auto-generiert aus der Piratino Lieferkarte (Uber Eats). Preise in CHF.
+export interface DeliveryModifierItem {
+  label: string;
+  price_delta?: number;
+}
+export interface DeliveryModifierGroup {
+  label: string;
+  items: DeliveryModifierItem[];
+}
 export interface DeliveryMenuItem {
   id: string;
   name: string;
   price: number;
   description?: string | null;
+  modifierGroups?: DeliveryModifierGroup[];
 }
 
 export interface DeliveryMenuCategory {
@@ -12,6 +21,306 @@ export interface DeliveryMenuCategory {
 }
 
 export const DELIVERY_MENU: DeliveryMenuCategory[] = [
+  {
+    "category": "Mittagsmenü",
+    "items": [
+      {
+        "id": "mittag-pizza",
+        "name": "Mittagsmenü Pizza",
+        "price": 25.0,
+        "description": "Pizza 32cm nach Wahl, gemischter Salat mit Sosse nach Wahl und ein Getränk",
+        "modifierGroups": [
+          {
+            "label": "Pizza wählen",
+            "items": [
+              {
+                "label": "Pizza Salami (scharf) - 32cm"
+              },
+              {
+                "label": "Pizza Margherita - 32cm"
+              },
+              {
+                "label": "Pizza Kebab - 32cm"
+              },
+              {
+                "label": "Pizza Prosciutto e Funghi - 32cm"
+              },
+              {
+                "label": "Pizza Da Arda - 32cm"
+              },
+              {
+                "label": "Pizza Hawaii - 32cm"
+              },
+              {
+                "label": "Pizza O Sole Mio - 32cm"
+              },
+              {
+                "label": "Pizza Toscana (scharf) - 32cm"
+              },
+              {
+                "label": "Pizza Prosciutto - 32cm"
+              },
+              {
+                "label": "Pizza Quattro Stagioni - 32cm"
+              },
+              {
+                "label": "Pizza Piratino - 32cm"
+              },
+              {
+                "label": "Pizza Padrone - 32cm"
+              },
+              {
+                "label": "Pizza Vegetariana - 32cm"
+              },
+              {
+                "label": "Pizza Napoli - 32cm"
+              },
+              {
+                "label": "Pizza Pesto - 32cm"
+              },
+              {
+                "label": "Pizza Da Reco - 32cm"
+              },
+              {
+                "label": "Pizza Fiorentina - 32cm"
+              },
+              {
+                "label": "Pizza Funghi - 32cm"
+              },
+              {
+                "label": "Pizza Salmone - 32cm"
+              },
+              {
+                "label": "Pizza Capricciosa - 32cm"
+              },
+              {
+                "label": "Pizza Boscaiola - 32cm"
+              },
+              {
+                "label": "Calzone (zugedeckt) - 32cm"
+              },
+              {
+                "label": "Pizza Frutti di Mare - 32cm"
+              },
+              {
+                "label": "Pizza Contadino - 32cm"
+              },
+              {
+                "label": "Pizza Luca - 32cm"
+              },
+              {
+                "label": "Calzone Puzzone (zugedeckt) - 32cm"
+              },
+              {
+                "label": "Pizza Fammy - 32cm"
+              },
+              {
+                "label": "Pizza Vegana - 32cm"
+              },
+              {
+                "label": "Pizza Da Esma - 32cm"
+              },
+              {
+                "label": "Pizza Inferno - 32cm"
+              },
+              {
+                "label": "Pizza Cipolla Peperoni - 32cm"
+              },
+              {
+                "label": "Pizza Gorgonzola - 32cm"
+              },
+              {
+                "label": "Pizza Mediterranea - 32cm"
+              },
+              {
+                "label": "Pizza Da Osi - 32cm"
+              },
+              {
+                "label": "Pizza Zitella - 32cm"
+              },
+              {
+                "label": "Pizza Madras - 32cm"
+              },
+              {
+                "label": "Calzone Special (zugedeckt) - 32cm"
+              },
+              {
+                "label": "My Pizza - 32cm"
+              },
+              {
+                "label": "Pizza Tre Formaggi - 32cm"
+              },
+              {
+                "label": "Pizza Campagnola - 32cm"
+              }
+            ]
+          },
+          {
+            "label": "Salatsosse wählen",
+            "items": [
+              {
+                "label": "hausgemachte Joghurtsosse"
+              },
+              {
+                "label": "hausgemachte Knoblauchsosse"
+              },
+              {
+                "label": "hausgemachte Cocktailsosse"
+              },
+              {
+                "label": "hausgemachte Tartarsosse"
+              },
+              {
+                "label": "French Dressing"
+              },
+              {
+                "label": "Italienisch Dressing"
+              },
+              {
+                "label": "Balsamico"
+              }
+            ]
+          },
+          {
+            "label": "Getränk wählen",
+            "items": [
+              {
+                "label": "Coca-Cola 0,5l"
+              },
+              {
+                "label": "Coca-Cola Zero 0,5l"
+              },
+              {
+                "label": "Fanta Orange 0,5l"
+              },
+              {
+                "label": "Eistea 0,5l"
+              },
+              {
+                "label": "Sprite 0,5l"
+              },
+              {
+                "label": "Red Bull 0,25l"
+              },
+              {
+                "label": "Mineralwasser 0,5l"
+              },
+              {
+                "label": "Tony El Mate"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "mittag-pasta",
+        "name": "Mittagsmenü Pasta",
+        "price": 25.0,
+        "description": "Pasta nach Wahl, gemischter Salat mit Sosse nach Wahl und ein Getränk",
+        "modifierGroups": [
+          {
+            "label": "Pasta wählen",
+            "items": [
+              {
+                "label": "Pasta Bolognese"
+              },
+              {
+                "label": "Pasta Piratino"
+              },
+              {
+                "label": "Pasta Carbonara"
+              },
+              {
+                "label": "Pasta Ai Funghi Porcini"
+              },
+              {
+                "label": "Pasta All`Arrabbiata"
+              },
+              {
+                "label": "Penne Al Forno"
+              },
+              {
+                "label": "Pasta Boscaiola"
+              },
+              {
+                "label": "Cannelloni (Vegetarisch)"
+              },
+              {
+                "label": "Lasagne"
+              },
+              {
+                "label": "Pasta Napoli"
+              },
+              {
+                "label": "Pasta Tiziana"
+              },
+              {
+                "label": "Cannelloni"
+              },
+              {
+                "label": "Tortellini Alla Panna"
+              }
+            ]
+          },
+          {
+            "label": "Salatsosse wählen",
+            "items": [
+              {
+                "label": "hausgemachte Joghurtsosse"
+              },
+              {
+                "label": "hausgemachte Knoblauchsosse"
+              },
+              {
+                "label": "hausgemachte Cocktailsosse"
+              },
+              {
+                "label": "hausgemachte Tartarsosse"
+              },
+              {
+                "label": "French Dressing"
+              },
+              {
+                "label": "Italienisch Dressing"
+              },
+              {
+                "label": "Balsamico"
+              }
+            ]
+          },
+          {
+            "label": "Getränk wählen",
+            "items": [
+              {
+                "label": "Coca-Cola 0,5l"
+              },
+              {
+                "label": "Coca-Cola Zero 0,5l"
+              },
+              {
+                "label": "Fanta Orange 0,5l"
+              },
+              {
+                "label": "Eistea 0,5l"
+              },
+              {
+                "label": "Sprite 0,5l"
+              },
+              {
+                "label": "Red Bull 0,25l"
+              },
+              {
+                "label": "Mineralwasser 0,5l"
+              },
+              {
+                "label": "Tony El Mate"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
   {
     "category": "Beilagen",
     "items": [
