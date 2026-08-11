@@ -120,6 +120,7 @@ const nav = [
   { to: "/lieferung", label: "Lieferung", icon: Bike },
   { to: "/", label: "Service", icon: Tablet },
   { to: "/pos", label: "Kasse", icon: ScanLine },
+  { to: "/kurier", label: "Kurier", icon: Bike },
   { to: "/tables", label: "Tische", icon: Grid3x3 },
   { to: "/kitchen", label: "Küche/Bar", icon: ChefHat },
   { to: "/staff", label: "Team", icon: Users },
@@ -147,13 +148,8 @@ const BARKEEPER_ALLOWED = new Set<string>([
 
 const SERVICE_ALLOWED = new Set<string>([
   "/",
-  "/lieferung",
-  "/tables",
-  "/mitarbeiter",
-  "/inventory",
-  "/musik",
-  "/payments",
-  "/settings",
+  "/pos",
+  "/kurier",
 ]);
 
 const KASSE_ALLOWED = new Set<string>([
