@@ -34,142 +34,130 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
             "label": "Pizza wählen",
             "items": [
               {
-                "label": "Pizza Salami (scharf) - 32cm"
-              },
-              {
-                "label": "Pizza Margherita - 32cm"
-              },
-              {
-                "label": "Pizza Kebab - 32cm"
-              },
-              {
-                "label": "Pizza Prosciutto e Funghi - 32cm"
-              },
-              {
-                "label": "Pizza Da Arda - 32cm"
-              },
-              {
-                "label": "Pizza Hawaii - 32cm"
-              },
-              {
-                "label": "Pizza O Sole Mio - 32cm"
-              },
-              {
-                "label": "Pizza Toscana (scharf) - 32cm"
-              },
-              {
-                "label": "Pizza Prosciutto - 32cm"
-              },
-              {
-                "label": "Pizza Quattro Stagioni - 32cm"
-              },
-              {
-                "label": "Pizza Piratino - 32cm"
-              },
-              {
-                "label": "Pizza Padrone - 32cm"
-              },
-              {
-                "label": "Pizza Vegetariana - 32cm"
-              },
-              {
-                "label": "Pizza Napoli - 32cm"
-              },
-              {
-                "label": "Pizza Pesto - 32cm"
-              },
-              {
-                "label": "Pizza Da Reco - 32cm"
-              },
-              {
-                "label": "Pizza Fiorentina - 32cm"
-              },
-              {
-                "label": "Pizza Funghi - 32cm"
-              },
-              {
-                "label": "Pizza Salmone - 32cm"
-              },
-              {
-                "label": "Pizza Capricciosa - 32cm"
-              },
-              {
-                "label": "Pizza Boscaiola - 32cm"
+                "label": "Boscaiola - 32cm"
               },
               {
                 "label": "Calzone (zugedeckt) - 32cm"
               },
               {
-                "label": "Pizza Frutti di Mare - 32cm"
-              },
-              {
-                "label": "Pizza Contadino - 32cm"
-              },
-              {
-                "label": "Pizza Luca - 32cm"
-              },
-              {
                 "label": "Calzone Puzzone (zugedeckt) - 32cm"
-              },
-              {
-                "label": "Pizza Fammy - 32cm"
-              },
-              {
-                "label": "Pizza Vegana - 32cm"
-              },
-              {
-                "label": "Pizza Da Esma - 32cm"
-              },
-              {
-                "label": "Pizza Inferno - 32cm"
-              },
-              {
-                "label": "Pizza Cipolla Peperoni - 32cm"
-              },
-              {
-                "label": "Pizza Gorgonzola - 32cm"
-              },
-              {
-                "label": "Pizza Mediterranea - 32cm"
-              },
-              {
-                "label": "Pizza Da Osi - 32cm"
-              },
-              {
-                "label": "Pizza Zitella - 32cm"
-              },
-              {
-                "label": "Pizza Madras - 32cm"
               },
               {
                 "label": "Calzone Special (zugedeckt) - 32cm"
               },
               {
+                "label": "Campagnola - 32cm"
+              },
+              {
+                "label": "Capricciosa - 32cm"
+              },
+              {
+                "label": "Cipolla Peperoni - 32cm"
+              },
+              {
+                "label": "Contadino - 32cm"
+              },
+              {
+                "label": "Da Arda - 32cm"
+              },
+              {
+                "label": "Da Esma - 32cm"
+              },
+              {
+                "label": "Da Osi - 32cm"
+              },
+              {
+                "label": "Da Reco - 32cm"
+              },
+              {
+                "label": "Fammy - 32cm"
+              },
+              {
+                "label": "Fiorentina - 32cm"
+              },
+              {
+                "label": "Frutti di Mare - 32cm"
+              },
+              {
+                "label": "Funghi - 32cm"
+              },
+              {
+                "label": "Gorgonzola - 32cm"
+              },
+              {
+                "label": "Hawaii - 32cm"
+              },
+              {
+                "label": "Inferno - 32cm"
+              },
+              {
+                "label": "Kebab - 32cm"
+              },
+              {
+                "label": "Luca - 32cm"
+              },
+              {
+                "label": "Madras - 32cm"
+              },
+              {
+                "label": "Margherita - 32cm"
+              },
+              {
+                "label": "Mediterranea - 32cm"
+              },
+              {
                 "label": "My Pizza - 32cm"
               },
               {
-                "label": "Pizza Tre Formaggi - 32cm"
+                "label": "Napoli - 32cm"
               },
               {
-                "label": "Pizza Campagnola - 32cm"
+                "label": "O Sole Mio - 32cm"
+              },
+              {
+                "label": "Padrone - 32cm"
+              },
+              {
+                "label": "Pesto - 32cm"
+              },
+              {
+                "label": "Piratino - 32cm"
+              },
+              {
+                "label": "Prosciutto - 32cm"
+              },
+              {
+                "label": "Prosciutto e Funghi - 32cm"
+              },
+              {
+                "label": "Quattro Stagioni - 32cm"
+              },
+              {
+                "label": "Salami (scharf) - 32cm"
+              },
+              {
+                "label": "Salmone - 32cm"
+              },
+              {
+                "label": "Toscana (scharf) - 32cm"
+              },
+              {
+                "label": "Tre Formaggi - 32cm"
+              },
+              {
+                "label": "Vegana - 32cm"
+              },
+              {
+                "label": "Vegetariana - 32cm"
+              },
+              {
+                "label": "Zitella - 32cm"
               }
             ]
           },
           {
             "label": "Salatsosse wählen",
             "items": [
-              {
-                "label": "hausgemachte Joghurtsosse"
-              },
-              {
-                "label": "hausgemachte Knoblauchsosse"
-              },
-              {
-                "label": "hausgemachte Cocktailsosse"
-              },
-              {
-                "label": "hausgemachte Tartarsosse"
-              },
               {
                 "label": "French Dressing"
               },
@@ -203,7 +191,10 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
                 "label": "Red Bull 0,25l"
               },
               {
-                "label": "Mineralwasser 0,5l"
+                "label": "Mineralwasser mit Kohlensäure 0,5l"
+              },
+              {
+                "label": "Mineralwasser ohne Kohlensäure 0,5l"
               },
               {
                 "label": "Tony El Mate"
@@ -266,18 +257,6 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
             "label": "Salatsosse wählen",
             "items": [
               {
-                "label": "hausgemachte Joghurtsosse"
-              },
-              {
-                "label": "hausgemachte Knoblauchsosse"
-              },
-              {
-                "label": "hausgemachte Cocktailsosse"
-              },
-              {
-                "label": "hausgemachte Tartarsosse"
-              },
-              {
                 "label": "French Dressing"
               },
               {
@@ -310,7 +289,10 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
                 "label": "Red Bull 0,25l"
               },
               {
-                "label": "Mineralwasser 0,5l"
+                "label": "Mineralwasser mit Kohlensäure 0,5l"
+              },
+              {
+                "label": "Mineralwasser ohne Kohlensäure 0,5l"
               },
               {
                 "label": "Tony El Mate"
