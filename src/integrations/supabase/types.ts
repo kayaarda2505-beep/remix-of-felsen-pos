@@ -646,6 +646,9 @@ export type Database = {
       orders: {
         Row: {
           closed_at: string | null
+          courier_assigned_at: string | null
+          courier_id: string | null
+          courier_name: string | null
           courier_started_at: string | null
           created_at: string
           customer_id: string | null
@@ -663,6 +666,9 @@ export type Database = {
         }
         Insert: {
           closed_at?: string | null
+          courier_assigned_at?: string | null
+          courier_id?: string | null
+          courier_name?: string | null
           courier_started_at?: string | null
           created_at?: string
           customer_id?: string | null
@@ -680,6 +686,9 @@ export type Database = {
         }
         Update: {
           closed_at?: string | null
+          courier_assigned_at?: string | null
+          courier_id?: string | null
+          courier_name?: string | null
           courier_started_at?: string | null
           created_at?: string
           customer_id?: string | null
@@ -696,6 +705,13 @@ export type Database = {
           total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]
