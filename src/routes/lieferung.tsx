@@ -554,7 +554,13 @@ function Lieferung() {
 
               {openDeliveries.length > 0 && (
                 <section className="glass-strong rounded-3xl p-5">
-                  <h2 className="font-semibold mb-3">Offene Lieferungen</h2>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="font-semibold">Offene Lieferungen</h2>
+                    <a href="/kurier" className="text-xs text-accent hover:underline">
+                      Kurier-Login
+                    </a>
+                  </div>
+
                   <div className="space-y-2">
                     {openDeliveries.map((o: any) => (
                       <div key={o.id} className="glass rounded-xl px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
