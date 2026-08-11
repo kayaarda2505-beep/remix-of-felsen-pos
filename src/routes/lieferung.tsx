@@ -132,12 +132,44 @@ function Lieferung() {
     },
   });
 
+  const { data: couriers = [] } = useQuery({
+    queryKey: ["team_members", "couriers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("team_members")
+        .select("id, name, role")
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const assignCourier = useMutation({
+    mutationFn: async ({ orderId, courierId }: { orderId: string; courierId: string | null }) => {
+      const c = couriers.find((x: any) => x.id === courierId) as any;
+      const { error } = await (supabase.from("orders") as any)
+        .update({
+          courier_id: courierId,
+          courier_name: c?.name ?? null,
+          courier_assigned_at: courierId ? new Date().toISOString() : null,
+        })
+        .eq("id", orderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders", "delivery"] });
+      toast.success("Kurier zugewiesen");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
+  });
+
   const { data: openDeliveries = [] } = useQuery({
     queryKey: ["orders", "delivery", "open"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, opened_at, delivery_address, delivery_note, courier_started_at")
+        .select("id, total, opened_at, delivery_address, delivery_note, courier_started_at, courier_id, courier_name")
         .eq("order_type", "delivery")
         .eq("status", "open")
         .is("courier_started_at", null)
@@ -156,7 +188,7 @@ function Lieferung() {
       start.setHours(0, 0, 0, 0);
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status, opened_at, delivery_address, delivery_note, customer_id, courier_started_at")
+        .select("id, total, status, opened_at, delivery_address, delivery_note, customer_id, courier_started_at, courier_name")
         .eq("order_type", "delivery")
         .gte("opened_at", start.toISOString())
         .order("opened_at", { ascending: false });
@@ -165,6 +197,7 @@ function Lieferung() {
     },
     refetchInterval: 15000,
   });
+
 
   // Kundenhistorie: letzte Lieferungen des gewählten Kunden
   const { data: customerHistory = [] } = useQuery({
