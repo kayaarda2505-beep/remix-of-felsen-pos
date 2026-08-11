@@ -104,14 +104,52 @@ export type Database = {
         }
         Relationships: []
       }
+      courier_locations: {
+        Row: {
+          accuracy: number | null
+          created_at: string
+          lat: number
+          lng: number
+          member_id: string
+          updated_at: string
+        }
+        Insert: {
+          accuracy?: number | null
+          created_at?: string
+          lat: number
+          lng: number
+          member_id: string
+          updated_at?: string
+        }
+        Update: {
+          accuracy?: number | null
+          created_at?: string
+          lat?: number
+          lng?: number
+          member_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_locations_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           city: string
           created_at: string
           first_name: string
+          geocoded_at: string | null
           house_no: string
           id: string
           last_name: string
+          lat: number | null
+          lng: number | null
           note: string | null
           phone: string
           phone2: string | null
@@ -123,9 +161,12 @@ export type Database = {
           city?: string
           created_at?: string
           first_name?: string
+          geocoded_at?: string | null
           house_no?: string
           id?: string
           last_name?: string
+          lat?: number | null
+          lng?: number | null
           note?: string | null
           phone?: string
           phone2?: string | null
@@ -137,9 +178,12 @@ export type Database = {
           city?: string
           created_at?: string
           first_name?: string
+          geocoded_at?: string | null
           house_no?: string
           id?: string
           last_name?: string
+          lat?: number | null
+          lng?: number | null
           note?: string | null
           phone?: string
           phone2?: string | null
