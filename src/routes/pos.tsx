@@ -577,22 +577,24 @@ function POS() {
         >
           Theke
         </button>
-        {openOrders.map((o) => (
-          <button
-            key={o.id}
-            onClick={() => setActiveOrderId(o.id)}
-            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium border-2 transition-all flex items-center gap-2 ${
-              activeOrderId === o.id ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span className="font-semibold">Tisch {o.dining_tables?.name ?? "?"}</span>
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Users className="w-3 h-3" /> {o.guests ?? 0}
-            </span>
-            <span className="text-xs tabular-nums text-accent">CHF {Number(o.total).toFixed(2)}</span>
-          </button>
-        ))}
-        {openOrders.length === 0 && (
+        {openOrders
+          .filter((o) => o.total > 0)
+          .map((o) => (
+            <button
+              key={o.id}
+              onClick={() => setActiveOrderId(o.id)}
+              className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium border-2 transition-all flex items-center gap-2 ${
+                activeOrderId === o.id ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <span className="font-semibold">Tisch {o.dining_tables?.name ?? "?"}</span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Users className="w-3 h-3" /> {o.guests ?? 0}
+              </span>
+              <span className="text-xs tabular-nums text-accent">CHF {Number(o.total).toFixed(2)}</span>
+            </button>
+          ))}
+        {openOrders.filter((o) => o.total > 0).length === 0 && (
           <div className="text-xs text-muted-foreground self-center px-2">Keine offenen Tische</div>
         )}
       </div>
