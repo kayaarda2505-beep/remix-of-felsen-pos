@@ -190,7 +190,7 @@ function KitchenView() {
           product_name: entry.name,
           qty: it.qty,
           note: it.note,
-          modifiers: mods,
+          modifiers: entry.mods,
           category: it.category,
         });
         ticket.firstSent = Math.min(ticket.firstSent, sentMs);
