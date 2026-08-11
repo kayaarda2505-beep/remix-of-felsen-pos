@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock, ChefHat, Wine, Inbox, BookOpen, X } from "lucide-react";
+import { CheckCircle2, Clock, ChefHat, Wine, Inbox, BookOpen, X, Pizza } from "lucide-react";
 import { PageHeader } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { routeForCategory } from "@/lib/receipt";
+import { routeForItem } from "@/lib/receipt";
 import { getTutorial, type CocktailTutorial } from "@/lib/cocktailTutorials";
 
 export const Route = createFileRoute("/kitchen")({
-  head: () => ({ meta: [{ title: "Küche & Bar — Piratino POS" }] }),
+  head: () => ({ meta: [{ title: "Küche, Bar & Pizzastation — Piratino POS" }] }),
   component: KitchenView,
 });
 
-type Station = "bar" | "kueche";
+type Station = "bar" | "kueche" | "pizza";
 
 interface TicketItem {
   id: string;
@@ -55,7 +55,7 @@ const saveAcked = (m: Record<string, number>) => localStorage.setItem(ACK_KEY, J
 
 function KitchenView() {
   const qc = useQueryClient();
-  const [filter, setFilter] = useState<"all" | "bar" | "kueche">("all");
+  const [filter, setFilter] = useState<"all" | "bar" | "kueche" | "pizza">("all");
   const [tick, setTick] = useState(0);
   const [acked, setAcked] = useState<Record<string, number>>(() => loadAcked());
   const [tutorial, setTutorial] = useState<CocktailTutorial | null>(null);
@@ -191,11 +191,11 @@ function KitchenView() {
   return (
     <div className="p-6 lg:p-10 pb-28 md:pb-10 max-w-[1800px] mx-auto">
       <PageHeader
-        title="Küche & Bar"
+        title="Küche, Bar & Pizzastation"
         subtitle="Live Bestellungen — automatisch nach Station sortiert"
         actions={
           <div className="glass rounded-xl p-1 flex gap-1">
-            {(["all", "bar", "kueche"] as const).map((f) => (
+            {(["all", "bar", "kueche", "pizza"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -205,7 +205,8 @@ function KitchenView() {
               >
                 {f === "bar" && <Wine className="w-3 h-3" />}
                 {f === "kueche" && <ChefHat className="w-3 h-3" />}
-                {f === "all" ? "Alle" : f === "bar" ? "Bar" : "Küche"}
+                {f === "pizza" && <Pizza className="w-3 h-3" />}
+                {f === "all" ? "Alle" : f === "bar" ? "Bar" : f === "kueche" ? "Küche" : "Pizzastation"}
               </button>
             ))}
           </div>
@@ -249,8 +250,8 @@ function KitchenView() {
                       <span className="tabular-nums">{minutes} Min</span>
                     </div>
                     <span className="inline-flex items-center gap-1 text-[10px] mt-1 px-2 py-0.5 rounded-md bg-white/5">
-                      {t.station === "bar" ? <Wine className="w-3 h-3" /> : <ChefHat className="w-3 h-3" />}
-                      {t.station === "bar" ? "Bar" : "Küche"}
+                      {t.station === "bar" ? <Wine className="w-3 h-3" /> : t.station === "pizza" ? <Pizza className="w-3 h-3" /> : <ChefHat className="w-3 h-3" />}
+                      {t.station === "bar" ? "Bar" : t.station === "pizza" ? "Pizzastation" : "Küche"}
                     </span>
                   </div>
                 </div>
