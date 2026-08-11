@@ -30,11 +30,23 @@ function CourierPage() {
   const fetchOrder = useServerFn(getCourierOrder);
   const startDelivery = useServerFn(startCourierDelivery);
   const qc = useQueryClient();
+  const finishDelivery = useServerFn(completeCourierDelivery);
+  const [showPay, setShowPay] = useState(false);
 
   const start = useMutation({
     mutationFn: () => startDelivery({ data: { id } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["courier-order", id] }),
   });
+
+  const complete = useMutation({
+    mutationFn: (method: "cash" | "card" | "twint") => finishDelivery({ data: { id, method } }),
+    onSuccess: () => {
+      setShowPay(false);
+      void qc.invalidateQueries({ queryKey: ["courier-order", id] });
+      void qc.invalidateQueries({ queryKey: ["my-courier-orders"] });
+    },
+  });
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["courier-order", id],
