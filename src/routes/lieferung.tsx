@@ -132,12 +132,44 @@ function Lieferung() {
     },
   });
 
+  const { data: couriers = [] } = useQuery({
+    queryKey: ["team_members", "couriers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("team_members")
+        .select("id, name, role")
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const assignCourier = useMutation({
+    mutationFn: async ({ orderId, courierId }: { orderId: string; courierId: string | null }) => {
+      const c = couriers.find((x: any) => x.id === courierId) as any;
+      const { error } = await (supabase.from("orders") as any)
+        .update({
+          courier_id: courierId,
+          courier_name: c?.name ?? null,
+          courier_assigned_at: courierId ? new Date().toISOString() : null,
+        })
+        .eq("id", orderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders", "delivery"] });
+      toast.success("Kurier zugewiesen");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
+  });
+
   const { data: openDeliveries = [] } = useQuery({
     queryKey: ["orders", "delivery", "open"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, opened_at, delivery_address, delivery_note, courier_started_at")
+        .select("id, total, opened_at, delivery_address, delivery_note, courier_started_at, courier_id, courier_name")
         .eq("order_type", "delivery")
         .eq("status", "open")
         .is("courier_started_at", null)
@@ -156,7 +188,7 @@ function Lieferung() {
       start.setHours(0, 0, 0, 0);
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status, opened_at, delivery_address, delivery_note, customer_id, courier_started_at")
+        .select("id, total, status, opened_at, delivery_address, delivery_note, customer_id, courier_started_at, courier_name")
         .eq("order_type", "delivery")
         .gte("opened_at", start.toISOString())
         .order("opened_at", { ascending: false });
@@ -165,6 +197,7 @@ function Lieferung() {
     },
     refetchInterval: 15000,
   });
+
 
   // Kundenhistorie: letzte Lieferungen des gewählten Kunden
   const { data: customerHistory = [] } = useQuery({
@@ -524,17 +557,33 @@ function Lieferung() {
                   <h2 className="font-semibold mb-3">Offene Lieferungen</h2>
                   <div className="space-y-2">
                     {openDeliveries.map((o: any) => (
-                      <div key={o.id} className="glass rounded-xl px-3 py-2 flex items-center justify-between gap-3">
-                        <div className="text-sm min-w-0">
+                      <div key={o.id} className="glass rounded-xl px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="text-sm min-w-0 flex-1">
                           <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
                           {o.delivery_note && (
                             <div className="text-xs text-muted-foreground truncate">{o.delivery_note}</div>
                           )}
+                          {o.courier_name && (
+                            <div className="text-xs text-accent">Kurier: {o.courier_name}</div>
+                          )}
                         </div>
+                        <select
+                          value={o.courier_id ?? ""}
+                          onChange={(e) => assignCourier.mutate({ orderId: o.id, courierId: e.target.value || null })}
+                          className="glass rounded-lg px-2 py-1.5 text-xs bg-transparent outline-none shrink-0"
+                        >
+                          <option value="">Kurier zuweisen…</option>
+                          {couriers.map((c: any) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
                         <div className="text-sm font-semibold tabular-nums shrink-0">
                           CHF {Number(o.total).toFixed(2)}
                         </div>
                       </div>
+
                     ))}
                   </div>
                 </section>
@@ -586,7 +635,9 @@ function Lieferung() {
                           <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
                           <div className="text-xs text-muted-foreground">
                             {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
+                            {o.courier_name ? ` · ${o.courier_name}` : ""}
                             {o.courier_started_at ? " · unterwegs" : ""}
+
                           </div>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">

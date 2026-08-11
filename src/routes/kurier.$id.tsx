@@ -112,6 +112,9 @@ function CourierPage() {
               <StickyNote className="w-4 h-4 mt-0.5 shrink-0" /> {order.delivery_note}
             </div>
           )}
+          {order.courier_name && (
+            <div className="text-xs text-muted-foreground mt-2">Kurier: {order.courier_name}</div>
+          )}
 
           <div className="grid grid-cols-2 gap-2 mt-4">
             <a
