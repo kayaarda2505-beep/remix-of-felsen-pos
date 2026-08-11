@@ -133,3 +133,75 @@ export const listCourierOrders = createServerFn({ method: "POST" })
       history: all.filter((o) => o.status !== "open"),
     };
   });
+
+// --- E-Mail/Passwort Login für Kuriere ---
+
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+async function memberForUser(userId: string) {
+  const { data, error } = await (supabaseAdmin as any)
+    .from("team_members")
+    .select("id, name, role, active")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data || data.active === false) return null;
+  return { id: data.id as string, name: data.name as string, role: data.role as string };
+}
+
+export const getMyCourier = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => ({ courier: await memberForUser(context.userId) }));
+
+export const listMyCourierOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const member = await memberForUser(context.userId);
+    if (!member) return { courier: null, active: [], history: [] };
+    const { data: rows, error } = await (supabaseAdmin as any)
+      .from("orders")
+      .select("id, status, total, opened_at, closed_at, delivery_address, delivery_note, courier_started_at, courier_assigned_at")
+      .eq("order_type", "delivery")
+      .eq("courier_id", member.id)
+      .order("opened_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    const all = (rows ?? []) as any[];
+    return {
+      courier: member,
+      active: all.filter((o) => o.status === "open"),
+      history: all.filter((o) => o.status !== "open"),
+    };
+  });
+
+const AccountSchema = z.object({
+  memberId: z.string().uuid(),
+  email: z.string().email(),
+  password: z.string().min(8).max(72),
+});
+
+export const createCourierAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => AccountSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: allowed, error: roleErr } = await context.supabase.rpc("is_admin_or_manager", {
+      _user_id: context.userId,
+    });
+    if (roleErr) throw new Error(roleErr.message);
+    if (!allowed) throw new Error("Keine Berechtigung");
+
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+    });
+    if (error || !created?.user) throw new Error(error?.message ?? "Konto konnte nicht erstellt werden");
+
+    const { error: linkErr } = await (supabaseAdmin as any)
+      .from("team_members")
+      .update({ user_id: created.user.id, email: data.email })
+      .eq("id", data.memberId);
+    if (linkErr) throw new Error(linkErr.message);
+
+    return { ok: true, email: data.email };
+  });
