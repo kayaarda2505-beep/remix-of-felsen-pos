@@ -1,9 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Bike, Loader2, LogOut, MapPin } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 import { listMyCourierOrders } from "@/lib/courier.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +10,9 @@ export const Route = createFileRoute("/kurier/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Kurier-Login — Piratino Lieferungen" },
-      { name: "description", content: "Als Kurier mit E-Mail und Passwort anmelden, zugewiesene Lieferungen sehen und die eigene Lieferhistorie prüfen." },
-      { property: "og:title", content: "Kurier-Login — Piratino Lieferungen" },
+      { title: "Meine Lieferungen — Piratino Kurier" },
+      { name: "description", content: "Zugewiesene Lieferungen und die eigene Lieferhistorie für Kuriere von Piratino." },
+      { property: "og:title", content: "Meine Lieferungen — Piratino Kurier" },
       { property: "og:description", content: "Zugewiesene Lieferungen und Lieferhistorie für Kuriere." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -24,86 +22,14 @@ export const Route = createFileRoute("/kurier/")({
 });
 
 function CourierHome() {
-  const [session, setSession] = useState<boolean | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const qc = useQueryClient();
-
   const listOrders = useServerFn(listMyCourierOrders);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(!!data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(!!s));
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  const doLogin = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (error) throw new Error("E-Mail oder Passwort falsch");
-    },
-    onSuccess: () => {
-      setPassword("");
-      qc.invalidateQueries({ queryKey: ["my-courier-orders"] });
-      toast.success("Angemeldet");
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
-  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["my-courier-orders"],
-    enabled: session === true,
     queryFn: () => listOrders({ data: {} as never }),
     refetchInterval: 20_000,
   });
-
-  if (session !== true) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            doLogin.mutate();
-          }}
-          className="glass-strong rounded-3xl p-6 w-full max-w-sm"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Bike className="w-5 h-5 text-accent" />
-            <h1 className="text-lg font-semibold">Kurier-Anmeldung</h1>
-          </div>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground">E-Mail</label>
-              <input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="glass rounded-xl px-3 py-3 w-full text-base outline-none bg-transparent"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Passwort</label>
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="glass rounded-xl px-3 py-3 w-full text-base outline-none bg-transparent"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={doLogin.isPending || !email || password.length < 6}
-              className="w-full rounded-xl py-3 bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40"
-            >
-              {doLogin.isPending ? "Prüfen…" : "Anmelden"}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
 
   const courier = data?.courier ?? null;
   const active = data?.active ?? [];
