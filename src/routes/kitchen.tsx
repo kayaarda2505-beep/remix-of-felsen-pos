@@ -91,16 +91,28 @@ function KitchenView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, dining_tables:table_id(name)")
+        .select("id, table_id, order_type, delivery_address, dining_tables:table_id(name), customers:customer_id(first_name, last_name)")
         .in("id", orderIds);
       if (error) throw error;
       const m: Record<string, string> = {};
-      (data ?? []).forEach((r: { id: string; dining_tables: { name: string } | null }) => {
-        m[r.id] = r.dining_tables?.name ?? "Direkt";
+      (data ?? []).forEach((r: {
+        id: string;
+        order_type: string | null;
+        delivery_address: string | null;
+        dining_tables: { name: string } | null;
+        customers: { first_name: string | null; last_name: string | null } | null;
+      }) => {
+        const cust = r.customers
+          ? `${r.customers.first_name ?? ""} ${r.customers.last_name ?? ""}`.trim()
+          : "";
+        m[r.id] =
+          r.dining_tables?.name ??
+          (cust || (r.order_type === "delivery" ? "Lieferung" : "Direkt"));
       });
       return m;
     },
   });
+
 
   // Realtime: bei neuen order_items sofort neu laden
   useEffect(() => {
