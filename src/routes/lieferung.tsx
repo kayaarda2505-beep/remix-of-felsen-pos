@@ -248,6 +248,8 @@ function Lieferung() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
 
+  const [configItem, setConfigItem] = useState<(DeliveryMenuItem & { category: string }) | null>(null);
+
   const menuItems = useMemo(() => {
     const term = productSearch.trim().toLowerCase();
     if (term) {
@@ -259,11 +261,11 @@ function Lieferung() {
     return (cat?.items ?? []).map((i) => ({ ...i, category: cat!.category }));
   }, [activeCategory, productSearch]);
 
-  const addItem = (item: DeliveryMenuItem & { category: string }) =>
+  const addItem = (item: DeliveryMenuItem & { category: string }, note?: string) =>
     setCart((prev) => {
-      const found = prev.find((l) => l.item.id === item.id && !l.note);
+      const found = prev.find((l) => l.item.id === item.id && (l.note ?? "") === (note ?? ""));
       if (found) return prev.map((l) => (l.key === found.key ? { ...l, qty: l.qty + 1 } : l));
-      return [...prev, { key: `${item.id}-${Date.now()}`, item, category: item.category, qty: 1 }];
+      return [...prev, { key: `${item.id}-${Date.now()}`, item, category: item.category, qty: 1, note }];
     });
 
   const changeQty = (key: string, delta: number) =>
@@ -706,7 +708,7 @@ function Lieferung() {
                     <motion.button
                       key={item.id}
                       whileTap={{ scale: 0.96 }}
-                      onClick={() => addItem(item)}
+                      onClick={() => (item.modifierGroups?.length ? setConfigItem(item) : addItem(item))}
                       className="glass rounded-2xl p-4 text-left min-h-28 flex flex-col justify-between hover:border-accent/40 transition-colors relative"
                     >
                       {inCart > 0 && (
@@ -753,6 +755,17 @@ function Lieferung() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {configItem && (
+              <MenuConfigDialog
+                item={configItem}
+                onClose={() => setConfigItem(null)}
+                onConfirm={(note) => {
+                  addItem(configItem, note);
+                  setConfigItem(null);
+                }}
+              />
+            )}
           </motion.div>
         )}
 
@@ -965,6 +978,75 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
           </button>
           <button onClick={onClose} className="rounded-xl py-3 bg-accent/20 text-accent text-sm font-medium">
             Fertig
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MenuConfigDialog({
+  item,
+  onClose,
+  onConfirm,
+}: {
+  item: DeliveryMenuItem & { category: string };
+  onClose: () => void;
+  onConfirm: (note: string) => void;
+}) {
+  const groups = item.modifierGroups ?? [];
+  const [choices, setChoices] = useState<Record<string, string>>({});
+  const complete = groups.every((g) => choices[g.label]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
+      <div className="glass-strong w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl p-5 max-h-[88vh] flex flex-col">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h3 className="text-lg font-semibold">{item.name}</h3>
+            {item.description && <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>}
+          </div>
+          <span className="text-base font-semibold tabular-nums shrink-0">CHF {item.price.toFixed(2)}</span>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-5 pr-1">
+          {groups.map((g) => (
+            <div key={g.label}>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">{g.label}</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {g.items.map((opt) => {
+                  const active = choices[g.label] === opt.label;
+                  return (
+                    <button
+                      key={opt.label}
+                      onClick={() => setChoices((c) => ({ ...c, [g.label]: opt.label }))}
+                      className={`rounded-xl px-3 py-2.5 text-xs text-left transition-colors ${
+                        active
+                          ? "bg-accent text-accent-foreground font-semibold"
+                          : "glass hover:border-accent/40"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2 pt-4">
+          <button onClick={onClose} className="glass rounded-2xl px-4 py-3 text-sm flex-1">
+            Abbrechen
+          </button>
+          <button
+            disabled={!complete}
+            onClick={() =>
+              onConfirm(groups.map((g) => `${g.label.replace(" wählen", "")}: ${choices[g.label]}`).join(" · "))
+            }
+            className="rounded-2xl px-4 py-3 text-sm font-semibold flex-[2] bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground disabled:opacity-40"
+          >
+            Hinzufügen
           </button>
         </div>
       </div>
