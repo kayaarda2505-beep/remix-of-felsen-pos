@@ -1226,6 +1226,7 @@ export type Database = {
           id: string
           location_id: string | null
           name: string
+          no_pin: boolean
           phone: string | null
           pin_hash: string
           role: Database["public"]["Enums"]["team_role"]
@@ -1247,6 +1248,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           name: string
+          no_pin?: boolean
           phone?: string | null
           pin_hash: string
           role?: Database["public"]["Enums"]["team_role"]
@@ -1268,6 +1270,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           name?: string
+          no_pin?: boolean
           phone?: string | null
           pin_hash?: string
           role?: Database["public"]["Enums"]["team_role"]
@@ -1448,6 +1451,16 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
+      login_without_pin: {
+        Args: { _account_number: number }
+        Returns: {
+          account_number: number
+          color: string
+          id: string
+          name: string
+          role: Database["public"]["Enums"]["team_role"]
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
