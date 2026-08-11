@@ -10,7 +10,7 @@ export const getCourierOrder = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { data: order, error } = await (supabaseAdmin as any)
       .from("orders")
-      .select("id, status, total, opened_at, order_type, delivery_address, delivery_note, customer_id, courier_started_at")
+      .select("id, status, total, opened_at, order_type, delivery_address, delivery_note, customer_id, courier_started_at, courier_name")
       .eq("id", data.id)
       .eq("order_type", "delivery")
       .maybeSingle();
@@ -68,6 +68,7 @@ export const getCourierOrder = createServerFn({ method: "GET" })
         total: Number(order.total),
         opened_at: order.opened_at,
         courier_started_at: (order as any).courier_started_at as string | null,
+        courier_name: ((order as any).courier_name ?? null) as string | null,
         delivery_address: order.delivery_address,
         delivery_note: order.delivery_note,
         items: (items ?? []).map((i) => ({
