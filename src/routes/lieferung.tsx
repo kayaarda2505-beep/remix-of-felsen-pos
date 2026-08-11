@@ -635,7 +635,9 @@ function Lieferung() {
                           <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
                           <div className="text-xs text-muted-foreground">
                             {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
+                            {o.courier_name ? ` · ${o.courier_name}` : ""}
                             {o.courier_started_at ? " · unterwegs" : ""}
+
                           </div>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
