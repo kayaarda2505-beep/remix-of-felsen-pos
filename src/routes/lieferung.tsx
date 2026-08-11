@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -9,19 +10,24 @@ import {
   Bike,
   CreditCard,
   Loader2,
+  MapPin as MapPinIcon,
   Minus,
   Phone,
   Plus,
   Search,
   Trash2,
   UserPlus,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { DeliveryMap, type MapPin as MapPinData } from "@/components/DeliveryMap";
+import { geocodeCustomers } from "@/lib/geo.functions";
 import { DELIVERY_MENU, type DeliveryMenuItem } from "@/lib/delivery-menu";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
 import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
+
 
 export const Route = createFileRoute("/lieferung")({
   head: () => ({
