@@ -405,8 +405,109 @@ function Lieferung() {
 
   const stepIndex = STEPS.findIndex((s) => s.key === step);
 
-  return (
-    <div className="h-screen flex flex-col p-4 lg:p-6 pb-28 md:pb-6 max-w-[1800px] mx-auto w-full">
+  // ── Karten-Daten ────────────────────────────────
+  const [showWizard, setShowWizard] = useState(false);
+
+  const { data: mapOrders = [] } = useQuery({
+    queryKey: ["orders", "delivery", "map"],
+    queryFn: async () => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const { data, error } = await supabase
+        .from("orders")
+        .select(
+          "id, total, status, opened_at, delivery_address, delivery_note, courier_id, courier_name, courier_started_at, customer_id, customers:customer_id(id, first_name, last_name, street, house_no, zip, city, phone, lat, lng)",
+        )
+        .eq("order_type", "delivery")
+        .gte("opened_at", start.toISOString())
+        .order("opened_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 10000,
+  });
+
+  const { data: courierLocations = [] } = useQuery({
+    queryKey: ["courier_locations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("courier_locations")
+        .select("member_id, lat, lng, updated_at, team_members:member_id(name)");
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 10000,
+  });
+
+  // Fehlende Koordinaten automatisch nachtragen
+  const geocode = useServerFn(geocodeCustomers);
+  useEffect(() => {
+    const missing = Array.from(
+      new Set(
+        mapOrders
+          .filter((o) => o.customers && o.customers.lat == null)
+          .map((o) => o.customers.id as string),
+      ),
+    );
+    if (missing.length === 0) return;
+    geocode({ data: { ids: missing.slice(0, 40) } })
+      .then((r: any) => {
+        if (r?.updated) qc.invalidateQueries({ queryKey: ["orders", "delivery", "map"] });
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapOrders.length]);
+
+  const isDelivered = (o: any) => o.status === "paid" && !!o.courier_started_at;
+  const todoOrders = useMemo(
+    () => mapOrders.filter((o) => o.status !== "cancelled" && !o.courier_started_at),
+    [mapOrders],
+  );
+  const enrouteOrders = useMemo(
+    () => mapOrders.filter((o) => o.status !== "cancelled" && o.courier_started_at && !isDelivered(o)),
+    [mapOrders],
+  );
+  const doneOrders = useMemo(() => mapOrders.filter(isDelivered), [mapOrders]);
+
+  const pins: MapPinData[] = useMemo(() => {
+    const out: MapPinData[] = [];
+    const push = (o: any, kind: "todo" | "enroute") => {
+      const c = o.customers;
+      if (!c || c.lat == null || c.lng == null) return;
+      out.push({
+        id: o.id,
+        lat: Number(c.lat),
+        lng: Number(c.lng),
+        kind,
+        label: `${[c.last_name, c.first_name].filter(Boolean).join(" ")} · CHF ${Number(o.total).toFixed(2)}`,
+        sublabel: `${c.street} ${c.house_no}, ${c.zip} ${c.city}${
+          o.courier_name ? ` — Kurier: ${o.courier_name}` : ""
+        }${kind === "enroute" ? " (unterwegs)" : ""}`,
+      });
+    };
+    todoOrders.forEach((o) => push(o, "todo"));
+    enrouteOrders.forEach((o) => push(o, "enroute"));
+
+    courierLocations.forEach((l) => {
+      const name = l.team_members?.name ?? "Kurier";
+      const load = enrouteOrders.filter((o) => o.courier_id === l.member_id);
+      out.push({
+        id: `courier-${l.member_id}`,
+        lat: Number(l.lat),
+        lng: Number(l.lng),
+        kind: "courier",
+        label: `${name} (${load.length} unterwegs)`,
+        sublabel:
+          load.map((o: any) => o.delivery_address ?? "Lieferung").join("<br/>") ||
+          "Keine aktive Lieferung",
+      });
+    });
+    return out;
+  }, [todoOrders, enrouteOrders, courierLocations]);
+
+  const wizard = (
+    <div className="h-full flex flex-col p-4 lg:p-6 pb-28 md:pb-6 max-w-[1800px] mx-auto w-full">
+
       {/* Kopf mit Schritten */}
       <header className="flex items-center gap-3 mb-4 shrink-0">
         {step !== "customer" && (
