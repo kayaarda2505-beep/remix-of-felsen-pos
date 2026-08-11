@@ -221,6 +221,10 @@ function MemberPanel({ member, isManager }: { member: Member; isManager: boolean
         )}
       </div>
 
+      {isManager && <CourierAccountCard memberId={member.id} defaultEmail={member.email ?? ""} />}
+
+
+
 
       {/* Zeitraum + Stunden */}
       <div className="glass rounded-3xl p-6">
