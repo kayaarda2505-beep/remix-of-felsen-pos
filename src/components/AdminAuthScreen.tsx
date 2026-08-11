@@ -50,7 +50,7 @@ export function AdminAuthScreen() {
           Piratino POS
         </h1>
         <p className="text-sm text-muted-foreground text-center mb-8">
-          {mode === "login" ? "Admin-Anmeldung" : "Erstes Admin-Konto einrichten"}
+          {mode === "login" ? "Anmeldung" : "Erstes Admin-Konto einrichten"}
         </p>
 
         <form onSubmit={submit} className="glass-strong rounded-3xl p-6 space-y-4">
@@ -135,7 +135,7 @@ export function AdminAuthScreen() {
         </form>
 
         <p className="text-[10px] text-muted-foreground text-center mt-6 tracking-wider uppercase">
-          Nur Admins & Manager melden sich hier an.
+          Admins, Manager & Kuriere melden sich hier an.
           <br />
           Service & Bar nutzen einen PIN.
         </p>

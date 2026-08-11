@@ -810,7 +810,7 @@ function CourierAccountCard({ memberId, defaultEmail }: { memberId: string; defa
     mutationFn: () => create({ data: { memberId, email: email.trim(), password } }),
     onSuccess: () => {
       setPassword("");
-      toast.success("Login erstellt — Kurier kann sich unter /kurier anmelden");
+      toast.success("Login erstellt — Kurier meldet sich über die normale Anmeldung an");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
@@ -845,7 +845,7 @@ function CourierAccountCard({ memberId, defaultEmail }: { memberId: string; defa
         </button>
       </div>
       <p className="text-xs text-muted-foreground mt-3">
-        Der Kurier meldet sich damit unter <b>/kurier</b> an und sieht nur seine zugewiesenen Lieferungen und die Historie.
+        Der Kurier meldet sich damit über die normale Anmeldeseite (E-Mail & Passwort) an und landet direkt bei seinen zugewiesenen Lieferungen samt Historie.
       </p>
     </div>
   );
