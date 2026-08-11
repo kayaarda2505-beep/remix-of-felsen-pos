@@ -127,13 +127,37 @@ function KitchenView() {
       const mods = Array.isArray(it.modifiers) ? (it.modifiers as string[]) : [];
       const isMenu = (it.category ?? "").toLowerCase().includes("mittagsmenü");
 
-      // Mittagsmenü: Hauptgang an Pizza/Küche, Salat & Getränk zusätzlich an die Bar
-      const entries: Array<{ station: Station; name: string; suffixId: string }> = [
-        { station: routeForItem(it.category, it.product_name), name: it.product_name, suffixId: "" },
-      ];
+      // Mittagsmenü: Hauptgang an Pizza/Küche, Salat & Getränk an die Bar
+      const isDrink = (m: string) =>
+        /(cola|fanta|sprite|rivella|eistee|ice tea|mineral|wasser|bier|apfelschorle|orangensaft|saft|red bull|schweppes|getränk)/i.test(m);
+      const isDressing = (m: string) => /(french|italien|balsamico|dressing|sosse|soße)/i.test(m);
+
+      const entries: Array<{ station: Station; name: string; suffixId: string; mods: string[] }> = [];
       if (isMenu) {
-        entries.push({ station: "bar", name: `${it.product_name} — Menüsalat & Getränk`, suffixId: "-bar" });
+        const drink = mods.find(isDrink);
+        const dressing = mods.find(isDressing);
+        const mainMods = mods.filter((m) => !isDrink(m) && !isDressing(m));
+        entries.push({
+          station: routeForItem(it.category, it.product_name),
+          name: mainMods[0] ?? it.product_name,
+          suffixId: "",
+          mods: mainMods.slice(1),
+        });
+        entries.push({
+          station: "bar",
+          name: drink ? `Menüsalat + ${drink}` : "Menüsalat",
+          suffixId: "-bar",
+          mods: dressing ? [dressing] : [],
+        });
+      } else {
+        entries.push({
+          station: routeForItem(it.category, it.product_name),
+          name: it.product_name,
+          suffixId: "",
+          mods,
+        });
       }
+
 
       for (const entry of entries) {
         const station = entry.station;
@@ -166,7 +190,7 @@ function KitchenView() {
           product_name: entry.name,
           qty: it.qty,
           note: it.note,
-          modifiers: mods,
+          modifiers: entry.mods,
           category: it.category,
         });
         ticket.firstSent = Math.min(ticket.firstSent, sentMs);
