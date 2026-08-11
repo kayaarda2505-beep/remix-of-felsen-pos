@@ -18,12 +18,23 @@ export type ReceiptItem = {
 const BAR_CATS = new Set([
   "Signatures", "Spritz", "Cocktails", "Bier", "Wein",
   "Shots", "Spirituosen", "Softdrinks", "Mocktails", "Homemades",
+  "Salate",
 ]);
 
 export function routeForCategory(cat?: string | null): "bar" | "kueche" {
   if (cat && BAR_CATS.has(cat)) return "bar";
   return "kueche";
 }
+
+/** Feinere Zuordnung für den Küchen-/Bar-Bildschirm inkl. eigener Pizzastation. */
+export function routeForItem(cat?: string | null, name?: string | null): "bar" | "kueche" | "pizza" {
+  const c = (cat ?? "").toLowerCase();
+  const n = (name ?? "").toLowerCase();
+  if (c.includes("pizza") || n.includes("pizza")) return "pizza";
+  if (routeForCategory(cat) === "bar") return "bar";
+  return "kueche";
+}
+
 
 export function splitByStation(items: ReceiptItem[]) {
   const bar: ReceiptItem[] = [];
