@@ -48,22 +48,31 @@ function loadMaps(): Promise<void> {
   return loadPromise;
 }
 
-function iconFor(kind: MapPinKind, google: any) {
+function svgIcon(kind: MapPinKind, google: any) {
   const color = PIN_COLORS[kind];
-  const path =
+  const glyph =
     kind === "courier"
-      ? "M12 2a6 6 0 0 1 6 6c0 4.5-6 14-6 14S6 12.5 6 8a6 6 0 0 1 6-6z"
-      : "M12 2a6 6 0 0 1 6 6c0 4.5-6 14-6 14S6 12.5 6 8a6 6 0 0 1 6-6z";
+      ? // Auto
+        `<path d="M13 30h30l-3.5-9.5A4 4 0 0 0 35.8 18H20.2a4 4 0 0 0-3.7 2.5L13 30z" fill="#fff"/>
+         <rect x="9" y="30" width="38" height="10" rx="3" fill="#fff"/>
+         <circle cx="18" cy="41" r="3.5" fill="#111"/><circle cx="38" cy="41" r="3.5" fill="#111"/>`
+      : // Box / Paket
+        `<path d="M28 13l15 7-15 7-15-7 15-7z" fill="#fff"/>
+         <path d="M13 22v13l15 7V29l-15-7z" fill="#fff" opacity="0.85"/>
+         <path d="M43 22v13l-15 7V29l15-7z" fill="#fff" opacity="0.7"/>`;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="70" viewBox="0 0 56 70">
+    <path d="M28 68C28 68 52 42 52 26A24 24 0 1 0 4 26C4 42 28 68 28 68Z" fill="${color}" stroke="#0b0b0d" stroke-width="2.5"/>
+    <g transform="translate(0,-2)">${glyph}</g>
+  </svg>`;
+
   return {
-    path,
-    fillColor: color,
-    fillOpacity: 1,
-    strokeColor: "#0b0b0d",
-    strokeWeight: 1.5,
-    scale: kind === "courier" ? 1.8 : 1.5,
-    anchor: new google.maps.Point(12, 22),
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new google.maps.Size(kind === "courier" ? 50 : 42, kind === "courier" ? 62 : 52),
+    anchor: new google.maps.Point(kind === "courier" ? 25 : 21, kind === "courier" ? 62 : 52),
   };
 }
+
 
 export function DeliveryMap({
   pins,
