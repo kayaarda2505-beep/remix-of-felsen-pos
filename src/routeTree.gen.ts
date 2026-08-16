@@ -21,6 +21,7 @@ import { Route as PosRouteImport } from './routes/pos'
 import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as MusikRouteImport } from './routes/musik'
 import { Route as MitarbeiterRouteImport } from './routes/mitarbeiter'
+import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as LieferungRouteImport } from './routes/lieferung'
 import { Route as KitchenRouteImport } from './routes/kitchen'
 import { Route as InventoryRouteImport } from './routes/inventory'
@@ -41,6 +42,7 @@ import { Route as SettingsHappyHourRouteImport } from './routes/settings.happy-h
 import { Route as SettingsDatabaseRouteImport } from './routes/settings.database'
 import { Route as OrderTokenRouteImport } from './routes/order.$token'
 import { Route as KurierIdRouteImport } from './routes/kurier.$id'
+import { Route as BewertungTokenRouteImport } from './routes/bewertung.$token'
 import { Route as OrderTokenPaidRouteImport } from './routes/order.$token.paid'
 import { Route as ApiPublicSpotifySearchRouteImport } from './routes/api/public/spotify-search'
 import { Route as ApiPublicSongRequestRouteImport } from './routes/api/public/song-request'
@@ -50,6 +52,7 @@ import { Route as ApiPublicPaymentRequestRouteImport } from './routes/api/public
 import { Route as ApiPublicOrderRouteImport } from './routes/api/public/order'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicTableTokenRouteImport } from './routes/api/public/table.$token'
+import { Route as ApiPublicReviewsDispatchRouteImport } from './routes/api/public/reviews/dispatch'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicPaymentsCreateTableCheckoutRouteImport } from './routes/api/public/payments/create-table-checkout'
 
@@ -111,6 +114,11 @@ const MusikRoute = MusikRouteImport.update({
 const MitarbeiterRoute = MitarbeiterRouteImport.update({
   id: '/mitarbeiter',
   path: '/mitarbeiter',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingRoute = MarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LieferungRoute = LieferungRouteImport.update({
@@ -213,6 +221,11 @@ const KurierIdRoute = KurierIdRouteImport.update({
   path: '/kurier/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BewertungTokenRoute = BewertungTokenRouteImport.update({
+  id: '/bewertung/$token',
+  path: '/bewertung/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrderTokenPaidRoute = OrderTokenPaidRouteImport.update({
   id: '/paid',
   path: '/paid',
@@ -259,6 +272,12 @@ const ApiPublicTableTokenRoute = ApiPublicTableTokenRouteImport.update({
   path: '/api/public/table/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicReviewsDispatchRoute =
+  ApiPublicReviewsDispatchRouteImport.update({
+    id: '/api/public/reviews/dispatch',
+    path: '/api/public/reviews/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -278,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof InventoryRoute
   '/kitchen': typeof KitchenRoute
   '/lieferung': typeof LieferungRoute
+  '/marketing': typeof MarketingRoute
   '/mitarbeiter': typeof MitarbeiterRoute
   '/musik': typeof MusikRoute
   '/payments': typeof PaymentsRoute
@@ -290,6 +310,7 @@ export interface FileRoutesByFullPath {
   '/spotify-player': typeof SpotifyPlayerRoute
   '/staff': typeof StaffRoute
   '/tables': typeof TablesRoute
+  '/bewertung/$token': typeof BewertungTokenRoute
   '/kurier/$id': typeof KurierIdRoute
   '/order/$token': typeof OrderTokenRouteWithChildren
   '/settings/database': typeof SettingsDatabaseRoute
@@ -314,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/order/$token/paid': typeof OrderTokenPaidRoute
   '/api/public/payments/create-table-checkout': typeof ApiPublicPaymentsCreateTableCheckoutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/reviews/dispatch': typeof ApiPublicReviewsDispatchRoute
   '/api/public/table/$token': typeof ApiPublicTableTokenRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -323,6 +345,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof InventoryRoute
   '/kitchen': typeof KitchenRoute
   '/lieferung': typeof LieferungRoute
+  '/marketing': typeof MarketingRoute
   '/mitarbeiter': typeof MitarbeiterRoute
   '/musik': typeof MusikRoute
   '/payments': typeof PaymentsRoute
@@ -334,6 +357,7 @@ export interface FileRoutesByTo {
   '/spotify-player': typeof SpotifyPlayerRoute
   '/staff': typeof StaffRoute
   '/tables': typeof TablesRoute
+  '/bewertung/$token': typeof BewertungTokenRoute
   '/kurier/$id': typeof KurierIdRoute
   '/order/$token': typeof OrderTokenRouteWithChildren
   '/settings/database': typeof SettingsDatabaseRoute
@@ -358,6 +382,7 @@ export interface FileRoutesByTo {
   '/order/$token/paid': typeof OrderTokenPaidRoute
   '/api/public/payments/create-table-checkout': typeof ApiPublicPaymentsCreateTableCheckoutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/reviews/dispatch': typeof ApiPublicReviewsDispatchRoute
   '/api/public/table/$token': typeof ApiPublicTableTokenRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -368,6 +393,7 @@ export interface FileRoutesById {
   '/inventory': typeof InventoryRoute
   '/kitchen': typeof KitchenRoute
   '/lieferung': typeof LieferungRoute
+  '/marketing': typeof MarketingRoute
   '/mitarbeiter': typeof MitarbeiterRoute
   '/musik': typeof MusikRoute
   '/payments': typeof PaymentsRoute
@@ -380,6 +406,7 @@ export interface FileRoutesById {
   '/spotify-player': typeof SpotifyPlayerRoute
   '/staff': typeof StaffRoute
   '/tables': typeof TablesRoute
+  '/bewertung/$token': typeof BewertungTokenRoute
   '/kurier/$id': typeof KurierIdRoute
   '/order/$token': typeof OrderTokenRouteWithChildren
   '/settings/database': typeof SettingsDatabaseRoute
@@ -404,6 +431,7 @@ export interface FileRoutesById {
   '/order/$token/paid': typeof OrderTokenPaidRoute
   '/api/public/payments/create-table-checkout': typeof ApiPublicPaymentsCreateTableCheckoutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/reviews/dispatch': typeof ApiPublicReviewsDispatchRoute
   '/api/public/table/$token': typeof ApiPublicTableTokenRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -415,6 +443,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/kitchen'
     | '/lieferung'
+    | '/marketing'
     | '/mitarbeiter'
     | '/musik'
     | '/payments'
@@ -427,6 +456,7 @@ export interface FileRouteTypes {
     | '/spotify-player'
     | '/staff'
     | '/tables'
+    | '/bewertung/$token'
     | '/kurier/$id'
     | '/order/$token'
     | '/settings/database'
@@ -451,6 +481,7 @@ export interface FileRouteTypes {
     | '/order/$token/paid'
     | '/api/public/payments/create-table-checkout'
     | '/api/public/payments/webhook'
+    | '/api/public/reviews/dispatch'
     | '/api/public/table/$token'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
@@ -460,6 +491,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/kitchen'
     | '/lieferung'
+    | '/marketing'
     | '/mitarbeiter'
     | '/musik'
     | '/payments'
@@ -471,6 +503,7 @@ export interface FileRouteTypes {
     | '/spotify-player'
     | '/staff'
     | '/tables'
+    | '/bewertung/$token'
     | '/kurier/$id'
     | '/order/$token'
     | '/settings/database'
@@ -495,6 +528,7 @@ export interface FileRouteTypes {
     | '/order/$token/paid'
     | '/api/public/payments/create-table-checkout'
     | '/api/public/payments/webhook'
+    | '/api/public/reviews/dispatch'
     | '/api/public/table/$token'
     | '/lovable/email/queue/process'
   id:
@@ -504,6 +538,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/kitchen'
     | '/lieferung'
+    | '/marketing'
     | '/mitarbeiter'
     | '/musik'
     | '/payments'
@@ -516,6 +551,7 @@ export interface FileRouteTypes {
     | '/spotify-player'
     | '/staff'
     | '/tables'
+    | '/bewertung/$token'
     | '/kurier/$id'
     | '/order/$token'
     | '/settings/database'
@@ -540,6 +576,7 @@ export interface FileRouteTypes {
     | '/order/$token/paid'
     | '/api/public/payments/create-table-checkout'
     | '/api/public/payments/webhook'
+    | '/api/public/reviews/dispatch'
     | '/api/public/table/$token'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -550,6 +587,7 @@ export interface RootRouteChildren {
   InventoryRoute: typeof InventoryRoute
   KitchenRoute: typeof KitchenRoute
   LieferungRoute: typeof LieferungRoute
+  MarketingRoute: typeof MarketingRoute
   MitarbeiterRoute: typeof MitarbeiterRoute
   MusikRoute: typeof MusikRoute
   PaymentsRoute: typeof PaymentsRoute
@@ -562,6 +600,7 @@ export interface RootRouteChildren {
   SpotifyPlayerRoute: typeof SpotifyPlayerRoute
   StaffRoute: typeof StaffRoute
   TablesRoute: typeof TablesRoute
+  BewertungTokenRoute: typeof BewertungTokenRoute
   KurierIdRoute: typeof KurierIdRoute
   OrderTokenRoute: typeof OrderTokenRouteWithChildren
   TrackTokenRoute: typeof TrackTokenRoute
@@ -574,6 +613,7 @@ export interface RootRouteChildren {
   ApiPublicSpotifySearchRoute: typeof ApiPublicSpotifySearchRoute
   ApiPublicPaymentsCreateTableCheckoutRoute: typeof ApiPublicPaymentsCreateTableCheckoutRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiPublicReviewsDispatchRoute: typeof ApiPublicReviewsDispatchRoute
   ApiPublicTableTokenRoute: typeof ApiPublicTableTokenRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -662,6 +702,13 @@ declare module '@tanstack/react-router' {
       path: '/mitarbeiter'
       fullPath: '/mitarbeiter'
       preLoaderRoute: typeof MitarbeiterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing': {
+      id: '/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof MarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lieferung': {
@@ -804,6 +851,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KurierIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bewertung/$token': {
+      id: '/bewertung/$token'
+      path: '/bewertung/$token'
+      fullPath: '/bewertung/$token'
+      preLoaderRoute: typeof BewertungTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/order/$token/paid': {
       id: '/order/$token/paid'
       path: '/paid'
@@ -865,6 +919,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/table/$token'
       fullPath: '/api/public/table/$token'
       preLoaderRoute: typeof ApiPublicTableTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/reviews/dispatch': {
+      id: '/api/public/reviews/dispatch'
+      path: '/api/public/reviews/dispatch'
+      fullPath: '/api/public/reviews/dispatch'
+      preLoaderRoute: typeof ApiPublicReviewsDispatchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/payments/webhook': {
@@ -934,6 +995,7 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryRoute: InventoryRoute,
   KitchenRoute: KitchenRoute,
   LieferungRoute: LieferungRoute,
+  MarketingRoute: MarketingRoute,
   MitarbeiterRoute: MitarbeiterRoute,
   MusikRoute: MusikRoute,
   PaymentsRoute: PaymentsRoute,
@@ -946,6 +1008,7 @@ const rootRouteChildren: RootRouteChildren = {
   SpotifyPlayerRoute: SpotifyPlayerRoute,
   StaffRoute: StaffRoute,
   TablesRoute: TablesRoute,
+  BewertungTokenRoute: BewertungTokenRoute,
   KurierIdRoute: KurierIdRoute,
   OrderTokenRoute: OrderTokenRouteWithChildren,
   TrackTokenRoute: TrackTokenRoute,
@@ -959,6 +1022,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPaymentsCreateTableCheckoutRoute:
     ApiPublicPaymentsCreateTableCheckoutRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiPublicReviewsDispatchRoute: ApiPublicReviewsDispatchRoute,
   ApiPublicTableTokenRoute: ApiPublicTableTokenRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }

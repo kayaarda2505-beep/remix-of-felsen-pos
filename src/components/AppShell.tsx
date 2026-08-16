@@ -15,6 +15,7 @@ import {
   Receipt,
   Wallet,
   Banknote,
+  Megaphone,
   Sun,
   Moon,
 } from "lucide-react";
@@ -131,6 +132,7 @@ const nav = [
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/musik", label: "Musik", icon: Music },
   { to: "/payments", label: "Bezahlen", icon: Wallet },
+  { to: "/marketing", label: "Marketing", icon: Megaphone },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

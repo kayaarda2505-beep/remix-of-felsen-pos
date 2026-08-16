@@ -150,6 +150,8 @@ export type Database = {
           last_name: string
           lat: number | null
           lng: number | null
+          newsletter_opt_in: boolean
+          newsletter_opt_in_at: string | null
           note: string | null
           phone: string
           phone2: string | null
@@ -167,6 +169,8 @@ export type Database = {
           last_name?: string
           lat?: number | null
           lng?: number | null
+          newsletter_opt_in?: boolean
+          newsletter_opt_in_at?: string | null
           note?: string | null
           phone?: string
           phone2?: string | null
@@ -184,6 +188,8 @@ export type Database = {
           last_name?: string
           lat?: number | null
           lng?: number | null
+          newsletter_opt_in?: boolean
+          newsletter_opt_in_at?: string | null
           note?: string | null
           phone?: string
           phone2?: string | null
@@ -601,6 +607,33 @@ export type Database = {
           id?: string
           name?: string
           timezone?: string
+        }
+        Relationships: []
+      }
+      marketing_campaigns: {
+        Row: {
+          created_at: string
+          failed_count: number
+          id: string
+          message: string
+          recipient_count: number
+          sent_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          failed_count?: number
+          id?: string
+          message: string
+          recipient_count?: number
+          sent_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          failed_count?: number
+          id?: string
+          message?: string
+          recipient_count?: number
+          sent_by?: string | null
         }
         Relationships: []
       }
@@ -1057,6 +1090,72 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      review_requests: {
+        Row: {
+          comment: string | null
+          created_at: string
+          customer_id: string | null
+          customer_name: string | null
+          id: string
+          newsletter_opt_in: boolean | null
+          order_id: string | null
+          phone: string | null
+          rating: number | null
+          responded_at: string | null
+          send_after: string
+          send_error: string | null
+          sent_at: string | null
+          token: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          id?: string
+          newsletter_opt_in?: boolean | null
+          order_id?: string | null
+          phone?: string | null
+          rating?: number | null
+          responded_at?: string | null
+          send_after?: string
+          send_error?: string | null
+          sent_at?: string | null
+          token: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          id?: string
+          newsletter_opt_in?: boolean | null
+          order_id?: string | null
+          phone?: string | null
+          rating?: number | null
+          responded_at?: string | null
+          send_after?: string
+          send_error?: string | null
+          sent_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_calls: {
         Row: {

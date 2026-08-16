@@ -127,7 +127,8 @@ function RootComponent() {
   const isPublicGuest =
     pathname.startsWith("/order/") ||
     pathname.startsWith("/kurier/") ||
-    pathname.startsWith("/track/");
+    pathname.startsWith("/track/") ||
+    pathname.startsWith("/bewertung/");
 
   return (
     <QueryClientProvider client={queryClient}>
