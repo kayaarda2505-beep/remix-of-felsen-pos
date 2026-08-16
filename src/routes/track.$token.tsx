@@ -33,6 +33,11 @@ function TrackPage() {
     refetchInterval: 15_000,
   });
 
+  const handleRouteInfo = useCallback((_id: string, info: { km: number; minutes: number }) => {
+    setRoute((prev) => (prev?.km === info.km && prev?.minutes === info.minutes ? prev : info));
+  }, []);
+
+
 
   if (isLoading) {
     return (
