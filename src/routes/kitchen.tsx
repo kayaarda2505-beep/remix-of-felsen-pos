@@ -214,10 +214,12 @@ function KitchenView() {
 
   const visible = tickets.filter((t) => filter === "all" || t.station === filter);
 
-  const ackTicket = (key: string) => {
+  const ackTicket = (key: string, orderId?: string) => {
     const next = { ...acked, [key]: Date.now() };
     setAcked(next);
     saveAcked(next);
+    // Kunde informieren: Bestellung ist bereit (nur Lieferungen, serverseitig geprüft)
+    if (orderId) void sendOrderReadySms({ data: { orderId } }).catch(() => undefined);
   };
 
   const now = Date.now();
