@@ -144,6 +144,31 @@ function ReviewPage() {
           </section>
         )}
 
+        {phase === "google" && (
+          <section className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+            <h2 className="text-lg font-semibold text-card-foreground">Danke für die {rating} Sterne!</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Würdest du uns die Bewertung auch bei Google hinterlassen? Das hilft uns enorm.
+            </p>
+            <a
+              href={GOOGLE_REVIEW_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setPhase("newsletter")}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground"
+            >
+              Bei Google bewerten
+            </a>
+            <button
+              type="button"
+              onClick={() => setPhase("newsletter")}
+              className="mt-3 w-full rounded-xl border border-border px-4 py-3 text-sm font-medium text-foreground"
+            >
+              Später
+            </button>
+          </section>
+        )}
+
         {phase === "newsletter" && (
           <section className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
             <h2 className="text-lg font-semibold text-card-foreground">Danke für deine Bewertung!</h2>
