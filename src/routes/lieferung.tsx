@@ -1008,9 +1008,21 @@ function Lieferung() {
   );
 
   return (
-    <div className="h-full min-h-0 flex flex-col max-w-[1800px] mx-auto w-full">
+    <div className="h-full min-h-0 relative w-full">
+      {/* Vollflächige Karte */}
+      <div className="absolute inset-0">
+        <DeliveryMap pins={pins} className="absolute inset-0" />
+        {pins.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-sm text-white/80">
+            Noch keine Lieferungen auf der Karte
+          </div>
+        )}
+      </div>
+
       {/* Kopf */}
-      <header className="flex items-center gap-3 px-4 lg:px-6 pt-4 pb-3 shrink-0">
+      <header className="absolute top-0 left-0 right-0 z-20 flex items-center gap-3 px-4 lg:px-6 pt-4 pb-3 pointer-events-none [&>*]:pointer-events-auto">
+        <div className="min-w-0 flex-1 glass-strong rounded-2xl px-4 py-2">
+
         <div className="min-w-0 flex-1">
           <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Piratino</div>
           <h1 className="text-xl font-semibold">Lieferkarte</h1>
