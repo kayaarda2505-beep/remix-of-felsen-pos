@@ -50,6 +50,7 @@ import { Route as ApiPublicPaymentRequestRouteImport } from './routes/api/public
 import { Route as ApiPublicOrderRouteImport } from './routes/api/public/order'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicTableTokenRouteImport } from './routes/api/public/table.$token'
+import { Route as ApiPublicReviewsDispatchRouteImport } from './routes/api/public/reviews/dispatch'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicPaymentsCreateTableCheckoutRouteImport } from './routes/api/public/payments/create-table-checkout'
 
@@ -259,6 +260,12 @@ const ApiPublicTableTokenRoute = ApiPublicTableTokenRouteImport.update({
   path: '/api/public/table/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicReviewsDispatchRoute =
+  ApiPublicReviewsDispatchRouteImport.update({
+    id: '/api/public/reviews/dispatch',
+    path: '/api/public/reviews/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -314,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/order/$token/paid': typeof OrderTokenPaidRoute
   '/api/public/payments/create-table-checkout': typeof ApiPublicPaymentsCreateTableCheckoutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/reviews/dispatch': typeof ApiPublicReviewsDispatchRoute
   '/api/public/table/$token': typeof ApiPublicTableTokenRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -358,6 +366,7 @@ export interface FileRoutesByTo {
   '/order/$token/paid': typeof OrderTokenPaidRoute
   '/api/public/payments/create-table-checkout': typeof ApiPublicPaymentsCreateTableCheckoutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/reviews/dispatch': typeof ApiPublicReviewsDispatchRoute
   '/api/public/table/$token': typeof ApiPublicTableTokenRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -404,6 +413,7 @@ export interface FileRoutesById {
   '/order/$token/paid': typeof OrderTokenPaidRoute
   '/api/public/payments/create-table-checkout': typeof ApiPublicPaymentsCreateTableCheckoutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/reviews/dispatch': typeof ApiPublicReviewsDispatchRoute
   '/api/public/table/$token': typeof ApiPublicTableTokenRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -451,6 +461,7 @@ export interface FileRouteTypes {
     | '/order/$token/paid'
     | '/api/public/payments/create-table-checkout'
     | '/api/public/payments/webhook'
+    | '/api/public/reviews/dispatch'
     | '/api/public/table/$token'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
@@ -495,6 +506,7 @@ export interface FileRouteTypes {
     | '/order/$token/paid'
     | '/api/public/payments/create-table-checkout'
     | '/api/public/payments/webhook'
+    | '/api/public/reviews/dispatch'
     | '/api/public/table/$token'
     | '/lovable/email/queue/process'
   id:
@@ -540,6 +552,7 @@ export interface FileRouteTypes {
     | '/order/$token/paid'
     | '/api/public/payments/create-table-checkout'
     | '/api/public/payments/webhook'
+    | '/api/public/reviews/dispatch'
     | '/api/public/table/$token'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -574,6 +587,7 @@ export interface RootRouteChildren {
   ApiPublicSpotifySearchRoute: typeof ApiPublicSpotifySearchRoute
   ApiPublicPaymentsCreateTableCheckoutRoute: typeof ApiPublicPaymentsCreateTableCheckoutRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiPublicReviewsDispatchRoute: typeof ApiPublicReviewsDispatchRoute
   ApiPublicTableTokenRoute: typeof ApiPublicTableTokenRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -867,6 +881,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTableTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/reviews/dispatch': {
+      id: '/api/public/reviews/dispatch'
+      path: '/api/public/reviews/dispatch'
+      fullPath: '/api/public/reviews/dispatch'
+      preLoaderRoute: typeof ApiPublicReviewsDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -959,6 +980,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPaymentsCreateTableCheckoutRoute:
     ApiPublicPaymentsCreateTableCheckoutRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiPublicReviewsDispatchRoute: ApiPublicReviewsDispatchRoute,
   ApiPublicTableTokenRoute: ApiPublicTableTokenRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
