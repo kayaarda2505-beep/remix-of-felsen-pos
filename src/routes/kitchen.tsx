@@ -327,7 +327,7 @@ function KitchenView() {
                 </div>
 
                 <button
-                  onClick={() => ackTicket(t.key)}
+                  onClick={() => ackTicket(t.key, t.orderId)}
                   className="w-full rounded-xl py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15"
                 >
                   <CheckCircle2 className="w-4 h-4" />
