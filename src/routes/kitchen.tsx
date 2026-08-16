@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { routeForItem } from "@/lib/receipt";
 import { getTutorial, type CocktailTutorial } from "@/lib/cocktailTutorials";
+import { sendOrderReadySms } from "@/lib/order-sms.functions";
 
 export const Route = createFileRoute("/kitchen")({
   head: () => ({ meta: [{ title: "Küche, Bar & Pizzastation — Piratino POS" }] }),
