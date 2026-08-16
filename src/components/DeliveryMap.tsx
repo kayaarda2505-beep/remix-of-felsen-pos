@@ -74,12 +74,27 @@ function svgIcon(kind: MapPinKind, google: any) {
 }
 
 
+export interface MapRoute {
+  id: string;
+  from: { lat: number; lng: number };
+  to: { lat: number; lng: number };
+}
+
+export interface RouteInfo {
+  km: number;
+  minutes: number;
+}
+
 export function DeliveryMap({
   pins,
+  routes = [],
+  onRouteInfo,
   onSelect,
   className = "",
 }: {
   pins: MapPin[];
+  routes?: MapRoute[];
+  onRouteInfo?: (id: string, info: RouteInfo) => void;
   onSelect?: (id: string) => void;
   className?: string;
 }) {
@@ -87,6 +102,8 @@ export function DeliveryMap({
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const infoRef = useRef<any>(null);
+  const routeLinesRef = useRef<any[]>([]);
+  const routeCacheRef = useRef<Record<string, { path: any[]; info: RouteInfo }>>({});
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -94,6 +111,18 @@ export function DeliveryMap({
     () => pins.map((p) => `${p.id}:${p.lat.toFixed(5)}:${p.lng.toFixed(5)}:${p.kind}`).join("|"),
     [pins],
   );
+
+  const routeSignature = useMemo(
+    () =>
+      routes
+        .map(
+          (r) =>
+            `${r.id}:${r.from.lat.toFixed(4)},${r.from.lng.toFixed(4)}>${r.to.lat.toFixed(4)},${r.to.lng.toFixed(4)}`,
+        )
+        .join("|"),
+    [routes],
+  );
+
 
   useEffect(() => {
     let cancelled = false;
@@ -155,6 +184,71 @@ export function DeliveryMap({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, signature]);
+
+  // Routen Kurier -> Lieferadresse zeichnen (mit Distanz/Dauer)
+  useEffect(() => {
+    if (!ready || !mapRef.current) return;
+    const google = window.google;
+    let cancelled = false;
+
+    routeLinesRef.current.forEach((l) => l.setMap(null));
+    routeLinesRef.current = [];
+
+    const draw = (path: any[]) => {
+      const line = new google.maps.Polyline({
+        path,
+        map: mapRef.current,
+        strokeColor: "#38bdf8",
+        strokeOpacity: 0.9,
+        strokeWeight: 5,
+        icons: [{ icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 3 }, offset: "50%" }],
+      });
+      routeLinesRef.current.push(line);
+    };
+
+    const service = new google.maps.DirectionsService();
+
+    routes.forEach((r) => {
+      const key = `${r.id}:${r.from.lat.toFixed(4)},${r.from.lng.toFixed(4)}>${r.to.lat.toFixed(4)},${r.to.lng.toFixed(4)}`;
+      const cached = routeCacheRef.current[key];
+      if (cached) {
+        draw(cached.path);
+        onRouteInfo?.(r.id, cached.info);
+        return;
+      }
+      service.route(
+        {
+          origin: r.from,
+          destination: r.to,
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (result: any, status: string) => {
+          if (cancelled) return;
+          if (status === "OK" && result?.routes?.[0]) {
+            const leg = result.routes[0].legs[0];
+            const path = result.routes[0].overview_path;
+            const info: RouteInfo = {
+              km: (leg.distance?.value ?? 0) / 1000,
+              minutes: Math.max(1, Math.round((leg.duration?.value ?? 0) / 60)),
+            };
+            routeCacheRef.current[key] = { path, info };
+            draw(path);
+            onRouteInfo?.(r.id, info);
+          } else {
+            // Fallback: Luftlinie
+            draw([r.from, r.to]);
+          }
+        },
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, routeSignature]);
+
+
 
   if (error) {
     return (

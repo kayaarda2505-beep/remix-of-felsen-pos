@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -504,6 +504,30 @@ function Lieferung() {
     });
     return out;
   }, [todoOrders, enrouteOrders, courierLocations]);
+
+  // Routen Kurier -> Kunde für laufende Lieferungen
+  const mapRoutes = useMemo(() => {
+    const out: { id: string; from: { lat: number; lng: number }; to: { lat: number; lng: number } }[] = [];
+    enrouteOrders.forEach((o: any) => {
+      const c = o.customers;
+      const loc = courierLocations.find((l: any) => l.member_id === o.courier_id);
+      if (!c || c.lat == null || c.lng == null || !loc) return;
+      out.push({
+        id: o.id,
+        from: { lat: Number(loc.lat), lng: Number(loc.lng) },
+        to: { lat: Number(c.lat), lng: Number(c.lng) },
+      });
+    });
+    return out;
+  }, [enrouteOrders, courierLocations]);
+
+  const [routeInfo, setRouteInfo] = useState<Record<string, { km: number; minutes: number }>>({});
+  const handleRouteInfo = useCallback((id: string, info: { km: number; minutes: number }) => {
+    setRouteInfo((prev) =>
+      prev[id]?.km === info.km && prev[id]?.minutes === info.minutes ? prev : { ...prev, [id]: info },
+    );
+  }, []);
+
 
   const wizard = (
     <div className="h-full flex flex-col p-4 lg:p-6 pb-28 md:pb-6 max-w-[1800px] mx-auto w-full">
@@ -1011,7 +1035,12 @@ function Lieferung() {
     <div className="h-full min-h-0 relative w-full">
       {/* Vollflächige Karte */}
       <div className="absolute inset-0">
-        <DeliveryMap pins={pins} className="absolute inset-0" />
+        <DeliveryMap
+          pins={pins}
+          routes={mapRoutes}
+          onRouteInfo={handleRouteInfo}
+          className="absolute inset-0"
+        />
         {pins.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-sm text-white/80">
             Noch keine Lieferungen auf der Karte
@@ -1058,6 +1087,7 @@ function Lieferung() {
             dot="bg-sky-400"
             orders={enrouteOrders}
             couriers={couriers}
+            routeInfo={routeInfo}
             onAssign={(orderId, courierId) => assignCourier.mutate({ orderId, courierId })}
           />
           <section className="glass-map rounded-3xl p-4">
@@ -1174,12 +1204,14 @@ function OrderGroup({
   dot,
   orders,
   couriers,
+  routeInfo = {},
   onAssign,
 }: {
   title: string;
   dot: string;
   orders: any[];
   couriers: any[];
+  routeInfo?: Record<string, { km: number; minutes: number }>;
   onAssign: (orderId: string, courierId: string | null) => void;
 }) {
   return (
@@ -1207,7 +1239,14 @@ function OrderGroup({
                       <MapPinIcon className="w-3 h-3" /> Adresse nicht auf Karte
                     </div>
                   )}
+                  {routeInfo[o.id] && (
+                    <div className="text-[11px] text-sky-300 flex items-center gap-1 mt-0.5 tabular-nums">
+                      <Bike className="w-3 h-3" /> noch {routeInfo[o.id].km.toFixed(1)} km · ca.{" "}
+                      {routeInfo[o.id].minutes} Min.
+                    </div>
+                  )}
                 </div>
+
                 <span className="text-sm font-semibold tabular-nums shrink-0">
                   CHF {Number(o.total).toFixed(2)}
                 </span>
