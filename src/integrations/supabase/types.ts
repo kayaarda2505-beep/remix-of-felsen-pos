@@ -724,6 +724,7 @@ export type Database = {
         Row: {
           closed_at: string | null
           courier_assigned_at: string | null
+          courier_delivered_at: string | null
           courier_id: string | null
           courier_name: string | null
           courier_started_at: string | null
@@ -746,6 +747,7 @@ export type Database = {
         Insert: {
           closed_at?: string | null
           courier_assigned_at?: string | null
+          courier_delivered_at?: string | null
           courier_id?: string | null
           courier_name?: string | null
           courier_started_at?: string | null
@@ -768,6 +770,7 @@ export type Database = {
         Update: {
           closed_at?: string | null
           courier_assigned_at?: string | null
+          courier_delivered_at?: string | null
           courier_id?: string | null
           courier_name?: string | null
           courier_started_at?: string | null

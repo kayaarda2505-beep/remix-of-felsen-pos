@@ -418,7 +418,7 @@ function Lieferung() {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, total, status, opened_at, delivery_address, delivery_note, courier_id, courier_name, courier_started_at, customer_id, customers:customer_id(id, first_name, last_name, street, house_no, zip, city, phone, lat, lng)",
+          "id, total, status, opened_at, delivery_address, delivery_note, courier_id, courier_name, courier_started_at, courier_delivered_at, customer_id, customers:customer_id(id, first_name, last_name, street, house_no, zip, city, phone, lat, lng)",
         )
         .eq("order_type", "delivery")
         .gte("opened_at", start.toISOString())
@@ -460,9 +460,9 @@ function Lieferung() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapOrders.length]);
 
-  const isDelivered = (o: any) => o.status === "paid" && !!o.courier_started_at;
+  const isDelivered = (o: any) => !!o.courier_delivered_at;
   const todoOrders = useMemo(
-    () => mapOrders.filter((o) => o.status !== "cancelled" && !o.courier_started_at),
+    () => mapOrders.filter((o) => o.status !== "cancelled" && !isDelivered(o) && !o.courier_started_at),
     [mapOrders],
   );
   const enrouteOrders = useMemo(
