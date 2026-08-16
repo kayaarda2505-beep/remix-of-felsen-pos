@@ -107,17 +107,10 @@ export function DeliveryMap({
           disableDefaultUI: true,
           zoomControl: true,
           gestureHandling: "greedy",
-          styles: [
-            { elementType: "geometry", stylers: [{ color: "#1b1b1f" }] },
-            { elementType: "labels.text.stroke", stylers: [{ color: "#1b1b1f" }] },
-            { elementType: "labels.text.fill", stylers: [{ color: "#9aa0a6" }] },
-            { featureType: "poi", stylers: [{ visibility: "off" }] },
-            { featureType: "road", elementType: "geometry", stylers: [{ color: "#2a2a30" }] },
-            { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8f98" }] },
-            { featureType: "water", elementType: "geometry", stylers: [{ color: "#12161c" }] },
-            { featureType: "transit", stylers: [{ visibility: "off" }] },
-          ],
+          mapTypeId: google.maps.MapTypeId.HYBRID,
+          tilt: 0,
         });
+
         infoRef.current = new google.maps.InfoWindow();
         setReady(true);
       })
