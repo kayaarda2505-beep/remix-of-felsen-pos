@@ -74,12 +74,27 @@ function svgIcon(kind: MapPinKind, google: any) {
 }
 
 
+export interface MapRoute {
+  id: string;
+  from: { lat: number; lng: number };
+  to: { lat: number; lng: number };
+}
+
+export interface RouteInfo {
+  km: number;
+  minutes: number;
+}
+
 export function DeliveryMap({
   pins,
+  routes = [],
+  onRouteInfo,
   onSelect,
   className = "",
 }: {
   pins: MapPin[];
+  routes?: MapRoute[];
+  onRouteInfo?: (id: string, info: RouteInfo) => void;
   onSelect?: (id: string) => void;
   className?: string;
 }) {
@@ -87,6 +102,8 @@ export function DeliveryMap({
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const infoRef = useRef<any>(null);
+  const routeLinesRef = useRef<any[]>([]);
+  const routeCacheRef = useRef<Record<string, { path: any[]; info: RouteInfo }>>({});
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -94,6 +111,18 @@ export function DeliveryMap({
     () => pins.map((p) => `${p.id}:${p.lat.toFixed(5)}:${p.lng.toFixed(5)}:${p.kind}`).join("|"),
     [pins],
   );
+
+  const routeSignature = useMemo(
+    () =>
+      routes
+        .map(
+          (r) =>
+            `${r.id}:${r.from.lat.toFixed(4)},${r.from.lng.toFixed(4)}>${r.to.lat.toFixed(4)},${r.to.lng.toFixed(4)}`,
+        )
+        .join("|"),
+    [routes],
+  );
+
 
   useEffect(() => {
     let cancelled = false;
