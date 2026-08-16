@@ -324,24 +324,11 @@ function Lieferung() {
       );
       if (itemErr) throw itemErr;
 
-      if (pay !== "open") {
-        const { error: payErr } = await supabase.from("payment_requests").insert({
-          order_id: order.id,
-          table_name: `Lieferung · ${customerName(customer)}`,
-          amount: subtotal,
-          tip: 0,
-          method: pay === "cash" ? "cash" : "card_terminal",
-          status: "paid",
-          handled_at: new Date().toISOString(),
-          note: `Lieferung · ${address}`,
-        });
-        if (payErr) throw payErr;
-        const { error: upErr } = await supabase
-          .from("orders")
-          .update({ status: "paid", closed_at: new Date().toISOString(), total: subtotal })
-          .eq("id", order.id);
-        if (upErr) throw upErr;
+      // Zahlung erfolgt erst beim Kunden durch den Kurier — Bestellung bleibt offen.
+      if (subtotal > 0) {
+        await supabase.from("orders").update({ total: subtotal }).eq("id", order.id);
       }
+
 
       try {
         if (isDesktopApp() && isAutoPrintEnabled()) {
