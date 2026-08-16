@@ -19,7 +19,10 @@ export const Route = createFileRoute("/bewertung/$token")({
   component: ReviewPage,
 });
 
-type Phase = "rating" | "newsletter" | "done";
+type Phase = "rating" | "google" | "newsletter" | "done";
+
+const GOOGLE_REVIEW_URL =
+  "https://www.google.com/maps/place/Piratino+Pizzeria+Take+Away/@47.3886642,8.483878,14z/data=!4m12!1m2!2m1!1spiratino!3m8!1s0x47900bb6780dea29:0x38f4ce157469c1b0!8m2!3d47.3886642!4d8.483878!9m1!1b1!15sCghwaXJhdGlub1oKIghwaXJhdGlub5IBCnJlc3RhdXJhbnTgAQA!16s%2Fg%2F11fhnhw7bw";
 
 function ReviewPage() {
   const { token } = Route.useParams();
