@@ -27,6 +27,7 @@ import { geocodeCustomers } from "@/lib/geo.functions";
 import { DELIVERY_MENU, type DeliveryMenuItem } from "@/lib/delivery-menu";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
 import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
+import { sendOrderReceivedSms } from "@/lib/order-sms.functions";
 
 
 export const Route = createFileRoute("/lieferung")({
@@ -328,6 +329,11 @@ function Lieferung() {
       if (subtotal > 0) {
         await supabase.from("orders").update({ total: subtotal }).eq("id", order.id);
       }
+
+      // Bestätigungs-SMS an den Kunden (darf die Bestellung nicht blockieren)
+      void sendOrderReceivedSms({ data: { orderId: order.id as string } }).catch(() => undefined);
+
+
 
 
       try {

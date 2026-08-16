@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { routeForItem } from "@/lib/receipt";
 import { getTutorial, type CocktailTutorial } from "@/lib/cocktailTutorials";
+import { sendOrderReadySms } from "@/lib/order-sms.functions";
 
 export const Route = createFileRoute("/kitchen")({
   head: () => ({ meta: [{ title: "Küche, Bar & Pizzastation — Piratino POS" }] }),
@@ -214,10 +215,12 @@ function KitchenView() {
 
   const visible = tickets.filter((t) => filter === "all" || t.station === filter);
 
-  const ackTicket = (key: string) => {
+  const ackTicket = (key: string, orderId?: string) => {
     const next = { ...acked, [key]: Date.now() };
     setAcked(next);
     saveAcked(next);
+    // Kunde informieren: Bestellung ist bereit (nur Lieferungen, serverseitig geprüft)
+    if (orderId) void sendOrderReadySms({ data: { orderId } }).catch(() => undefined);
   };
 
   const now = Date.now();
@@ -324,7 +327,7 @@ function KitchenView() {
                 </div>
 
                 <button
-                  onClick={() => ackTicket(t.key)}
+                  onClick={() => ackTicket(t.key, t.orderId)}
                   className="w-full rounded-xl py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15"
                 >
                   <CheckCircle2 className="w-4 h-4" />
