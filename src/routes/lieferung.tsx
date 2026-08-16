@@ -349,11 +349,16 @@ function Lieferung() {
             }${deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""}`,
             items,
             total: subtotal,
-            paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
-            interim: pay === "open",
+            paymentMethod: pay === "cash" ? "Bar (beim Kunden)" : pay === "card" ? "Karte (beim Kunden)" : null,
+            interim: true,
             title: "LIEFERSCHEIN",
             footerNote:
-              pay === "open" ? "Offen — beim Kunden kassieren" : "Bezahlt — vielen Dank!",
+              pay === "cash"
+                ? "Offen — bar beim Kunden kassieren"
+                : pay === "card"
+                  ? "Offen — mit Karte beim Kunden kassieren"
+                  : "Offen — beim Kunden kassieren",
+
             qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
             qrLabel: "QR scannen: Adresse, Navigation & Anruf",
           });
