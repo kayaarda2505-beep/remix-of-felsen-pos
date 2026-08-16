@@ -975,7 +975,7 @@ function Lieferung() {
                     ) : (
                       <CreditCard className="w-5 h-5" />
                     )}
-                    Bezahlt mit Karte
+                    Zahlt mit Karte
                   </button>
                   <button
                     onClick={() => saveOrder.mutate({ pay: "cash" })}
