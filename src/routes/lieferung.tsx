@@ -386,14 +386,14 @@ function Lieferung() {
       };
     },
     onSuccess: ({ pay, receipt }) => {
-      toast.success(pay === "open" ? "Lieferbestellung erfasst" : "Lieferung bezahlt");
+      toast.success("Lieferbestellung erfasst — Zahlung beim Kunden");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order_items"] });
-      setReceipt({ ...receipt, paid: pay !== "open", payMethod: pay });
+      setReceipt({ ...receipt, paid: false, payMethod: pay });
       setShowWizard(false);
       resetAll();
-
     },
+
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
 
