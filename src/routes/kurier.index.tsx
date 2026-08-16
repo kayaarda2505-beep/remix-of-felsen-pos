@@ -60,18 +60,25 @@ function CourierHome() {
     }
 
     const send = (pos: GeolocationPosition) => {
-      setGeoState("on");
-      setGeoMsg(null);
-      void (supabase.from("courier_locations") as any).upsert(
-        {
-          member_id: courier.id,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy ?? null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "member_id" },
-      );
+      void (async () => {
+        const { error } = await (supabase.from("courier_locations") as any).upsert(
+          {
+            member_id: courier.id,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy ?? null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "member_id" },
+        );
+        if (error) {
+          setGeoState("error");
+          setGeoMsg(`Standort konnte nicht gesendet werden: ${error.message}`);
+        } else {
+          setGeoState("on");
+          setGeoMsg(null);
+        }
+      })();
     };
     const onErr = (err: GeolocationPositionError) => {
       if (err.code === err.PERMISSION_DENIED) {
