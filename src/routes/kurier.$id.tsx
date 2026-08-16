@@ -87,7 +87,7 @@ function CourierPage() {
   const phone = c?.phone?.replace(/[^+0-9]/g, "") ?? "";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-[100dvh] bg-background text-foreground pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-md mx-auto p-4 space-y-4 pb-10">
         <header className="flex items-center gap-2 pt-2">
           <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">

@@ -1008,7 +1008,7 @@ function Lieferung() {
   );
 
   return (
-    <div className="h-screen flex flex-col max-w-[1800px] mx-auto w-full">
+    <div className="h-full min-h-0 flex flex-col max-w-[1800px] mx-auto w-full">
       {/* Kopf */}
       <header className="flex items-center gap-3 px-4 lg:px-6 pt-4 pb-3 shrink-0">
         <div className="min-w-0 flex-1">
