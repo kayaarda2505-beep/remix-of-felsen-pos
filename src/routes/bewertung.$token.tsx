@@ -19,7 +19,10 @@ export const Route = createFileRoute("/bewertung/$token")({
   component: ReviewPage,
 });
 
-type Phase = "rating" | "newsletter" | "done";
+type Phase = "rating" | "google" | "newsletter" | "done";
+
+const GOOGLE_REVIEW_URL =
+  "https://www.google.com/maps/place/Piratino+Pizzeria+Take+Away/@47.3886642,8.483878,14z/data=!4m12!1m2!2m1!1spiratino!3m8!1s0x47900bb6780dea29:0x38f4ce157469c1b0!8m2!3d47.3886642!4d8.483878!9m1!1b1!15sCghwaXJhdGlub1oKIghwaXJhdGlub5IBCnJlc3RhdXJhbnTgAQA!16s%2Fg%2F11fhnhw7bw";
 
 function ReviewPage() {
   const { token } = Route.useParams();
@@ -70,7 +73,7 @@ function ReviewPage() {
     setBusy(true);
     try {
       await save({ data: { token, rating, comment: comment.trim() || undefined } });
-      setPhase("newsletter");
+      setPhase(rating >= 4 ? "google" : "newsletter");
     } finally {
       setBusy(false);
     }
@@ -137,6 +140,31 @@ function ReviewPage() {
             >
               {busy && <Loader2 className="size-4 animate-spin" />}
               Bewertung senden
+            </button>
+          </section>
+        )}
+
+        {phase === "google" && (
+          <section className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+            <h2 className="text-lg font-semibold text-card-foreground">Danke für die {rating} Sterne!</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Würdest du uns die Bewertung auch bei Google hinterlassen? Das hilft uns enorm.
+            </p>
+            <a
+              href={GOOGLE_REVIEW_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setPhase("newsletter")}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground"
+            >
+              Bei Google bewerten
+            </a>
+            <button
+              type="button"
+              onClick={() => setPhase("newsletter")}
+              className="mt-3 w-full rounded-xl border border-border px-4 py-3 text-sm font-medium text-foreground"
+            >
+              Später
             </button>
           </section>
         )}
