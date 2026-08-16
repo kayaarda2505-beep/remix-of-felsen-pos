@@ -197,6 +197,24 @@ function CourierPage() {
             </button>
           )}
 
+          {start.data?.sms && (
+            <div
+              className={`mt-2 rounded-xl text-xs px-3 py-2 text-center ${
+                start.data.sms.sent ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
+              }`}
+            >
+              {start.data.sms.sent
+                ? "Kunde per SMS informiert (Live-Tracking-Link)"
+                : `SMS nicht gesendet: ${start.data.sms.error ?? "keine Mobilnummer hinterlegt"}`}
+            </div>
+          )}
+          {start.isError && (
+            <div className="mt-2 rounded-xl bg-destructive/10 text-destructive text-xs px-3 py-2 text-center">
+              {(start.error as Error).message}
+            </div>
+          )}
+
+
           {order.status === "paid" ? (
             <div className="mt-3 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm px-3 py-3 text-center">
               Lieferung abgeschlossen
