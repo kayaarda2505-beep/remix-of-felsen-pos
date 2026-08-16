@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { Check, Loader2, Star } from "lucide-react";
-import { getReviewRequest, setNewsletterOptIn, submitReview } from "@/lib/reviews.functions";
+import { getReviewRequest, setNewsletterOptIn } from "@/lib/reviews.functions";
 
 export const Route = createFileRoute("/bewertung/$token")({
   head: () => ({
