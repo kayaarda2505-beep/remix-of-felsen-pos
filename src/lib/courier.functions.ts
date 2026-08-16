@@ -196,8 +196,48 @@ export const completeCourierDelivery = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (uErr) throw new Error(uErr.message);
 
+    await scheduleReviewRequest(data.id);
+
     return { ok: true, amount: open, method: data.method };
   });
+
+/** Plant 30 Minuten nach Lieferung eine Bewertungs-SMS ein. */
+async function scheduleReviewRequest(orderId: string) {
+  try {
+    const db = supabaseAdmin as any;
+    const { data: existing } = await db
+      .from("review_requests")
+      .select("id")
+      .eq("order_id", orderId)
+      .maybeSingle();
+    if (existing) return;
+
+    const { data: order } = await db
+      .from("orders")
+      .select("customer_id, order_type")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (!order?.customer_id) return;
+
+    const { data: c } = await db
+      .from("customers")
+      .select("phone, first_name, last_name")
+      .eq("id", order.customer_id)
+      .maybeSingle();
+    if (!c?.phone) return;
+
+    await db.from("review_requests").insert({
+      order_id: orderId,
+      customer_id: order.customer_id,
+      phone: c.phone,
+      customer_name: [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || null,
+      token: crypto.randomUUID().replace(/-/g, ""),
+      send_after: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    });
+  } catch (e) {
+    console.error("[reviews] schedule", e);
+  }
+}
 
 
 const LoginSchema = z.object({
