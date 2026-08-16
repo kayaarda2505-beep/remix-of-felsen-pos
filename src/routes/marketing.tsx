@@ -119,7 +119,7 @@ function MarketingPage() {
                 Newsletter-Kund:innen ({data?.subscribers.length ?? 0})
               </h2>
               <ul className="mt-3 divide-y divide-border">
-                {(data?.subscribers ?? []).map((s) => (
+                {(data?.subscribers ?? []).map((s: any) => (
                   <li key={s.id} className="flex items-center justify-between py-2 text-sm">
                     <div>
                       <p className="font-medium text-foreground">{s.name}</p>
@@ -139,7 +139,7 @@ function MarketingPage() {
             <section className="rounded-2xl border border-border bg-card p-5">
               <h2 className="text-lg font-semibold text-card-foreground">Letzte Bewertungen</h2>
               <ul className="mt-3 divide-y divide-border">
-                {(data?.reviews ?? []).map((r) => (
+                {(data?.reviews ?? []).map((r: any) => (
                   <li key={r.id} className="py-2 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-foreground">{r.customerName ?? "Kunde"}</span>
@@ -168,7 +168,7 @@ function MarketingPage() {
             <section className="rounded-2xl border border-border bg-card p-5">
               <h2 className="text-lg font-semibold text-card-foreground">Gesendete Angebote</h2>
               <ul className="mt-3 divide-y divide-border">
-                {data.campaigns.map((c) => (
+                {data.campaigns.map((c: any) => (
                   <li key={c.id} className="py-2 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-foreground">{c.message}</span>
