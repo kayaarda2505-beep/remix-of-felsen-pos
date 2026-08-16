@@ -16,25 +16,35 @@ export async function sendSms(recipient: number, message: string, reference?: st
   const connectionKey = process.env["GATEWAYAPI_API_KEY"];
   if (!lovableKey || !connectionKey) throw new Error("SMS ist nicht konfiguriert");
 
-  const res = await fetch(`${GATEWAY_URL}/mobile/single`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": connectionKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sender: "Piratino",
-      recipient,
-      message,
-      ...(reference ? { reference } : {}),
-    }),
-  });
+  const urlMatch = message.match(/https:\/\/\S+/);
+  const messages = urlMatch
+    ? [
+        "Piratino: Deine Bestellung ist jetzt unterwegs.",
+        `Live-Standort und Ankunftszeit: ${urlMatch[0]}`,
+      ]
+    : [message];
 
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`[SMS] GatewayAPI ${res.status}: ${body}`);
-    throw new Error(`SMS fehlgeschlagen [${res.status}]: ${body}`);
+  for (const [index, text] of messages.entries()) {
+    const res = await fetch(`${GATEWAY_URL}/mobile/single`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": connectionKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: "Piratino",
+        recipient,
+        message: text,
+        ...(reference ? { reference: `${reference}-${index + 1}` } : {}),
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[SMS] GatewayAPI ${res.status}: ${body}`);
+      throw new Error(`SMS fehlgeschlagen [${res.status}]: ${body}`);
+    }
   }
   return true;
 }
