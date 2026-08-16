@@ -131,7 +131,7 @@ export function DeliveryMap({
       const marker = new google.maps.Marker({
         position: { lat: p.lat, lng: p.lng },
         map: mapRef.current,
-        icon: iconFor(p.kind, google),
+        icon: svgIcon(p.kind, google),
         title: p.label,
       });
       marker.addListener("click", () => {
