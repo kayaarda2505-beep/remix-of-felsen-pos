@@ -33,10 +33,15 @@ function CourierPage() {
   const finishDelivery = useServerFn(completeCourierDelivery);
   const [showPay, setShowPay] = useState(false);
 
+  const resend = useMutation({
+    mutationFn: () => resendSms({ data: { id } }),
+  });
+
   const start = useMutation({
     mutationFn: () => startDelivery({ data: { id } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["courier-order", id] }),
   });
+
 
   const complete = useMutation({
     mutationFn: (method: "cash" | "card" | "twint") => finishDelivery({ data: { id, method } }),
