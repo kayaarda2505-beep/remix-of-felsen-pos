@@ -1150,6 +1150,42 @@ export type Database = {
           },
         ]
       }
+      sms_events: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          error_details: string | null
+          id: string
+          msg_id: string | null
+          raw: Json | null
+          recipient: string | null
+          reference: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          error_details?: string | null
+          id?: string
+          msg_id?: string | null
+          raw?: Json | null
+          recipient?: string | null
+          reference?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          error_details?: string | null
+          id?: string
+          msg_id?: string | null
+          raw?: Json | null
+          recipient?: string | null
+          reference?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       song_requests: {
         Row: {
           artist: string | null
