@@ -1285,7 +1285,10 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
         <div className="text-xs text-center mt-1 text-muted-foreground print:text-black">
           {receipt.paid
             ? `Bezahlt (${receipt.payMethod === "cash" ? "Bar" : "Karte"})`
-            : "Offen — beim Kunden kassieren"}
+            : `Offen — beim Kunden kassieren${
+                receipt.payMethod === "cash" ? " (Bar)" : receipt.payMethod === "card" ? " (Karte)" : ""
+              }`}
+
         </div>
 
         <div className="mt-5 flex flex-col items-center">
