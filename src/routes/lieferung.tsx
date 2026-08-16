@@ -1087,6 +1087,7 @@ function Lieferung() {
             dot="bg-sky-400"
             orders={enrouteOrders}
             couriers={couriers}
+            routeInfo={routeInfo}
             onAssign={(orderId, courierId) => assignCourier.mutate({ orderId, courierId })}
           />
           <section className="glass-map rounded-3xl p-4">
