@@ -330,6 +330,11 @@ function Lieferung() {
         await supabase.from("orders").update({ total: subtotal }).eq("id", order.id);
       }
 
+      // Bestätigungs-SMS an den Kunden (darf die Bestellung nicht blockieren)
+      void sendOrderReceivedSms({ data: { orderId: order.id as string } }).catch(() => undefined);
+
+
+
 
       try {
         if (isDesktopApp() && isAutoPrintEnabled()) {
