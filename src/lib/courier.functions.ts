@@ -10,7 +10,7 @@ export const getCourierOrder = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { data: order, error } = await (supabaseAdmin as any)
       .from("orders")
-      .select("id, status, total, opened_at, order_type, delivery_address, delivery_note, customer_id, courier_started_at, courier_name")
+      .select("id, status, total, opened_at, order_type, delivery_address, delivery_note, customer_id, courier_started_at, courier_delivered_at, courier_name")
       .eq("id", data.id)
       .eq("order_type", "delivery")
       .maybeSingle();
@@ -167,7 +167,15 @@ export const completeCourierDelivery = createServerFn({ method: "POST" })
       .maybeSingle();
     if (oErr) throw new Error(oErr.message);
     if (!order) throw new Error("Bestellung nicht gefunden");
-    if (order.status === "paid") return { ok: true, alreadyPaid: true };
+    if (order.status === "paid") {
+      await (supabaseAdmin as any)
+        .from("orders")
+        .update({ courier_delivered_at: new Date().toISOString() })
+        .eq("id", data.id)
+        .is("courier_delivered_at", null);
+      await scheduleReviewRequest(data.id);
+      return { ok: true, alreadyPaid: true };
+    }
 
     const { data: existing } = await (supabaseAdmin as any)
       .from("payment_requests")
@@ -192,7 +200,7 @@ export const completeCourierDelivery = createServerFn({ method: "POST" })
 
     const { error: uErr } = await (supabaseAdmin as any)
       .from("orders")
-      .update({ status: "paid", closed_at: new Date().toISOString() })
+      .update({ status: "paid", closed_at: new Date().toISOString(), courier_delivered_at: new Date().toISOString() })
       .eq("id", data.id);
     if (uErr) throw new Error(uErr.message);
 
@@ -263,7 +271,7 @@ export const listCourierOrders = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: rows, error } = await (supabaseAdmin as any)
       .from("orders")
-      .select("id, status, total, opened_at, closed_at, delivery_address, delivery_note, courier_started_at, courier_assigned_at")
+      .select("id, status, total, opened_at, closed_at, delivery_address, delivery_note, courier_started_at, courier_assigned_at, courier_delivered_at")
       .eq("order_type", "delivery")
       .eq("courier_id", data.courierId)
       .order("opened_at", { ascending: false })
@@ -271,8 +279,8 @@ export const listCourierOrders = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const all = (rows ?? []) as any[];
     return {
-      active: all.filter((o) => o.status === "open"),
-      history: all.filter((o) => o.status !== "open"),
+      active: all.filter((o) => !o.courier_delivered_at && o.status !== "cancelled"),
+      history: all.filter((o) => !!o.courier_delivered_at || o.status === "cancelled"),
     };
   });
 
@@ -302,7 +310,7 @@ export const listMyCourierOrders = createServerFn({ method: "POST" })
     if (!member) return { courier: null, active: [], history: [] };
     const { data: rows, error } = await (supabaseAdmin as any)
       .from("orders")
-      .select("id, status, total, opened_at, closed_at, delivery_address, delivery_note, courier_started_at, courier_assigned_at")
+      .select("id, status, total, opened_at, closed_at, delivery_address, delivery_note, courier_started_at, courier_assigned_at, courier_delivered_at")
       .eq("order_type", "delivery")
       .eq("courier_id", member.id)
       .order("opened_at", { ascending: false })
@@ -311,8 +319,8 @@ export const listMyCourierOrders = createServerFn({ method: "POST" })
     const all = (rows ?? []) as any[];
     return {
       courier: member,
-      active: all.filter((o) => o.status === "open"),
-      history: all.filter((o) => o.status !== "open"),
+      active: all.filter((o) => !o.courier_delivered_at && o.status !== "cancelled"),
+      history: all.filter((o) => !!o.courier_delivered_at || o.status === "cancelled"),
     };
   });
 
