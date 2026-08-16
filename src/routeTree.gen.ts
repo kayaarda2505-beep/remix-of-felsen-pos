@@ -28,6 +28,7 @@ import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as KurierIndexRouteImport } from './routes/kurier.index'
+import { Route as TrackTokenRouteImport } from './routes/track.$token'
 import { Route as SettingsSpotifyRouteImport } from './routes/settings.spotify'
 import { Route as SettingsRegionRouteImport } from './routes/settings.region'
 import { Route as SettingsRecipesRouteImport } from './routes/settings.recipes'
@@ -144,6 +145,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
 const KurierIndexRoute = KurierIndexRouteImport.update({
   id: '/kurier/',
   path: '/kurier/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackTokenRoute = TrackTokenRouteImport.update({
+  id: '/track/$token',
+  path: '/track/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsSpotifyRoute = SettingsSpotifyRouteImport.update({
@@ -290,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/settings/recipes': typeof SettingsRecipesRoute
   '/settings/region': typeof SettingsRegionRoute
   '/settings/spotify': typeof SettingsSpotifyRoute
+  '/track/$token': typeof TrackTokenRoute
   '/kurier/': typeof KurierIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/order': typeof ApiPublicOrderRoute
@@ -332,6 +339,7 @@ export interface FileRoutesByTo {
   '/settings/recipes': typeof SettingsRecipesRoute
   '/settings/region': typeof SettingsRegionRoute
   '/settings/spotify': typeof SettingsSpotifyRoute
+  '/track/$token': typeof TrackTokenRoute
   '/kurier': typeof KurierIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/api/public/order': typeof ApiPublicOrderRoute
@@ -376,6 +384,7 @@ export interface FileRoutesById {
   '/settings/recipes': typeof SettingsRecipesRoute
   '/settings/region': typeof SettingsRegionRoute
   '/settings/spotify': typeof SettingsSpotifyRoute
+  '/track/$token': typeof TrackTokenRoute
   '/kurier/': typeof KurierIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/order': typeof ApiPublicOrderRoute
@@ -421,6 +430,7 @@ export interface FileRouteTypes {
     | '/settings/recipes'
     | '/settings/region'
     | '/settings/spotify'
+    | '/track/$token'
     | '/kurier/'
     | '/settings/'
     | '/api/public/order'
@@ -463,6 +473,7 @@ export interface FileRouteTypes {
     | '/settings/recipes'
     | '/settings/region'
     | '/settings/spotify'
+    | '/track/$token'
     | '/kurier'
     | '/settings'
     | '/api/public/order'
@@ -506,6 +517,7 @@ export interface FileRouteTypes {
     | '/settings/recipes'
     | '/settings/region'
     | '/settings/spotify'
+    | '/track/$token'
     | '/kurier/'
     | '/settings/'
     | '/api/public/order'
@@ -540,6 +552,7 @@ export interface RootRouteChildren {
   TablesRoute: typeof TablesRoute
   KurierIdRoute: typeof KurierIdRoute
   OrderTokenRoute: typeof OrderTokenRouteWithChildren
+  TrackTokenRoute: typeof TrackTokenRoute
   KurierIndexRoute: typeof KurierIndexRoute
   ApiPublicOrderRoute: typeof ApiPublicOrderRoute
   ApiPublicPaymentRequestRoute: typeof ApiPublicPaymentRequestRoute
@@ -685,6 +698,13 @@ declare module '@tanstack/react-router' {
       path: '/kurier'
       fullPath: '/kurier/'
       preLoaderRoute: typeof KurierIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/track/$token': {
+      id: '/track/$token'
+      path: '/track/$token'
+      fullPath: '/track/$token'
+      preLoaderRoute: typeof TrackTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/spotify': {
@@ -908,6 +928,7 @@ const rootRouteChildren: RootRouteChildren = {
   TablesRoute: TablesRoute,
   KurierIdRoute: KurierIdRoute,
   OrderTokenRoute: OrderTokenRouteWithChildren,
+  TrackTokenRoute: TrackTokenRoute,
   KurierIndexRoute: KurierIndexRoute,
   ApiPublicOrderRoute: ApiPublicOrderRoute,
   ApiPublicPaymentRequestRoute: ApiPublicPaymentRequestRoute,
