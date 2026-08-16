@@ -227,6 +227,23 @@ function CourierPage() {
             </div>
           )}
 
+          <button
+            onClick={() => resend.mutate()}
+            disabled={resend.isPending}
+            className="mt-2 w-full rounded-xl py-2.5 glass text-xs font-medium disabled:opacity-50"
+          >
+            {resend.isPending ? "SMS wird gesendet…" : "Tracking-SMS (erneut) senden"}
+          </button>
+          {resend.data?.sms && (
+            <div
+              className={`mt-2 rounded-xl text-xs px-3 py-2 text-center ${
+                resend.data.sms.sent ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
+              }`}
+            >
+              {resend.data.sms.sent ? "SMS gesendet" : `SMS nicht gesendet: ${resend.data.sms.error ?? "Fehler"}`}
+            </div>
+          )}
+
 
           {order.status === "paid" ? (
             <div className="mt-3 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm px-3 py-3 text-center">
