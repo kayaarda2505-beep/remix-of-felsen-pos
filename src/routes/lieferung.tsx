@@ -505,6 +505,30 @@ function Lieferung() {
     return out;
   }, [todoOrders, enrouteOrders, courierLocations]);
 
+  // Routen Kurier -> Kunde für laufende Lieferungen
+  const mapRoutes = useMemo(() => {
+    const out: { id: string; from: { lat: number; lng: number }; to: { lat: number; lng: number } }[] = [];
+    enrouteOrders.forEach((o: any) => {
+      const c = o.customers;
+      const loc = courierLocations.find((l: any) => l.member_id === o.courier_id);
+      if (!c || c.lat == null || c.lng == null || !loc) return;
+      out.push({
+        id: o.id,
+        from: { lat: Number(loc.lat), lng: Number(loc.lng) },
+        to: { lat: Number(c.lat), lng: Number(c.lng) },
+      });
+    });
+    return out;
+  }, [enrouteOrders, courierLocations]);
+
+  const [routeInfo, setRouteInfo] = useState<Record<string, { km: number; minutes: number }>>({});
+  const handleRouteInfo = useCallback((id: string, info: { km: number; minutes: number }) => {
+    setRouteInfo((prev) =>
+      prev[id]?.km === info.km && prev[id]?.minutes === info.minutes ? prev : { ...prev, [id]: info },
+    );
+  }, []);
+
+
   const wizard = (
     <div className="h-full flex flex-col p-4 lg:p-6 pb-28 md:pb-6 max-w-[1800px] mx-auto w-full">
 
