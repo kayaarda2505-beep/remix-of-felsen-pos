@@ -1035,7 +1035,12 @@ function Lieferung() {
     <div className="h-full min-h-0 relative w-full">
       {/* Vollflächige Karte */}
       <div className="absolute inset-0">
-        <DeliveryMap pins={pins} className="absolute inset-0" />
+        <DeliveryMap
+          pins={pins}
+          routes={mapRoutes}
+          onRouteInfo={handleRouteInfo}
+          className="absolute inset-0"
+        />
         {pins.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-sm text-white/80">
             Noch keine Lieferungen auf der Karte
