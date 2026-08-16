@@ -1023,15 +1023,16 @@ function Lieferung() {
 
       {/* Kopf */}
       <header className="absolute top-0 left-0 right-0 z-20 flex items-center gap-3 px-4 lg:px-6 pt-4 pb-3 pointer-events-none [&>*]:pointer-events-auto">
-        <div className="min-w-0 flex-1 glass-strong rounded-2xl px-4 py-2">
+        <div className="min-w-0 flex-1 glass-map rounded-2xl px-4 py-2">
           <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Piratino</div>
           <h1 className="text-xl font-semibold">Lieferkarte</h1>
         </div>
-        <div className="hidden sm:flex items-center gap-4 text-xs glass-strong rounded-2xl px-4 py-3">
+        <div className="hidden sm:flex items-center gap-4 text-xs glass-map rounded-2xl px-4 py-3">
           <Legend color="bg-amber-500" label={`Zu erledigen (${todoOrders.length})`} />
           <Legend color="bg-sky-400" label={`Unterwegs (${enrouteOrders.length})`} />
           <Legend color="bg-emerald-400" label={`Kuriere (${courierLocations.length})`} />
         </div>
+
         <button
           onClick={() => {
             resetAll();
@@ -1061,7 +1062,7 @@ function Lieferung() {
             couriers={couriers}
             onAssign={(orderId, courierId) => assignCourier.mutate({ orderId, courierId })}
           />
-          <section className="glass-strong rounded-3xl p-4">
+          <section className="glass-map rounded-3xl p-4">
             <h2 className="font-semibold mb-3 text-sm">Kuriere</h2>
             {courierLocations.length === 0 ? (
               <div className="text-xs text-muted-foreground">
@@ -1097,7 +1098,7 @@ function Lieferung() {
             )}
           </section>
 
-          <section className="glass-strong rounded-3xl p-4">
+          <section className="glass-map rounded-3xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-sm">Heute erledigt</h2>
               <span className="text-xs text-muted-foreground tabular-nums">
