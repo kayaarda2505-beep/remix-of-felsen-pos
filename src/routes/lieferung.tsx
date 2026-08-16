@@ -1022,12 +1022,10 @@ function Lieferung() {
       {/* Kopf */}
       <header className="absolute top-0 left-0 right-0 z-20 flex items-center gap-3 px-4 lg:px-6 pt-4 pb-3 pointer-events-none [&>*]:pointer-events-auto">
         <div className="min-w-0 flex-1 glass-strong rounded-2xl px-4 py-2">
-
-        <div className="min-w-0 flex-1">
           <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Piratino</div>
           <h1 className="text-xl font-semibold">Lieferkarte</h1>
         </div>
-        <div className="hidden sm:flex items-center gap-4 text-xs">
+        <div className="hidden sm:flex items-center gap-4 text-xs glass-strong rounded-2xl px-4 py-3">
           <Legend color="bg-amber-500" label={`Zu erledigen (${todoOrders.length})`} />
           <Legend color="bg-sky-400" label={`Unterwegs (${enrouteOrders.length})`} />
           <Legend color="bg-emerald-400" label={`Kuriere (${courierLocations.length})`} />
@@ -1043,24 +1041,10 @@ function Lieferung() {
         </button>
       </header>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 px-4 lg:px-6 pb-4">
-        {/* Karte */}
-        <div className="relative rounded-3xl overflow-hidden glass-strong min-h-[45vh]">
-          <DeliveryMap pins={pins} className="absolute inset-0" />
-          {pins.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-sm text-muted-foreground">
-              Noch keine Lieferungen auf der Karte
-            </div>
-          )}
-          <div className="absolute bottom-3 left-3 flex gap-2 sm:hidden">
-            <Legend color="bg-amber-500" label={`${todoOrders.length}`} />
-            <Legend color="bg-sky-400" label={`${enrouteOrders.length}`} />
-            <Legend color="bg-emerald-400" label={`${courierLocations.length}`} />
-          </div>
-        </div>
+      <div className="absolute inset-0 z-10 pointer-events-none px-4 lg:px-6 pt-24 pb-4 flex justify-end">
+        {/* Listen als Overlay über der Karte */}
+        <div className="pointer-events-auto w-full sm:max-w-[380px] min-h-0 max-h-full overflow-y-auto space-y-4 pb-24 lg:pb-0">
 
-        {/* Listen */}
-        <div className="min-h-0 overflow-y-auto space-y-4 pb-24 lg:pb-0">
           <OrderGroup
             title="Zu erledigen"
             dot="bg-amber-500"
