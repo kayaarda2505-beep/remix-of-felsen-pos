@@ -546,7 +546,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <SpotifyBarSpeakerProvider>
     <UrgentAlertOverlay />
-    <div className="h-screen flex w-full overflow-hidden">
+    <div className="h-[100dvh] flex w-full overflow-hidden">
       <aside className="hidden md:flex w-20 lg:w-60 flex-col p-3 lg:p-4 gap-1 border-r border-border/40 bg-sidebar/60 backdrop-blur-2xl overflow-y-auto">
 
         <div className="px-2 py-4 mb-2">
@@ -624,7 +624,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 min-h-0 overflow-auto">{children}</main>
+      <main className="flex-1 min-w-0 min-h-0 overflow-auto pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] md:pt-0 md:pl-0 md:pr-0">
+        {children}
+      </main>
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 glass-strong border-t border-border/40">

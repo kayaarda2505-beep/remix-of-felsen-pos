@@ -224,7 +224,7 @@ function OrderPage() {
   }, [submitted]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/80 border-b border-border/40">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
