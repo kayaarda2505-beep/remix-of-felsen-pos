@@ -324,24 +324,11 @@ function Lieferung() {
       );
       if (itemErr) throw itemErr;
 
-      if (pay !== "open") {
-        const { error: payErr } = await supabase.from("payment_requests").insert({
-          order_id: order.id,
-          table_name: `Lieferung · ${customerName(customer)}`,
-          amount: subtotal,
-          tip: 0,
-          method: pay === "cash" ? "cash" : "card_terminal",
-          status: "paid",
-          handled_at: new Date().toISOString(),
-          note: `Lieferung · ${address}`,
-        });
-        if (payErr) throw payErr;
-        const { error: upErr } = await supabase
-          .from("orders")
-          .update({ status: "paid", closed_at: new Date().toISOString(), total: subtotal })
-          .eq("id", order.id);
-        if (upErr) throw upErr;
+      // Zahlung erfolgt erst beim Kunden durch den Kurier — Bestellung bleibt offen.
+      if (subtotal > 0) {
+        await supabase.from("orders").update({ total: subtotal }).eq("id", order.id);
       }
+
 
       try {
         if (isDesktopApp() && isAutoPrintEnabled()) {
@@ -362,11 +349,16 @@ function Lieferung() {
             }${deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""}`,
             items,
             total: subtotal,
-            paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
-            interim: pay === "open",
+            paymentMethod: pay === "cash" ? "Bar (beim Kunden)" : pay === "card" ? "Karte (beim Kunden)" : null,
+            interim: true,
             title: "LIEFERSCHEIN",
             footerNote:
-              pay === "open" ? "Offen — beim Kunden kassieren" : "Bezahlt — vielen Dank!",
+              pay === "cash"
+                ? "Offen — bar beim Kunden kassieren"
+                : pay === "card"
+                  ? "Offen — mit Karte beim Kunden kassieren"
+                  : "Offen — beim Kunden kassieren",
+
             qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
             qrLabel: "QR scannen: Adresse, Navigation & Anruf",
           });
@@ -394,14 +386,14 @@ function Lieferung() {
       };
     },
     onSuccess: ({ pay, receipt }) => {
-      toast.success(pay === "open" ? "Lieferbestellung erfasst" : "Lieferung bezahlt");
+      toast.success("Lieferbestellung erfasst — Zahlung beim Kunden");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order_items"] });
-      setReceipt({ ...receipt, paid: pay !== "open", payMethod: pay });
+      setReceipt({ ...receipt, paid: false, payMethod: pay });
       setShowWizard(false);
       resetAll();
-
     },
+
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
 
@@ -983,7 +975,7 @@ function Lieferung() {
                     ) : (
                       <CreditCard className="w-5 h-5" />
                     )}
-                    Bezahlt mit Karte
+                    Zahlt mit Karte
                   </button>
                   <button
                     onClick={() => saveOrder.mutate({ pay: "cash" })}
@@ -995,7 +987,7 @@ function Lieferung() {
                     ) : (
                       <Banknote className="w-5 h-5" />
                     )}
-                    Bezahlt mit Bar
+                    Zahlt mit Bar
                   </button>
                 </div>
 
@@ -1293,7 +1285,10 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
         <div className="text-xs text-center mt-1 text-muted-foreground print:text-black">
           {receipt.paid
             ? `Bezahlt (${receipt.payMethod === "cash" ? "Bar" : "Karte"})`
-            : "Offen — beim Kunden kassieren"}
+            : `Offen — beim Kunden kassieren${
+                receipt.payMethod === "cash" ? " (Bar)" : receipt.payMethod === "card" ? " (Karte)" : ""
+              }`}
+
         </div>
 
         <div className="mt-5 flex flex-col items-center">
