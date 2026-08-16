@@ -68,6 +68,7 @@ export const getCourierOrder = createServerFn({ method: "GET" })
         total: Number(order.total),
         opened_at: order.opened_at,
         courier_started_at: (order as any).courier_started_at as string | null,
+        courier_delivered_at: (order as any).courier_delivered_at as string | null,
         courier_name: ((order as any).courier_name ?? null) as string | null,
         delivery_address: order.delivery_address,
         delivery_note: order.delivery_note,
