@@ -972,31 +972,33 @@ function Lieferung() {
                   </span>
                 </div>
 
-                <button
-                  onClick={() => saveOrder.mutate({ pay: "open" })}
-                  disabled={!customer || cart.length === 0 || saveOrder.isPending}
-                  className="w-full rounded-2xl py-4 glass text-sm font-medium hover:border-accent/40 disabled:opacity-40 flex items-center justify-center gap-2"
-                >
-                  {saveOrder.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bike className="w-4 h-4" />}
-                  Bestellung senden (offen)
-                </button>
-
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => saveOrder.mutate({ pay: "cash" })}
-                    disabled={!customer || cart.length === 0 || saveOrder.isPending}
-                    className="rounded-xl py-4 glass flex flex-col items-center gap-1 text-xs hover:border-accent/40 disabled:opacity-40"
-                  >
-                    <Banknote className="w-4 h-4" /> Bar bezahlt
-                  </button>
                   <button
                     onClick={() => saveOrder.mutate({ pay: "card" })}
                     disabled={!customer || cart.length === 0 || saveOrder.isPending}
-                    className="rounded-xl py-4 glass flex flex-col items-center gap-1 text-xs hover:border-accent/40 disabled:opacity-40"
+                    className="rounded-2xl py-5 glass flex flex-col items-center gap-1.5 text-sm font-medium hover:border-accent/40 disabled:opacity-40"
                   >
-                    <CreditCard className="w-4 h-4" /> Karte bezahlt
+                    {saveOrder.isPending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <CreditCard className="w-5 h-5" />
+                    )}
+                    Bezahlt mit Karte
+                  </button>
+                  <button
+                    onClick={() => saveOrder.mutate({ pay: "cash" })}
+                    disabled={!customer || cart.length === 0 || saveOrder.isPending}
+                    className="rounded-2xl py-5 glass flex flex-col items-center gap-1.5 text-sm font-medium hover:border-accent/40 disabled:opacity-40"
+                  >
+                    {saveOrder.isPending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Banknote className="w-5 h-5" />
+                    )}
+                    Bezahlt mit Bar
                   </button>
                 </div>
+
               </div>
             </div>
           </motion.div>
