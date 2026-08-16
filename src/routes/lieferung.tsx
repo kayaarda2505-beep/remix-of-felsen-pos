@@ -1239,7 +1239,14 @@ function OrderGroup({
                       <MapPinIcon className="w-3 h-3" /> Adresse nicht auf Karte
                     </div>
                   )}
+                  {routeInfo[o.id] && (
+                    <div className="text-[11px] text-sky-300 flex items-center gap-1 mt-0.5 tabular-nums">
+                      <Bike className="w-3 h-3" /> noch {routeInfo[o.id].km.toFixed(1)} km · ca.{" "}
+                      {routeInfo[o.id].minutes} Min.
+                    </div>
+                  )}
                 </div>
+
                 <span className="text-sm font-semibold tabular-nums shrink-0">
                   CHF {Number(o.total).toFixed(2)}
                 </span>
