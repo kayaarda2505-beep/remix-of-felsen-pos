@@ -215,6 +215,11 @@
   background: oklch(1 0 0 / 80%);
 }
 
+.light .glass-map {
+  background: oklch(1 0 0 / 55%);
+}
+
+
 @layer base {
   * {
     border-color: var(--color-border);
