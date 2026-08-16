@@ -707,6 +707,8 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
           table_id: string | null
           total: number
+          tracking_sms_sent_at: string | null
+          tracking_token: string | null
         }
         Insert: {
           closed_at?: string | null
@@ -727,6 +729,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           table_id?: string | null
           total?: number
+          tracking_sms_sent_at?: string | null
+          tracking_token?: string | null
         }
         Update: {
           closed_at?: string | null
@@ -747,6 +751,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           table_id?: string | null
           total?: number
+          tracking_sms_sent_at?: string | null
+          tracking_token?: string | null
         }
         Relationships: [
           {
