@@ -23,12 +23,14 @@ export const Route = createFileRoute("/track/$token")({
 function TrackPage() {
   const { token } = Route.useParams();
   const fetchTracking = useServerFn(getTracking);
+  const [route, setRoute] = useState<{ km: number; minutes: number } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["tracking", token],
     queryFn: () => fetchTracking({ data: { token } }),
     refetchInterval: 15_000,
   });
+
 
   if (isLoading) {
     return (
