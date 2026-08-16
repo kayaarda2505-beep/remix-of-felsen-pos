@@ -987,7 +987,7 @@ function Lieferung() {
                     ) : (
                       <Banknote className="w-5 h-5" />
                     )}
-                    Bezahlt mit Bar
+                    Zahlt mit Bar
                   </button>
                 </div>
 
