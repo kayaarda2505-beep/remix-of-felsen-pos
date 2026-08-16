@@ -63,6 +63,14 @@ function TrackPage() {
   if (t.destination) pins.push({ id: "dest", ...t.destination, kind: "todo", label: "Lieferadresse", sublabel: t.address ?? undefined });
   if (t.courier) pins.push({ id: "courier", lat: t.courier.lat, lng: t.courier.lng, kind: "courier", label: t.courierName ?? "Kurier" });
 
+  const mapRoutes =
+    t.courier && t.destination
+      ? [{ id: "delivery", from: { lat: t.courier.lat, lng: t.courier.lng }, to: t.destination }]
+      : [];
+
+  const etaMinutes = route?.minutes ?? t.etaMinutes;
+  const distanceKm = route?.km ?? t.distanceKm;
+
   return (
     <div className="min-h-[100dvh] bg-background text-foreground pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-md mx-auto p-4 space-y-4">
@@ -88,18 +96,24 @@ function TrackPage() {
               <Clock className="w-4 h-4" /> Geschätzte Ankunft
             </div>
             <div className="text-3xl font-semibold mt-1">
-              {t.etaMinutes ? `ca. ${t.etaMinutes} Min.` : "wird berechnet …"}
+              {etaMinutes ? `ca. ${etaMinutes} Min.` : "wird berechnet …"}
             </div>
-            {t.distanceKm != null && (
-              <div className="text-xs text-muted-foreground mt-1">noch {t.distanceKm.toFixed(1)} km entfernt</div>
+            {distanceKm != null && (
+              <div className="text-xs text-muted-foreground mt-1">noch {distanceKm.toFixed(1)} km entfernt</div>
             )}
             {t.courierName && <div className="text-sm mt-2">Kurier: {t.courierName}</div>}
           </div>
         )}
 
         {pins.length > 0 && (
-          <DeliveryMap pins={pins} className="w-full h-[55dvh] rounded-3xl overflow-hidden" />
+          <DeliveryMap
+            pins={pins}
+            routes={mapRoutes}
+            onRouteInfo={handleRouteInfo}
+            className="w-full h-[55dvh] rounded-3xl overflow-hidden"
+          />
         )}
+
 
         <div className="glass-strong rounded-3xl p-5">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Lieferadresse</div>
