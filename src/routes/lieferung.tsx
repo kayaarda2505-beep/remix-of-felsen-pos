@@ -27,6 +27,7 @@ import { geocodeCustomers } from "@/lib/geo.functions";
 import { DELIVERY_MENU, type DeliveryMenuItem } from "@/lib/delivery-menu";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
 import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
+import { sendOrderReceivedSms } from "@/lib/order-sms.functions";
 
 
 export const Route = createFileRoute("/lieferung")({
