@@ -44,6 +44,7 @@ import { Route as KurierIdRouteImport } from './routes/kurier.$id'
 import { Route as OrderTokenPaidRouteImport } from './routes/order.$token.paid'
 import { Route as ApiPublicSpotifySearchRouteImport } from './routes/api/public/spotify-search'
 import { Route as ApiPublicSongRequestRouteImport } from './routes/api/public/song-request'
+import { Route as ApiPublicSmsTestRouteImport } from './routes/api/public/sms-test'
 import { Route as ApiPublicServiceCallRouteImport } from './routes/api/public/service-call'
 import { Route as ApiPublicPaymentRequestRouteImport } from './routes/api/public/payment-request'
 import { Route as ApiPublicOrderRouteImport } from './routes/api/public/order'
@@ -227,6 +228,11 @@ const ApiPublicSongRequestRoute = ApiPublicSongRequestRouteImport.update({
   path: '/api/public/song-request',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSmsTestRoute = ApiPublicSmsTestRouteImport.update({
+  id: '/api/public/sms-test',
+  path: '/api/public/sms-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicServiceCallRoute = ApiPublicServiceCallRouteImport.update({
   id: '/api/public/service-call',
   path: '/api/public/service-call',
@@ -302,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/api/public/order': typeof ApiPublicOrderRoute
   '/api/public/payment-request': typeof ApiPublicPaymentRequestRoute
   '/api/public/service-call': typeof ApiPublicServiceCallRoute
+  '/api/public/sms-test': typeof ApiPublicSmsTestRoute
   '/api/public/song-request': typeof ApiPublicSongRequestRoute
   '/api/public/spotify-search': typeof ApiPublicSpotifySearchRoute
   '/order/$token/paid': typeof OrderTokenPaidRoute
@@ -345,6 +352,7 @@ export interface FileRoutesByTo {
   '/api/public/order': typeof ApiPublicOrderRoute
   '/api/public/payment-request': typeof ApiPublicPaymentRequestRoute
   '/api/public/service-call': typeof ApiPublicServiceCallRoute
+  '/api/public/sms-test': typeof ApiPublicSmsTestRoute
   '/api/public/song-request': typeof ApiPublicSongRequestRoute
   '/api/public/spotify-search': typeof ApiPublicSpotifySearchRoute
   '/order/$token/paid': typeof OrderTokenPaidRoute
@@ -390,6 +398,7 @@ export interface FileRoutesById {
   '/api/public/order': typeof ApiPublicOrderRoute
   '/api/public/payment-request': typeof ApiPublicPaymentRequestRoute
   '/api/public/service-call': typeof ApiPublicServiceCallRoute
+  '/api/public/sms-test': typeof ApiPublicSmsTestRoute
   '/api/public/song-request': typeof ApiPublicSongRequestRoute
   '/api/public/spotify-search': typeof ApiPublicSpotifySearchRoute
   '/order/$token/paid': typeof OrderTokenPaidRoute
@@ -436,6 +445,7 @@ export interface FileRouteTypes {
     | '/api/public/order'
     | '/api/public/payment-request'
     | '/api/public/service-call'
+    | '/api/public/sms-test'
     | '/api/public/song-request'
     | '/api/public/spotify-search'
     | '/order/$token/paid'
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/api/public/order'
     | '/api/public/payment-request'
     | '/api/public/service-call'
+    | '/api/public/sms-test'
     | '/api/public/song-request'
     | '/api/public/spotify-search'
     | '/order/$token/paid'
@@ -523,6 +534,7 @@ export interface FileRouteTypes {
     | '/api/public/order'
     | '/api/public/payment-request'
     | '/api/public/service-call'
+    | '/api/public/sms-test'
     | '/api/public/song-request'
     | '/api/public/spotify-search'
     | '/order/$token/paid'
@@ -557,6 +569,7 @@ export interface RootRouteChildren {
   ApiPublicOrderRoute: typeof ApiPublicOrderRoute
   ApiPublicPaymentRequestRoute: typeof ApiPublicPaymentRequestRoute
   ApiPublicServiceCallRoute: typeof ApiPublicServiceCallRoute
+  ApiPublicSmsTestRoute: typeof ApiPublicSmsTestRoute
   ApiPublicSongRequestRoute: typeof ApiPublicSongRequestRoute
   ApiPublicSpotifySearchRoute: typeof ApiPublicSpotifySearchRoute
   ApiPublicPaymentsCreateTableCheckoutRoute: typeof ApiPublicPaymentsCreateTableCheckoutRoute
@@ -812,6 +825,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSongRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/sms-test': {
+      id: '/api/public/sms-test'
+      path: '/api/public/sms-test'
+      fullPath: '/api/public/sms-test'
+      preLoaderRoute: typeof ApiPublicSmsTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/service-call': {
       id: '/api/public/service-call'
       path: '/api/public/service-call'
@@ -933,6 +953,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOrderRoute: ApiPublicOrderRoute,
   ApiPublicPaymentRequestRoute: ApiPublicPaymentRequestRoute,
   ApiPublicServiceCallRoute: ApiPublicServiceCallRoute,
+  ApiPublicSmsTestRoute: ApiPublicSmsTestRoute,
   ApiPublicSongRequestRoute: ApiPublicSongRequestRoute,
   ApiPublicSpotifySearchRoute: ApiPublicSpotifySearchRoute,
   ApiPublicPaymentsCreateTableCheckoutRoute:
