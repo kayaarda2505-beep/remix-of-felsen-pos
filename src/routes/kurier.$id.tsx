@@ -39,9 +39,11 @@ function CourierPage() {
   const finishDelivery = useServerFn(completeCourierDelivery);
   const [showPay, setShowPay] = useState(false);
 
+  const resendSms = useServerFn(resendTrackingSms);
   const resend = useMutation({
     mutationFn: () => resendSms({ data: { id } }),
   });
+
 
   const start = useMutation({
     mutationFn: () => startDelivery({ data: { id } }),
