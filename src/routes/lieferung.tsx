@@ -1204,12 +1204,14 @@ function OrderGroup({
   dot,
   orders,
   couriers,
+  routeInfo = {},
   onAssign,
 }: {
   title: string;
   dot: string;
   orders: any[];
   couriers: any[];
+  routeInfo?: Record<string, { km: number; minutes: number }>;
   onAssign: (orderId: string, courierId: string | null) => void;
 }) {
   return (
