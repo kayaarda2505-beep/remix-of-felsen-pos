@@ -1062,7 +1062,7 @@ function Lieferung() {
             couriers={couriers}
             onAssign={(orderId, courierId) => assignCourier.mutate({ orderId, courierId })}
           />
-          <section className="glass-strong rounded-3xl p-4">
+          <section className="glass-map rounded-3xl p-4">
             <h2 className="font-semibold mb-3 text-sm">Kuriere</h2>
             {courierLocations.length === 0 ? (
               <div className="text-xs text-muted-foreground">
@@ -1098,7 +1098,7 @@ function Lieferung() {
             )}
           </section>
 
-          <section className="glass-strong rounded-3xl p-4">
+          <section className="glass-map rounded-3xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-sm">Heute erledigt</h2>
               <span className="text-xs text-muted-foreground tabular-nums">
