@@ -124,7 +124,10 @@ function RootComponent() {
   }, [router, queryClient]);
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isPublicGuest = pathname.startsWith("/order/") || pathname.startsWith("/kurier/");
+  const isPublicGuest =
+    pathname.startsWith("/order/") ||
+    pathname.startsWith("/kurier/") ||
+    pathname.startsWith("/track/");
 
   return (
     <QueryClientProvider client={queryClient}>
