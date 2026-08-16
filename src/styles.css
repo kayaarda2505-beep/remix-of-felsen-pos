@@ -260,6 +260,15 @@
     box-shadow: var(--shadow-elevated);
   }
 
+  .glass-map {
+    background: oklch(0.18 0.006 270 / 55%);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-elevated);
+  }
+
+
   .text-gradient-gold {
     background: var(--gradient-gold);
     -webkit-background-clip: text;
