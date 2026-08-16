@@ -85,6 +85,50 @@ export const getCourierOrder = createServerFn({ method: "GET" })
     };
   });
 
+async function sendTrackingSms(orderId: string, force = false): Promise<{ sent: boolean; error?: string }> {
+  try {
+    const { data: order } = await (supabaseAdmin as any)
+      .from("orders")
+      .select("id, customer_id, tracking_token, tracking_sms_sent_at")
+      .eq("id", orderId)
+      .maybeSingle();
+
+    if (!order) return { sent: false, error: "Bestellung nicht gefunden" };
+    if (order.tracking_sms_sent_at && !force) return { sent: false, error: "SMS wurde bereits gesendet" };
+    if (!order.customer_id) return { sent: false, error: "Kein Kunde hinterlegt" };
+
+    const { data: customer } = await (supabaseAdmin as any)
+      .from("customers")
+      .select("phone")
+      .eq("id", order.customer_id)
+      .maybeSingle();
+
+    const { toMsisdn, sendSms } = await import("@/lib/sms.server");
+    const recipient = toMsisdn(customer?.phone);
+    if (!recipient) return { sent: false, error: "Keine gültige Mobilnummer" };
+
+    let token = order.tracking_token as string | null;
+    if (!token) {
+      token = crypto.randomUUID().replace(/-/g, "");
+      await (supabaseAdmin as any).from("orders").update({ tracking_token: token }).eq("id", orderId);
+    }
+    const base = process.env["PUBLIC_SITE_URL"] ?? "https://felsens-pos-glow.lovable.app";
+    await sendSms(
+      recipient,
+      `Piratino: Deine Bestellung ist unterwegs! Live-Standort & Ankunftszeit: ${base}/track/${token}`,
+      `order-${orderId}-${Date.now()}`,
+    );
+    await (supabaseAdmin as any)
+      .from("orders")
+      .update({ tracking_sms_sent_at: new Date().toISOString() })
+      .eq("id", orderId);
+    return { sent: true };
+  } catch (e) {
+    console.error("[courier] SMS", e);
+    return { sent: false, error: e instanceof Error ? e.message : "SMS Fehler" };
+  }
+}
+
 export const startCourierDelivery = createServerFn({ method: "POST" })
   .inputValidator((input) => IdSchema.parse(input))
   .handler(async ({ data }) => {
@@ -96,51 +140,14 @@ export const startCourierDelivery = createServerFn({ method: "POST" })
       .is("courier_started_at", null);
     if (error) throw new Error(error.message);
 
-    // Kunde per SMS informieren (einmalig) inkl. Live-Tracking-Link
-    let sms: { sent: boolean; error?: string } = { sent: false };
-    try {
-      const { data: order } = await (supabaseAdmin as any)
-        .from("orders")
-        .select("id, customer_id, tracking_token, tracking_sms_sent_at")
-        .eq("id", data.id)
-        .maybeSingle();
-
-      if (order && !order.tracking_sms_sent_at && order.customer_id) {
-        const { data: customer } = await (supabaseAdmin as any)
-          .from("customers")
-          .select("phone, first_name")
-          .eq("id", order.customer_id)
-          .maybeSingle();
-
-        const { toMsisdn, sendSms } = await import("@/lib/sms.server");
-        const recipient = toMsisdn(customer?.phone);
-
-        if (recipient) {
-          let token = order.tracking_token as string | null;
-          if (!token) {
-            token = crypto.randomUUID().replace(/-/g, "");
-            await (supabaseAdmin as any).from("orders").update({ tracking_token: token }).eq("id", data.id);
-          }
-          const base = process.env["PUBLIC_SITE_URL"] ?? "https://felsens-pos-glow.lovable.app";
-          await sendSms(
-            recipient,
-            `Piratino: Deine Bestellung ist unterwegs! Live-Standort & Ankunftszeit: ${base}/track/${token}`,
-            `order-${data.id}`,
-          );
-          await (supabaseAdmin as any)
-            .from("orders")
-            .update({ tracking_sms_sent_at: new Date().toISOString() })
-            .eq("id", data.id);
-          sms = { sent: true };
-        }
-      }
-    } catch (e) {
-      sms = { sent: false, error: e instanceof Error ? e.message : "SMS Fehler" };
-      console.error("[courier] SMS", e);
-    }
-
+    const sms = await sendTrackingSms(data.id);
     return { ok: true, sms };
   });
+
+export const resendTrackingSms = createServerFn({ method: "POST" })
+  .inputValidator((input) => IdSchema.parse(input))
+  .handler(async ({ data }) => ({ sms: await sendTrackingSms(data.id, true) }));
+
 
 
 const CompleteSchema = z.object({
