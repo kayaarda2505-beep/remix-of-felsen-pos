@@ -73,7 +73,7 @@ function ReviewPage() {
     setBusy(true);
     try {
       await save({ data: { token, rating, comment: comment.trim() || undefined } });
-      setPhase("newsletter");
+      setPhase(rating >= 4 ? "google" : "newsletter");
     } finally {
       setBusy(false);
     }
