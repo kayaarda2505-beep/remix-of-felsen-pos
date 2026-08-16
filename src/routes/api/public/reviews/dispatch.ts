@@ -30,7 +30,7 @@ async function dispatchDueReviews() {
     try {
       await sendSms(
         recipient,
-        `Piratino: Wie hat's geschmeckt? Bewerte uns in 10 Sekunden: ${base}/bewertung/${r.token}`,
+        `Piratino: Wie hat's geschmeckt? Bewerte uns direkt bei Google: https://maps.google.com/?cid=4104131751984087472 - Angebote per SMS erhalten? Hier Ja/Nein: ${base}/bewertung/${r.token}`,
         `review-${r.id}`,
       );
       await db
