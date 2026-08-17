@@ -578,13 +578,28 @@ function POS() {
       {/* Open tabs row */}
       <div className="flex gap-2 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
         <button
-          onClick={() => setActiveOrderId(null)}
+          onClick={() => {
+            setActiveOrderId(null);
+            setTakeaway(false);
+          }}
           className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium border-2 transition-all ${
-            !isTab ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground"
+            !isTab && !takeaway ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground"
           }`}
         >
           Theke
         </button>
+        <button
+          onClick={() => {
+            setActiveOrderId(null);
+            setTakeaway(true);
+          }}
+          className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium border-2 transition-all flex items-center gap-2 ${
+            !isTab && takeaway ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" /> Takeaway
+        </button>
+
         {openOrders
           .filter((o) => o.total > 0)
           .map((o) => (
