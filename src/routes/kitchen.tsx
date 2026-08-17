@@ -67,12 +67,45 @@ const loadAcked = (): Record<string, number> => {
 };
 const saveAcked = (m: Record<string, number>) => localStorage.setItem(ACK_KEY, JSON.stringify(m));
 
+const SOUND_KEY = "kitchen.sound.v1";
+
+/** Lauter Alarm-Ton (mehrere Beeps) für neue Bestellungen. */
+function playAlarm(loud: boolean) {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const beeps = loud ? 4 : 2;
+  const gainPeak = loud ? 1 : 0.35;
+  for (let i = 0; i < beeps; i++) {
+    const start = ctx.currentTime + i * 0.32;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(loud ? 980 : 760, start);
+    osc.frequency.setValueAtTime(loud ? 1320 : 900, start + 0.12);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(gainPeak, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.26);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + 0.28);
+  }
+}
+
 function KitchenView() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"all" | "bar" | "kueche" | "pizza">("all");
   const [tick, setTick] = useState(0);
   const [acked, setAcked] = useState<Record<string, number>>(() => loadAcked());
   const [tutorial, setTutorial] = useState<CocktailTutorial | null>(null);
+  const [soundOn, setSoundOn] = useState(true);
+  const seenKeys = useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    installAudioUnlock();
+    setSoundOn(localStorage.getItem(SOUND_KEY) !== "off");
+  }, []);
+
 
   // 1-Sekunden-Tick für Elapsed-Anzeige
   useEffect(() => {
