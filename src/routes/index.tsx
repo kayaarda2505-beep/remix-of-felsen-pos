@@ -722,8 +722,8 @@ function ServiceTablet() {
             exit={{ opacity: 0, x: -20 }}
             className="flex-1 flex min-h-0"
           >
-            {/* Categories rail */}
-            <nav className="w-24 md:w-36 shrink-0 border-r border-border/40 overflow-y-auto bg-sidebar/40">
+            {/* Categories rail — nur ab Tablet */}
+            <nav className="hidden md:block w-36 shrink-0 border-r border-border/40 overflow-y-auto bg-sidebar/40">
               {categories.map((c) => (
                 <button
                   key={c}
@@ -731,7 +731,7 @@ function ServiceTablet() {
                     setActiveCat(c);
                     setSearch("");
                   }}
-                  className={`w-full text-left px-3 md:px-4 py-4 text-xs md:text-sm font-medium border-l-2 transition-all tap-highlight-none ${
+                  className={`w-full text-left px-4 py-4 text-sm font-medium border-l-2 transition-all tap-highlight-none ${
                     activeCat === c && !search
                       ? "border-accent bg-white/[0.04] text-foreground"
                       : "border-transparent text-muted-foreground"
@@ -744,17 +744,42 @@ function ServiceTablet() {
 
             {/* Products */}
             <div className="flex-1 flex flex-col min-w-0">
-              <div className="p-3 md:p-4 border-b border-border/40">
-                <div className="glass rounded-xl flex items-center gap-2 px-3 py-2.5">
+              <div className="p-3 md:p-4 border-b border-border/40 space-y-2.5">
+                <div className="glass rounded-xl flex items-center gap-2 px-3 py-3">
                   <Search className="w-4 h-4 text-muted-foreground" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Produkt suchen…"
-                    className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
+                    className="bg-transparent outline-none text-base md:text-sm flex-1 placeholder:text-muted-foreground"
                   />
+                  {search && (
+                    <button onClick={() => setSearch("")} className="w-8 h-8 -mr-1 rounded-lg flex items-center justify-center active:bg-white/10">
+                      <X className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
+                {/* Mobile: Kategorien als horizontale Chips */}
+                <div className="md:hidden -mx-3 px-3 flex gap-2 overflow-x-auto scrollbar-none">
+                  {categories.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setActiveCat(c);
+                        setSearch("");
+                      }}
+                      className={`shrink-0 rounded-xl px-3.5 py-2.5 text-sm font-medium border tap-highlight-none transition-colors ${
+                        activeCat === c && !search
+                          ? "border-accent/60 bg-accent/20 text-foreground"
+                          : "border-transparent bg-white/[0.05] text-muted-foreground"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
                 </div>
               </div>
+
 
               <div className="flex-1 overflow-y-auto p-3 md:p-4 pb-28 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3 auto-rows-min">
                 {visible.map((p) => {
