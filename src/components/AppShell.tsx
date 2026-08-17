@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Bike,
   Tablet,
@@ -546,6 +546,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const navRole = operator?.role as string | undefined;
   const operatorStation = stationForAccount(operator?.accountNumber);
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (operatorStation && path !== "/kitchen") {
+      void navigate({ to: "/kitchen" });
+    }
+  }, [operatorStation, path, navigate]);
   const visibleNav = operatorStation
     ? nav.filter((n) => n.to === "/kitchen")
     : navRole === "barkeeper"
