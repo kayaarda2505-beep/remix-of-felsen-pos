@@ -109,15 +109,31 @@ const STEPS: { key: Step; label: string }[] = [
   { key: "checkout", label: "Lieferbestellung" },
 ];
 
+const TAKEAWAY_STEPS: { key: Step; label: string }[] = [
+  { key: "customer", label: "Telefonnummer" },
+  { key: "order", label: "Bestellung" },
+  { key: "checkout", label: "Takeaway-Bestellung" },
+];
+
+/** Grobe Abholzeit-Schätzung in Minuten (Basis 20 Min., +5 pro 4 Artikel, max. 45). */
+function estimateMinutes(itemCount: number) {
+  return Math.min(45, 20 + Math.floor(Math.max(0, itemCount - 1) / 4) * 5);
+}
+
 function Lieferung() {
   const qc = useQueryClient();
   const { operator } = useAuth();
+
+  const [mode, setMode] = useState<"delivery" | "takeaway">("delivery");
+  const [taName, setTaName] = useState("");
+  const [taPhone, setTaPhone] = useState("");
 
   const [step, setStep] = useState<Step>("customer");
   const [search, setSearch] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+
 
   const [activeCategory, setActiveCategory] = useState(DELIVERY_MENU[0]?.category ?? "");
   const [productSearch, setProductSearch] = useState("");
