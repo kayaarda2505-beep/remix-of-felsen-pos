@@ -235,6 +235,10 @@ async function scheduleReviewRequest(orderId: string) {
       .maybeSingle();
     if (!c?.phone) return;
 
+    const { getReviewStatus } = await import("./review-eligibility.server");
+    const status = await getReviewStatus(db, { customerId: order.customer_id, phone: c.phone });
+    if (status.alreadySubscribed) return;
+
     await db.from("review_requests").insert({
       order_id: orderId,
       customer_id: order.customer_id,

@@ -7,7 +7,7 @@ async function dispatchDueReviews() {
 
   const { data: due, error } = await db
     .from("review_requests")
-    .select("id, token, phone, customer_name")
+    .select("id, token, phone, customer_name, customer_id")
     .is("sent_at", null)
     .lte("send_after", new Date().toISOString())
     .limit(25);
@@ -27,12 +27,24 @@ async function dispatchDueReviews() {
       failed++;
       continue;
     }
+    const { getReviewStatus } = await import("@/lib/review-eligibility.server");
+    const status = await getReviewStatus(db, { customerId: r.customer_id, phone: r.phone });
+
+    if (status.alreadySubscribed) {
+      // Kunde ist bereits Abonnent -> keine weitere Bewertungs-/Newsletter-Anfrage
+      await db
+        .from("review_requests")
+        .update({ sent_at: new Date().toISOString(), send_error: "Übersprungen (bereits Abonnent)" })
+        .eq("id", r.id);
+      continue;
+    }
+
+    const message = status.alreadyReviewed
+      ? `Piratino: Danke für deine Bestellung! Angebote per SMS erhalten? Hier Ja/Nein: ${base}/bewertung/${r.token}`
+      : `Piratino: Wie hat's geschmeckt? Bewerte uns direkt bei Google: https://maps.google.com/?cid=4104131751984087472 - Angebote per SMS erhalten? Hier Ja/Nein: ${base}/bewertung/${r.token}`;
+
     try {
-      await sendSms(
-        recipient,
-        `Piratino: Wie hat's geschmeckt? Bewerte uns direkt bei Google: https://maps.google.com/?cid=4104131751984087472 - Angebote per SMS erhalten? Hier Ja/Nein: ${base}/bewertung/${r.token}`,
-        `review-${r.id}`,
-      );
+      await sendSms(recipient, message, `review-${r.id}`);
       await db
         .from("review_requests")
         .update({ sent_at: new Date().toISOString(), send_error: null })

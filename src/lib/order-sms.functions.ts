@@ -18,6 +18,12 @@ async function scheduleReview(admin: any, orderId: string, phone: string, name: 
       .eq("order_id", orderId)
       .maybeSingle();
     if (existing) return;
+
+    const { getReviewStatus } = await import("./review-eligibility.server");
+    const status = await getReviewStatus(admin, { customerId, phone });
+    // Bereits Newsletter-Abonnent -> weder Bewertung noch Newsletter erneut anfragen
+    if (status.alreadySubscribed) return;
+
     await admin.from("review_requests").insert({
       order_id: orderId,
       customer_id: customerId,
