@@ -28,7 +28,7 @@ import { PiratinoLogo } from "./PiratinoLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
-import { printBill, routeForCategory } from "@/lib/receipt";
+import { printBill, routeForCategory, routeForItem } from "@/lib/receipt";
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 import { UrgentAlertOverlay, pushUrgentAlert } from "@/components/UrgentAlert";
 import { installAudioUnlock, getAudioContext } from "@/lib/audio-unlock";
@@ -408,6 +408,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, []);
   const operatorRole = operator?.role;
+  const operatorStationKey = stationForAccount(operator?.accountNumber);
+  const operatorAccountRef = useRef<number | null | undefined>(operator?.accountNumber);
+  useEffect(() => { operatorAccountRef.current = operator?.accountNumber; }, [operator?.accountNumber]);
   const operatorRoleRef = useRef<string | undefined>(operatorRole);
   useEffect(() => { operatorRoleRef.current = operatorRole; }, [operatorRole]);
   const handleServiceCall = useCallback((r: any) => {
@@ -430,10 +433,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const handledDrinkItemIds = useRef<Set<string>>(new Set());
   const handleStationOrderItem = useCallback(async (it: any) => {
     if (!it?.id || handledDrinkItemIds.current.has(it.id)) return;
-    const station = routeForCategory(it.category); // "bar" | "kueche"
-    if (operatorRole === "barkeeper" && station !== "bar") return;
-    if (operatorRole === "kueche" && station !== "kueche") return;
-    if (operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
+    const myStation = stationForAccount(operatorAccountRef.current);
+    if (myStation) {
+      // Station-Account: Ton nur bei Bestellungen der eigenen Station
+      if (routeForItem(it.category, it.product_name) !== myStation) return;
+    } else {
+      const station = routeForCategory(it.category); // "bar" | "kueche"
+      if (operatorRole === "barkeeper" && station !== "bar") return;
+      if (operatorRole === "kueche" && station !== "kueche") return;
+      if (operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
+    }
+    const station = routeForCategory(it.category);
     handledDrinkItemIds.current.add(it.id);
 
     let tableName: string | null = null;
@@ -457,7 +467,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [operatorRole, playServiceDing]);
 
   useEffect(() => {
-    if (operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
+    if (!operatorStationKey && operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
     const ch = supabase
       .channel(`order_items_station_notify_${Math.random().toString(36).slice(2)}`)
       .on(
