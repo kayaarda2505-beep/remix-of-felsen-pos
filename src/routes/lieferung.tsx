@@ -1658,18 +1658,57 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
   );
 }
 
+const SIDE_OPTIONS = (
+  DELIVERY_MENU.find((c) => /beilag/i.test(c.category))?.items ?? []
+).map((i) => ({ id: i.id, name: i.name, price: i.price }));
+
 function MenuConfigDialog({
   item,
+  basePrice,
   onClose,
   onConfirm,
 }: {
   item: DeliveryMenuItem & { category: string };
+  basePrice: number;
   onClose: () => void;
-  onConfirm: (note: string) => void;
+  onConfirm: (r: { note: string; extra: number; qty: number }) => void;
 }) {
   const groups = item.modifierGroups ?? [];
   const [choices, setChoices] = useState<Record<string, string>>({});
+  const [removed, setRemoved] = useState<string[]>([]);
+  const [extras, setExtras] = useState<Record<string, number>>({});
+  const [note, setNote] = useState("");
+  const [qty, setQty] = useState(1);
   const complete = groups.every((g) => choices[g.label]);
+
+  const ingredients = (item.description ?? "")
+    .split(/,|·/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 1 && s.length < 30);
+
+  const extraDelta = SIDE_OPTIONS.reduce((s, o) => s + (extras[o.id] ?? 0) * o.price, 0);
+  const unit = basePrice + extraDelta;
+
+  const bump = (id: string, d: number) =>
+    setExtras((prev) => {
+      const next = Math.max(0, (prev[id] ?? 0) + d);
+      const out = { ...prev };
+      if (next === 0) delete out[id];
+      else out[id] = next;
+      return out;
+    });
+
+  const submit = () => {
+    const parts = [
+      ...groups.map((g) => `${g.label.replace(" wählen", "")}: ${choices[g.label]}`),
+      ...removed.map((r) => `ohne ${r}`),
+      ...SIDE_OPTIONS.filter((o) => (extras[o.id] ?? 0) > 0).map(
+        (o) => `+ ${o.name}${(extras[o.id] ?? 0) > 1 ? ` x${extras[o.id]}` : ""}`,
+      ),
+      ...(note.trim() ? [note.trim()] : []),
+    ];
+    onConfirm({ note: parts.join(" · "), extra: +extraDelta.toFixed(2), qty });
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
@@ -1679,7 +1718,7 @@ function MenuConfigDialog({
             <h3 className="text-lg font-semibold">{item.name}</h3>
             {item.description && <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>}
           </div>
-          <span className="text-base font-semibold tabular-nums shrink-0">CHF {item.price.toFixed(2)}</span>
+          <span className="text-base font-semibold tabular-nums shrink-0">CHF {basePrice.toFixed(2)}</span>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-5 pr-1">
@@ -1706,23 +1745,123 @@ function MenuConfigDialog({
               </div>
             </div>
           ))}
+
+          {ingredients.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                Zutaten / Beilagen entfernen
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {ingredients.map((ing) => {
+                  const active = removed.includes(ing);
+                  return (
+                    <button
+                      key={ing}
+                      onClick={() =>
+                        setRemoved((prev) =>
+                          prev.includes(ing) ? prev.filter((x) => x !== ing) : [...prev, ing],
+                        )
+                      }
+                      className={`px-3 py-2 rounded-full text-xs font-medium border transition-colors ${
+                        active
+                          ? "bg-destructive/20 text-destructive border-destructive/50"
+                          : "glass border-border/40 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      ohne {ing}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {SIDE_OPTIONS.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                Beilagen hinzufügen
+              </div>
+              <div className="space-y-1.5">
+                {SIDE_OPTIONS.map((o) => {
+                  const n = extras[o.id] ?? 0;
+                  return (
+                    <div
+                      key={o.id}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2 border ${
+                        n > 0 ? "bg-accent/10 border-accent/40" : "glass border-border/40"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm truncate">{o.name}</div>
+                        <div className="text-[11px] text-muted-foreground tabular-nums">
+                          +CHF {o.price.toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 glass rounded-lg p-0.5 shrink-0">
+                        <button
+                          onClick={() => bump(o.id, -1)}
+                          className="w-8 h-8 rounded-md flex items-center justify-center active:bg-white/10"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="w-6 text-center text-sm tabular-nums">{n}</span>
+                        <button
+                          onClick={() => bump(o.id, 1)}
+                          className="w-8 h-8 rounded-md flex items-center justify-center active:bg-white/10"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+              Notiz an die Küche
+            </div>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              placeholder="z.B. gut durchgebacken, Allergie…"
+              className="w-full glass rounded-xl p-3 text-sm bg-transparent outline-none resize-none placeholder:text-muted-foreground"
+            />
+          </div>
         </div>
 
-        <div className="flex gap-2 pt-4">
+        <div className="flex gap-2 pt-4 items-center">
+          <div className="flex items-center gap-1 glass rounded-2xl p-1 shrink-0">
+            <button
+              onClick={() => setQty((q) => Math.max(1, q - 1))}
+              className="w-9 h-9 rounded-lg flex items-center justify-center active:bg-white/10"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="w-7 text-center text-sm font-semibold tabular-nums">{qty}</span>
+            <button
+              onClick={() => setQty((q) => q + 1)}
+              className="w-9 h-9 rounded-lg flex items-center justify-center active:bg-white/10"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
           <button onClick={onClose} className="glass rounded-2xl px-4 py-3 text-sm flex-1">
             Abbrechen
           </button>
           <button
             disabled={!complete}
-            onClick={() =>
-              onConfirm(groups.map((g) => `${g.label.replace(" wählen", "")}: ${choices[g.label]}`).join(" · "))
-            }
+            onClick={submit}
             className="rounded-2xl px-4 py-3 text-sm font-semibold flex-[2] bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground disabled:opacity-40"
           >
-            Hinzufügen
+            Hinzufügen · CHF {(unit * qty).toFixed(2)}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
