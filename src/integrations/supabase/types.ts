@@ -723,6 +723,8 @@ export type Database = {
       orders: {
         Row: {
           closed_at: string | null
+          contact_name: string | null
+          contact_phone: string | null
           courier_assigned_at: string | null
           courier_delivered_at: string | null
           courier_id: string | null
@@ -746,6 +748,8 @@ export type Database = {
         }
         Insert: {
           closed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           courier_assigned_at?: string | null
           courier_delivered_at?: string | null
           courier_id?: string | null
@@ -769,6 +773,8 @@ export type Database = {
         }
         Update: {
           closed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           courier_assigned_at?: string | null
           courier_delivered_at?: string | null
           courier_id?: string | null
