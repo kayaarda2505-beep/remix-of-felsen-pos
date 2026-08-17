@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock, ChefHat, Wine, Inbox, BookOpen, X, Pizza } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, Clock, ChefHat, Wine, Inbox, BookOpen, X, Pizza, Bike, ShoppingBag, Utensils, Volume2, VolumeX } from "lucide-react";
 import { PageHeader } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { routeForItem } from "@/lib/receipt";
 import { getTutorial, type CocktailTutorial } from "@/lib/cocktailTutorials";
 import { sendOrderReadySms } from "@/lib/order-sms.functions";
+import { getAudioContext, installAudioUnlock } from "@/lib/audio-unlock";
 
 export const Route = createFileRoute("/kitchen")({
   head: () => ({ meta: [{ title: "Küche, Bar & Pizzastation — Piratino POS" }] }),
@@ -15,6 +16,16 @@ export const Route = createFileRoute("/kitchen")({
 });
 
 type Station = "bar" | "kueche" | "pizza";
+
+type OrderKind = "table" | "takeaway" | "delivery" | "counter";
+interface OrderInfo { label: string; kind: OrderKind; address: string | null }
+
+const KIND_LABEL: Record<OrderKind, string> = {
+  table: "Tisch / Service",
+  takeaway: "Takeaway — Abholung",
+  delivery: "Lieferung",
+  counter: "Theke / Direkt",
+};
 
 interface TicketItem {
   id: string;
@@ -31,6 +42,8 @@ interface Ticket {
   orderId: string;
   station: Station;
   tableName: string;
+  kind: OrderKind;
+  address: string | null;
   items: TicketItem[];
   firstSent: number;       // ms timestamp of earliest item
   batch: number;           // bucket timestamp (sent_at rounded to 5s)
@@ -54,12 +67,45 @@ const loadAcked = (): Record<string, number> => {
 };
 const saveAcked = (m: Record<string, number>) => localStorage.setItem(ACK_KEY, JSON.stringify(m));
 
+const SOUND_KEY = "kitchen.sound.v1";
+
+/** Lauter Alarm-Ton (mehrere Beeps) für neue Bestellungen. */
+function playAlarm(loud: boolean) {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const beeps = loud ? 4 : 2;
+  const gainPeak = loud ? 1 : 0.35;
+  for (let i = 0; i < beeps; i++) {
+    const start = ctx.currentTime + i * 0.32;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(loud ? 980 : 760, start);
+    osc.frequency.setValueAtTime(loud ? 1320 : 900, start + 0.12);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(gainPeak, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.26);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + 0.28);
+  }
+}
+
 function KitchenView() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"all" | "bar" | "kueche" | "pizza">("all");
   const [tick, setTick] = useState(0);
   const [acked, setAcked] = useState<Record<string, number>>(() => loadAcked());
   const [tutorial, setTutorial] = useState<CocktailTutorial | null>(null);
+  const [soundOn, setSoundOn] = useState(true);
+  const seenKeys = useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    installAudioUnlock();
+    setSoundOn(localStorage.getItem(SOUND_KEY) !== "off");
+  }, []);
+
 
   // 1-Sekunden-Tick für Elapsed-Anzeige
   useEffect(() => {
@@ -86,7 +132,7 @@ function KitchenView() {
 
   // Tischnamen für die Order-IDs
   const orderIds = useMemo(() => Array.from(new Set(rawItems.map((i) => i.order_id))), [rawItems]);
-  const { data: orderMap = {} } = useQuery<Record<string, string>>({
+  const { data: orderMap = {} } = useQuery<Record<string, OrderInfo>>({
     queryKey: ["kitchen", "order-tables", orderIds.join(",")],
     enabled: orderIds.length > 0,
     queryFn: async () => {
@@ -95,7 +141,7 @@ function KitchenView() {
         .select("id, table_id, order_type, delivery_address, dining_tables:table_id(name), customers:customer_id(first_name, last_name)")
         .in("id", orderIds);
       if (error) throw error;
-      const m: Record<string, string> = {};
+      const m: Record<string, OrderInfo> = {};
       (data ?? []).forEach((r: {
         id: string;
         order_type: string | null;
@@ -106,15 +152,22 @@ function KitchenView() {
         const cust = r.customers
           ? `${r.customers.first_name ?? ""} ${r.customers.last_name ?? ""}`.trim()
           : "";
-        m[r.id] =
-          (r.order_type === "takeaway" ? "Takeaway" : null) ??
-          r.dining_tables?.name ??
-          (cust || (r.order_type === "delivery" ? "Lieferung" : "Direkt"));
-
+        const kind: OrderKind =
+          r.order_type === "takeaway" ? "takeaway"
+          : r.order_type === "delivery" ? "delivery"
+          : r.dining_tables?.name ? "table"
+          : "counter";
+        const label =
+          kind === "takeaway" ? (cust || "Takeaway")
+          : kind === "delivery" ? (cust || "Lieferung")
+          : kind === "table" ? (r.dining_tables?.name ?? "Tisch")
+          : (cust || "Direkt");
+        m[r.id] = { label, kind, address: r.delivery_address };
       });
       return m;
     },
   });
+
 
 
   // Realtime: bei neuen order_items sofort neu laden
@@ -188,11 +241,14 @@ function KitchenView() {
         const key = `${it.order_id}-${station}-${batch}`;
         if (acked[key] && batch <= acked[key]) continue;
         if (!ticket) {
+          const info = orderMap[it.order_id];
           ticket = {
             key,
             orderId: it.order_id,
             station,
-            tableName: orderMap[it.order_id] ?? "…",
+            tableName: info?.label ?? "…",
+            kind: info?.kind ?? "counter",
+            address: info?.address ?? null,
             items: [],
             firstSent: sentMs,
             batch,
@@ -217,6 +273,19 @@ function KitchenView() {
 
   const visible = tickets.filter((t) => filter === "all" || t.station === filter);
 
+  // Neue Tickets => Signalton (Pizzastation deutlich lauter)
+  useEffect(() => {
+    const relevant = tickets.filter((t) => filter === "all" || t.station === filter);
+    if (seenKeys.current === null) {
+      seenKeys.current = new Set(relevant.map((t) => t.key));
+      return;
+    }
+    const fresh = relevant.filter((t) => !seenKeys.current!.has(t.key));
+    seenKeys.current = new Set(relevant.map((t) => t.key));
+    if (fresh.length === 0 || !soundOn) return;
+    playAlarm(fresh.some((t) => t.station === "pizza"));
+  }, [tickets, filter, soundOn]);
+
   const ackTicket = (key: string, orderId?: string) => {
     const next = { ...acked, [key]: Date.now() };
     setAcked(next);
@@ -235,21 +304,38 @@ function KitchenView() {
         title="Küche, Bar & Pizzastation"
         subtitle="Live Bestellungen — automatisch nach Station sortiert"
         actions={
-          <div className="glass rounded-xl p-1 flex gap-1">
-            {(["all", "bar", "kueche", "pizza"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                  filter === f ? "bg-white/10" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {f === "bar" && <Wine className="w-3 h-3" />}
-                {f === "kueche" && <ChefHat className="w-3 h-3" />}
-                {f === "pizza" && <Pizza className="w-3 h-3" />}
-                {f === "all" ? "Alle" : f === "bar" ? "Bar" : f === "kueche" ? "Küche" : "Pizzastation"}
-              </button>
-            ))}
+          <div className="flex gap-2 items-center">
+            <div className="glass rounded-xl p-1 flex gap-1">
+              {(["all", "bar", "kueche", "pizza"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                    filter === f ? "bg-white/10" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {f === "bar" && <Wine className="w-3 h-3" />}
+                  {f === "kueche" && <ChefHat className="w-3 h-3" />}
+                  {f === "pizza" && <Pizza className="w-3 h-3" />}
+                  {f === "all" ? "Alle" : f === "bar" ? "Bar" : f === "kueche" ? "Küche" : "Pizzastation"}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const next = !soundOn;
+                setSoundOn(next);
+                localStorage.setItem(SOUND_KEY, next ? "on" : "off");
+                if (next) playAlarm(filter === "pizza");
+              }}
+              className={`glass rounded-xl px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                soundOn ? "text-foreground" : "text-muted-foreground"
+              }`}
+              title="Signalton für neue Bestellungen"
+            >
+              {soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+              {soundOn ? "Ton an" : "Ton aus"}
+            </button>
           </div>
         }
       />
@@ -281,9 +367,20 @@ function KitchenView() {
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-mono text-xs text-muted-foreground">#{t.orderId.slice(0, 6)}</div>
-                    <div className="text-lg font-semibold">{t.tableName}</div>
+                    <div className="text-lg font-semibold truncate">{t.tableName}</div>
+                    <span className={`inline-flex items-center gap-1 text-[10px] mt-1 px-2 py-0.5 rounded-md font-medium ${
+                      t.kind === "delivery" ? "bg-primary/20 text-primary"
+                      : t.kind === "takeaway" ? "bg-warning/20 text-warning"
+                      : "bg-white/10 text-muted-foreground"
+                    }`}>
+                      {t.kind === "delivery" ? <Bike className="w-3 h-3" /> : t.kind === "takeaway" ? <ShoppingBag className="w-3 h-3" /> : <Utensils className="w-3 h-3" />}
+                      {KIND_LABEL[t.kind]}
+                    </span>
+                    {t.kind === "delivery" && t.address && (
+                      <div className="text-[11px] text-muted-foreground mt-1 truncate">{t.address}</div>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className={`flex items-center gap-1 text-xs ${urgent ? "text-warning" : "text-muted-foreground"}`}>
