@@ -304,21 +304,38 @@ function KitchenView() {
         title="Küche, Bar & Pizzastation"
         subtitle="Live Bestellungen — automatisch nach Station sortiert"
         actions={
-          <div className="glass rounded-xl p-1 flex gap-1">
-            {(["all", "bar", "kueche", "pizza"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                  filter === f ? "bg-white/10" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {f === "bar" && <Wine className="w-3 h-3" />}
-                {f === "kueche" && <ChefHat className="w-3 h-3" />}
-                {f === "pizza" && <Pizza className="w-3 h-3" />}
-                {f === "all" ? "Alle" : f === "bar" ? "Bar" : f === "kueche" ? "Küche" : "Pizzastation"}
-              </button>
-            ))}
+          <div className="flex gap-2 items-center">
+            <div className="glass rounded-xl p-1 flex gap-1">
+              {(["all", "bar", "kueche", "pizza"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                    filter === f ? "bg-white/10" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {f === "bar" && <Wine className="w-3 h-3" />}
+                  {f === "kueche" && <ChefHat className="w-3 h-3" />}
+                  {f === "pizza" && <Pizza className="w-3 h-3" />}
+                  {f === "all" ? "Alle" : f === "bar" ? "Bar" : f === "kueche" ? "Küche" : "Pizzastation"}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const next = !soundOn;
+                setSoundOn(next);
+                localStorage.setItem(SOUND_KEY, next ? "on" : "off");
+                if (next) playAlarm(filter === "pizza");
+              }}
+              className={`glass rounded-xl px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                soundOn ? "text-foreground" : "text-muted-foreground"
+              }`}
+              title="Signalton für neue Bestellungen"
+            >
+              {soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+              {soundOn ? "Ton an" : "Ton aus"}
+            </button>
           </div>
         }
       />
