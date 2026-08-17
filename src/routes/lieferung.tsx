@@ -15,6 +15,8 @@ import {
   Phone,
   Plus,
   Search,
+  ShoppingBag,
+
   Trash2,
   UserPlus,
   X,
@@ -25,9 +27,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { DeliveryMap, type MapPin as MapPinData } from "@/components/DeliveryMap";
 import { geocodeCustomers } from "@/lib/geo.functions";
 import { DELIVERY_MENU, type DeliveryMenuItem } from "@/lib/delivery-menu";
+import { takeawayPrice } from "@/lib/takeaway-pricing";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
 import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
 import { sendOrderReceivedSms } from "@/lib/order-sms.functions";
+
 
 
 export const Route = createFileRoute("/lieferung")({
@@ -105,15 +109,31 @@ const STEPS: { key: Step; label: string }[] = [
   { key: "checkout", label: "Lieferbestellung" },
 ];
 
+const TAKEAWAY_STEPS: { key: Step; label: string }[] = [
+  { key: "customer", label: "Telefonnummer" },
+  { key: "order", label: "Bestellung" },
+  { key: "checkout", label: "Takeaway-Bestellung" },
+];
+
+/** Grobe Abholzeit-Schätzung in Minuten (Basis 20 Min., +5 pro 4 Artikel, max. 45). */
+function estimateMinutes(itemCount: number) {
+  return Math.min(45, 20 + Math.floor(Math.max(0, itemCount - 1) / 4) * 5);
+}
+
 function Lieferung() {
   const qc = useQueryClient();
   const { operator } = useAuth();
+
+  const [mode, setMode] = useState<"delivery" | "takeaway">("delivery");
+  const [taName, setTaName] = useState("");
+  const [taPhone, setTaPhone] = useState("");
 
   const [step, setStep] = useState<Step>("customer");
   const [search, setSearch] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+
 
   const [activeCategory, setActiveCategory] = useState(DELIVERY_MENU[0]?.category ?? "");
   const [productSearch, setProductSearch] = useState("");
@@ -278,7 +298,13 @@ function Lieferung() {
   const changeQty = (key: string, delta: number) =>
     setCart((prev) => prev.map((l) => (l.key === key ? { ...l, qty: l.qty + delta } : l)).filter((l) => l.qty > 0));
 
-  const subtotal = cart.reduce((s, l) => s + l.item.price * l.qty, 0);
+  const priceOf = useCallback(
+    (item: { name: string; price: number }, category: string) =>
+      mode === "takeaway" ? takeawayPrice({ name: item.name, category, price: item.price }) : item.price,
+    [mode],
+  );
+
+  const subtotal = cart.reduce((s, l) => s + priceOf(l.item, l.category) * l.qty, 0);
   const itemCount = cart.reduce((s, l) => s + l.qty, 0);
 
   const resetAll = () => {
@@ -287,26 +313,39 @@ function Lieferung() {
     setCustomer(null);
     setSearch("");
     setProductSearch("");
+    setTaName("");
+    setTaPhone("");
     setStep("customer");
   };
 
+
   const saveOrder = useMutation({
     mutationFn: async ({ pay }: { pay: "open" | "cash" | "card" }) => {
-      if (!customer) throw new Error("Bitte zuerst eine Kundenadresse erfassen");
+      const isTakeaway = mode === "takeaway";
+      if (!isTakeaway && !customer) throw new Error("Bitte zuerst eine Kundenadresse erfassen");
+      if (isTakeaway && taPhone.trim().length < 6) throw new Error("Bitte Telefonnummer erfassen");
       if (cart.length === 0) throw new Error("Keine Produkte gewählt");
 
-      const address = customerAddress(customer);
+      const guestName = isTakeaway ? taName.trim() || "Takeaway" : customerName(customer!);
+      const guestPhone = isTakeaway ? taPhone.trim() : customer!.phone;
+      const address = isTakeaway ? "Abholung im Lokal" : customerAddress(customer!);
+      const eta = estimateMinutes(itemCount);
+
       const { data: order, error } = await supabase
         .from("orders")
         .insert({
           status: "open",
-          order_type: "delivery",
-          customer_id: customer.id,
-          delivery_address: `${customerName(customer)} · ${address}${customer.phone ? ` · ${customer.phone}` : ""}`,
+          order_type: isTakeaway ? "takeaway" : "delivery",
+          customer_id: isTakeaway ? null : customer!.id,
+          contact_phone: isTakeaway ? guestPhone : null,
+          contact_name: isTakeaway ? guestName : null,
+          delivery_address: isTakeaway
+            ? `TAKEAWAY · ${guestName}${guestPhone ? ` · ${guestPhone}` : ""}`
+            : `${guestName} · ${address}${guestPhone ? ` · ${guestPhone}` : ""}`,
           delivery_note: deliveryNote.trim() || null,
           total: 0,
           opened_by_name: operator?.name ?? null,
-        })
+        } as any)
         .select("id")
         .single();
       if (error) throw error;
@@ -317,7 +356,7 @@ function Lieferung() {
           product_id: l.item.id,
           product_name: l.item.name,
           category: l.category,
-          unit_price: l.item.price,
+          unit_price: priceOf(l.item, l.category),
           qty: l.qty,
           modifiers: [],
           note: l.note ?? null,
@@ -325,16 +364,15 @@ function Lieferung() {
       );
       if (itemErr) throw itemErr;
 
-      // Zahlung erfolgt erst beim Kunden durch den Kurier — Bestellung bleibt offen.
+      // Zahlung erfolgt erst beim Kunden / bei der Abholung — Bestellung bleibt offen.
       if (subtotal > 0) {
         await supabase.from("orders").update({ total: subtotal }).eq("id", order.id);
       }
 
       // Bestätigungs-SMS an den Kunden (darf die Bestellung nicht blockieren)
-      void sendOrderReceivedSms({ data: { orderId: order.id as string } }).catch(() => undefined);
-
-
-
+      void sendOrderReceivedSms({
+        data: { orderId: order.id as string, ...(isTakeaway ? { etaMinutes: eta } : {}) },
+      }).catch(() => undefined);
 
       try {
         if (isDesktopApp() && isAutoPrintEnabled()) {
@@ -345,28 +383,37 @@ function Lieferung() {
           const items: ReceiptItem[] = cart.map((l) => ({
             product_name: l.item.name,
             qty: l.qty,
-            unit_price: l.item.price,
+            unit_price: priceOf(l.item, l.category),
             modifiers: [],
           }));
           await printBill({
             printers: (printers ?? []) as any,
-            tableName: `LIEFERUNG · ${customerName(customer)} · ${address}${
-              customer.phone ? ` · ${customer.phone}` : ""
-            }${deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""}`,
+            tableName: isTakeaway
+              ? `TAKEAWAY · ${guestName}${guestPhone ? ` · ${guestPhone}` : ""}${
+                  deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""
+                }`
+              : `LIEFERUNG · ${guestName} · ${address}${guestPhone ? ` · ${guestPhone}` : ""}${
+                  deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""
+                }`,
             items,
             total: subtotal,
-            paymentMethod: pay === "cash" ? "Bar (beim Kunden)" : pay === "card" ? "Karte (beim Kunden)" : null,
+            paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
             interim: true,
-            title: "LIEFERSCHEIN",
-            footerNote:
-              pay === "cash"
+            title: isTakeaway ? "TAKEAWAY" : "LIEFERSCHEIN",
+            footerNote: isTakeaway
+              ? `Offen — bei Abholung kassieren · ca. ${eta} Min.`
+              : pay === "cash"
                 ? "Offen — bar beim Kunden kassieren"
                 : pay === "card"
                   ? "Offen — mit Karte beim Kunden kassieren"
                   : "Offen — beim Kunden kassieren",
 
-            qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
-            qrLabel: "QR scannen: Adresse, Navigation & Anruf",
+            ...(isTakeaway
+              ? {}
+              : {
+                  qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
+                  qrLabel: "QR scannen: Adresse, Navigation & Anruf",
+                }),
           });
         }
       } catch (err) {
@@ -380,19 +427,24 @@ function Lieferung() {
         pay,
         receipt: {
           orderId: order.id as string,
-          customerName: customerName(customer),
+          customerName: guestName,
           address,
-          phone: customer.phone,
+          phone: guestPhone,
           note: deliveryNote.trim(),
-          customerNote: customer.note ?? "",
-          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: l.item.price })),
+          customerNote: isTakeaway ? `Abholbereit in ca. ${eta} Min.` : customer?.note ?? "",
+          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: priceOf(l.item, l.category) })),
           total: subtotal,
           createdAt: new Date().toISOString(),
         } as DeliveryReceipt,
+
       };
     },
     onSuccess: ({ pay, receipt }) => {
-      toast.success("Lieferbestellung erfasst — Zahlung beim Kunden");
+      toast.success(
+        mode === "takeaway"
+          ? "Takeaway-Bestellung erfasst — SMS an den Kunden gesendet"
+          : "Lieferbestellung erfasst — Zahlung beim Kunden",
+      );
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order_items"] });
       setReceipt({ ...receipt, paid: false, payMethod: pay });
@@ -403,7 +455,9 @@ function Lieferung() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
 
-  const stepIndex = STEPS.findIndex((s) => s.key === step);
+  const steps = mode === "takeaway" ? TAKEAWAY_STEPS : STEPS;
+  const stepIndex = steps.findIndex((s) => s.key === step);
+
 
   // ── Karten-Daten ────────────────────────────────
   const [showWizard, setShowWizard] = useState(false);
@@ -543,19 +597,27 @@ function Lieferung() {
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Lieferung</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            {mode === "takeaway" ? "Takeaway" : "Lieferung"}
+          </div>
           <h1 className="text-xl font-semibold truncate">
-            {stepIndex + 1}. {STEPS[stepIndex].label}
-            {customer && step !== "customer" && (
+            {stepIndex + 1}. {steps[stepIndex].label}
+            {mode === "delivery" && customer && step !== "customer" && (
               <span className="text-sm font-normal text-muted-foreground">
                 {" "}
                 · {customerName(customer)}, {customerAddress(customer)}
               </span>
             )}
+            {mode === "takeaway" && taPhone && step !== "customer" && (
+              <span className="text-sm font-normal text-muted-foreground">
+                {" "}
+                · {taName || "Takeaway"} · {taPhone}
+              </span>
+            )}
           </h1>
         </div>
         <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-          {STEPS.map((s, i) => (
+          {steps.map((s, i) => (
             <div
               key={s.key}
               className={`h-1.5 rounded-full transition-all ${
@@ -567,8 +629,58 @@ function Lieferung() {
       </header>
 
       <AnimatePresence mode="wait">
+        {/* ── SCHRITT 1 (TAKEAWAY): TELEFONNUMMER ──── */}
+        {step === "customer" && mode === "takeaway" && (
+          <motion.div
+            key="takeaway-contact"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="flex-1 min-h-0 overflow-y-auto"
+          >
+            <div className="max-w-xl mx-auto space-y-4">
+              <div className="glass-strong rounded-3xl p-5 space-y-3">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-accent" /> Takeaway — Kontakt
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Nummer erfassen, mit der der Kunde angerufen hat. Er erhält automatisch eine SMS mit der
+                  voraussichtlichen Abholzeit.
+                </p>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Telefon *</label>
+                  <input
+                    autoFocus
+                    inputMode="tel"
+                    value={taPhone}
+                    onChange={(e) => setTaPhone(e.target.value)}
+                    placeholder="z.B. 076 442 21 60"
+                    className="glass rounded-xl px-3 py-3 w-full text-base outline-none bg-transparent"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Name</label>
+                  <input
+                    value={taName}
+                    onChange={(e) => setTaName(e.target.value)}
+                    placeholder="Name des Kunden"
+                    className="glass rounded-xl px-3 py-3 w-full text-base outline-none bg-transparent"
+                  />
+                </div>
+                <button
+                  onClick={() => setStep("order")}
+                  disabled={taPhone.trim().length < 6}
+                  className="w-full rounded-xl py-3 bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2"
+                >
+                  Weiter zur Bestellung <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* ── SCHRITT 1: KUNDENADRESSE ─────────────── */}
-        {step === "customer" && (
+        {step === "customer" && mode === "delivery" && (
           <motion.div
             key="customer"
             initial={{ opacity: 0, x: 20 }}
@@ -576,6 +688,7 @@ function Lieferung() {
             exit={{ opacity: 0, x: -20 }}
             className="flex-1 min-h-0 overflow-y-auto"
           >
+
             <div className="max-w-3xl mx-auto space-y-4">
               <div className="glass-strong rounded-3xl p-5">
                 <div className="flex items-center justify-between mb-3">
@@ -855,7 +968,10 @@ function Lieferung() {
                           </div>
                         )}
                       </div>
-                      <div className="text-base font-semibold tabular-nums mt-2">CHF {item.price.toFixed(2)}</div>
+                      <div className="text-base font-semibold tabular-nums mt-2">
+                        CHF {priceOf(item, item.category).toFixed(2)}
+                      </div>
+
                     </motion.button>
                   );
                 })}
@@ -910,7 +1026,19 @@ function Lieferung() {
             className="flex-1 min-h-0 overflow-y-auto"
           >
             <div className="max-w-3xl mx-auto space-y-4">
-              {customer && (
+              {mode === "takeaway" ? (
+                <div className="glass-strong rounded-3xl p-5">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Takeaway</div>
+                  <div className="text-sm font-medium">{taName || "Abholung"}</div>
+                  <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Phone className="w-3 h-3" /> {taPhone}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Abholbereit in ca. {estimateMinutes(itemCount)} Min.
+                  </div>
+                </div>
+              ) : (
+                customer && (
                 <div className="glass-strong rounded-3xl p-5">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Lieferadresse</div>
                   <div className="text-sm font-medium">{customerName(customer)}</div>
@@ -921,11 +1049,13 @@ function Lieferung() {
                     </div>
                   )}
                 </div>
+                )
               )}
 
               <div className="glass-strong rounded-3xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-semibold">Lieferbestellung</h2>
+                  <h2 className="font-semibold">{mode === "takeaway" ? "Takeaway-Bestellung" : "Lieferbestellung"}</h2>
+
                   <button
                     onClick={() => setCart([])}
                     className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
@@ -943,8 +1073,9 @@ function Lieferung() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{l.item.name}</div>
                         <div className="text-xs text-muted-foreground tabular-nums">
-                          CHF {l.item.price.toFixed(2)}
+                          CHF {priceOf(l.item, l.category).toFixed(2)}
                         </div>
+
                       </div>
                       <div className="flex items-center gap-1 glass rounded-lg p-0.5 shrink-0">
                         <button
@@ -962,8 +1093,9 @@ function Lieferung() {
                         </button>
                       </div>
                       <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
-                        {(l.item.price * l.qty).toFixed(2)}
+                        {(priceOf(l.item, l.category) * l.qty).toFixed(2)}
                       </div>
+
                     </div>
                   ))}
                 </div>
@@ -978,11 +1110,13 @@ function Lieferung() {
 
               <div className="glass-strong rounded-3xl p-5 space-y-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Liefernotiz</label>
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {mode === "takeaway" ? "Notiz" : "Liefernotiz"}
+                  </label>
                   <input
                     value={deliveryNote}
                     onChange={(e) => setDeliveryNote(e.target.value)}
-                    placeholder="z.B. 3. Stock, klingeln bei Meier"
+                    placeholder={mode === "takeaway" ? "z.B. ohne Zwiebeln" : "z.B. 3. Stock, klingeln bei Meier"}
                     className="glass rounded-xl px-3 py-3 w-full text-sm outline-none bg-transparent"
                   />
                 </div>
@@ -994,6 +1128,20 @@ function Lieferung() {
                   </span>
                 </div>
 
+                {mode === "takeaway" ? (
+                  <button
+                    onClick={() => saveOrder.mutate({ pay: "open" })}
+                    disabled={taPhone.trim().length < 6 || cart.length === 0 || saveOrder.isPending}
+                    className="w-full rounded-2xl py-5 bg-primary text-primary-foreground flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-40"
+                  >
+                    {saveOrder.isPending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <ShoppingBag className="w-5 h-5" />
+                    )}
+                    Takeaway-Bestellung senden
+                  </button>
+                ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => saveOrder.mutate({ pay: "card" })}
@@ -1020,6 +1168,8 @@ function Lieferung() {
                     Zahlt mit Bar
                   </button>
                 </div>
+                )}
+
 
               </div>
             </div>
@@ -1063,12 +1213,24 @@ function Lieferung() {
         <button
           onClick={() => {
             resetAll();
+            setMode("delivery");
             setShowWizard(true);
           }}
           className="rounded-2xl px-4 py-3 text-sm font-semibold bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground flex items-center gap-2 active:scale-95 transition-transform"
         >
           <Plus className="w-4 h-4" /> Neue Bestellung
         </button>
+        <button
+          onClick={() => {
+            resetAll();
+            setMode("takeaway");
+            setShowWizard(true);
+          }}
+          className="rounded-2xl px-4 py-3 text-sm font-semibold glass-map flex items-center gap-2 active:scale-95 transition-transform"
+        >
+          <ShoppingBag className="w-4 h-4" /> Takeaway
+        </button>
+
       </header>
 
       <div className="absolute inset-0 z-10 pointer-events-none px-4 lg:px-6 pt-24 pb-4 flex justify-end">
