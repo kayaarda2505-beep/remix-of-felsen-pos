@@ -86,7 +86,7 @@ function KitchenView() {
 
   // Tischnamen für die Order-IDs
   const orderIds = useMemo(() => Array.from(new Set(rawItems.map((i) => i.order_id))), [rawItems]);
-  const { data: orderMap = {} } = useQuery<Record<string, string>>({
+  const { data: orderMap = {} } = useQuery<Record<string, OrderInfo>>({
     queryKey: ["kitchen", "order-tables", orderIds.join(",")],
     enabled: orderIds.length > 0,
     queryFn: async () => {
@@ -95,7 +95,7 @@ function KitchenView() {
         .select("id, table_id, order_type, delivery_address, dining_tables:table_id(name), customers:customer_id(first_name, last_name)")
         .in("id", orderIds);
       if (error) throw error;
-      const m: Record<string, string> = {};
+      const m: Record<string, OrderInfo> = {};
       (data ?? []).forEach((r: {
         id: string;
         order_type: string | null;
@@ -106,15 +106,22 @@ function KitchenView() {
         const cust = r.customers
           ? `${r.customers.first_name ?? ""} ${r.customers.last_name ?? ""}`.trim()
           : "";
-        m[r.id] =
-          (r.order_type === "takeaway" ? "Takeaway" : null) ??
-          r.dining_tables?.name ??
-          (cust || (r.order_type === "delivery" ? "Lieferung" : "Direkt"));
-
+        const kind: OrderKind =
+          r.order_type === "takeaway" ? "takeaway"
+          : r.order_type === "delivery" ? "delivery"
+          : r.dining_tables?.name ? "table"
+          : "counter";
+        const label =
+          kind === "takeaway" ? (cust || "Takeaway")
+          : kind === "delivery" ? (cust || "Lieferung")
+          : kind === "table" ? (r.dining_tables?.name ?? "Tisch")
+          : (cust || "Direkt");
+        m[r.id] = { label, kind, address: r.delivery_address };
       });
       return m;
     },
   });
+
 
 
   // Realtime: bei neuen order_items sofort neu laden
