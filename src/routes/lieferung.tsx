@@ -440,7 +440,11 @@ function Lieferung() {
       };
     },
     onSuccess: ({ pay, receipt }) => {
-      toast.success("Lieferbestellung erfasst — Zahlung beim Kunden");
+      toast.success(
+        mode === "takeaway"
+          ? "Takeaway-Bestellung erfasst — SMS an den Kunden gesendet"
+          : "Lieferbestellung erfasst — Zahlung beim Kunden",
+      );
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order_items"] });
       setReceipt({ ...receipt, paid: false, payMethod: pay });
@@ -451,7 +455,9 @@ function Lieferung() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
 
-  const stepIndex = STEPS.findIndex((s) => s.key === step);
+  const steps = mode === "takeaway" ? TAKEAWAY_STEPS : STEPS;
+  const stepIndex = steps.findIndex((s) => s.key === step);
+
 
   // ── Karten-Daten ────────────────────────────────
   const [showWizard, setShowWizard] = useState(false);
