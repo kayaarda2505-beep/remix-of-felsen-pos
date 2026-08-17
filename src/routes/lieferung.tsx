@@ -120,9 +120,9 @@ const TAKEAWAY_STEPS: { key: Step; label: string }[] = [
   { key: "checkout", label: "Takeaway-Bestellung" },
 ];
 
-/** Grobe Abholzeit-Schätzung in Minuten (Basis 20 Min., +5 pro 4 Artikel, max. 45). */
+/** Grobe Abholzeit-Schätzung in Minuten: meist 10 Min., bei vielen Artikeln 15 Min. */
 function estimateMinutes(itemCount: number) {
-  return Math.min(45, 20 + Math.floor(Math.max(0, itemCount - 1) / 4) * 5);
+  return itemCount > 4 ? 15 : 10;
 }
 
 function Lieferung() {
