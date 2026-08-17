@@ -1687,7 +1687,14 @@ function MenuConfigDialog({
     .map((s) => s.trim())
     .filter((s) => s.length > 1 && s.length < 30);
 
-  const extraDelta = SIDE_OPTIONS.reduce((s, o) => s + (extras[o.id] ?? 0) * o.price, 0);
+  const isPizza = isPizzaItem(item.name, item.category);
+  const toppingOptions = isPizza
+    ? PIZZA_TOPPINGS.map((t) => ({ ...t, price: toppingPrice(t, item.name, item.category) }))
+    : [];
+
+  const extraDelta =
+    SIDE_OPTIONS.reduce((s, o) => s + (extras[o.id] ?? 0) * o.price, 0) +
+    toppingOptions.reduce((s, t) => s + (extras[t.id] ?? 0) * t.price, 0);
   const unit = basePrice + extraDelta;
 
   const bump = (id: string, d: number) =>
@@ -1703,6 +1710,9 @@ function MenuConfigDialog({
     const parts = [
       ...groups.map((g) => `${g.label.replace(" wählen", "")}: ${choices[g.label]}`),
       ...removed.map((r) => `ohne ${r}`),
+      ...toppingOptions
+        .filter((t) => (extras[t.id] ?? 0) > 0)
+        .map((t) => `+ ${t.name}${(extras[t.id] ?? 0) > 1 ? ` x${extras[t.id]}` : ""}`),
       ...SIDE_OPTIONS.filter((o) => (extras[o.id] ?? 0) > 0).map(
         (o) => `+ ${o.name}${(extras[o.id] ?? 0) > 1 ? ` x${extras[o.id]}` : ""}`,
       ),
