@@ -397,9 +397,10 @@ function POS() {
   const payWalkIn = useMutation({
     mutationFn: async ({ method, extraTip = 0 }: { method: string; extraTip?: number }) => {
       if (walkInCart.length === 0) return;
+      const channelName = takeaway ? "Takeaway" : "Theke";
       const { data: order, error: oErr } = await supabase
         .from("orders")
-        .insert({ status: "open", guests: 1 })
+        .insert({ status: "open", guests: 1, order_type: takeaway ? "takeaway" : "dine_in", opened_by_name: channelName })
         .select("id")
         .single();
       if (oErr || !order) throw oErr ?? new Error("order");
@@ -420,13 +421,13 @@ function POS() {
       const totalAmt = +(itemsSubtotal + effectiveTip).toFixed(2);
       const { error: payErr } = await supabase.from("payment_requests").insert({
         order_id: order.id,
-        table_name: "Theke",
+        table_name: channelName,
         amount: totalAmt,
         tip: effectiveTip,
         method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
         status: "paid",
         handled_at: new Date().toISOString(),
-        note: `Theke · ${method}`,
+        note: `${channelName} · ${method}`,
       });
       if (payErr) throw payErr;
       const { error: uErr } = await supabase
@@ -445,7 +446,7 @@ function POS() {
         }));
         const err = await printBill({
           printers,
-          tableName: "Theke",
+          tableName: channelName,
           items,
           subtotal: itemsSubtotal,
           total: totalAmt,
@@ -467,6 +468,7 @@ function POS() {
       qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       setWalkInCart([]);
       setTip(0);
+      setTakeaway(false);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
@@ -504,7 +506,7 @@ function POS() {
   // Zwischenrechnung drucken (vor dem Bezahlen-Dialog)
   const printInterim = async () => {
     if (!isDesktopApp()) return;
-    const tableName = isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : "Theke";
+    const tableName = isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : takeaway ? "Takeaway" : "Theke";
     const items: ReceiptItem[] = isTab
       ? tabItems.map((it) => ({
           product_name: it.product_name,
