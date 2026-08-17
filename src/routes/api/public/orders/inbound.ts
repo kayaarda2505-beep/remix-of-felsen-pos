@@ -152,18 +152,33 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
           .single();
         if (error) return Response.json({ error: error.message }, { status: 500, headers: cors });
 
+        // Produkt-IDs auflösen: exakter Name-Match, sonst Freitext-Artikel
+        const { data: prodRows } = await admin
+          .from("products")
+          .select("id, name, category")
+          .eq("active", true);
+        const prodList = (prodRows ?? []) as Array<{ id: string; name: string; category: string | null }>;
+        const byName = new Map(prodList.map((p) => [p.name.trim().toLowerCase(), p]));
+
+        const slug = (s: string) =>
+          s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "artikel";
+
         const { error: itemErr } = await admin.from("order_items").insert(
-          payload.items.map((i) => ({
-            order_id: order.id,
-            product_id: i.product_id ?? null,
-            product_name: i.product_name,
-            category: i.category ?? null,
-            unit_price: i.unit_price,
-            qty: i.qty,
-            note: i.note ?? null,
-            modifiers: i.modifiers ?? [],
-          })),
+          payload.items.map((i) => {
+            const match = byName.get(i.product_name.trim().toLowerCase());
+            return {
+              order_id: order.id,
+              product_id: i.product_id ?? match?.id ?? `web-${slug(i.product_name)}`,
+              product_name: i.product_name,
+              category: i.category ?? match?.category ?? null,
+              unit_price: i.unit_price,
+              qty: i.qty,
+              note: i.note ?? null,
+              modifiers: i.modifiers ?? [],
+            };
+          }),
         );
+
         if (itemErr) return Response.json({ error: itemErr.message }, { status: 500, headers: cors });
 
         // Bestätigungs-SMS (darf die Bestellung nicht blockieren)
