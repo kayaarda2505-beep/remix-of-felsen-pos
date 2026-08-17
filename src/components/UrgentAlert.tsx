@@ -44,44 +44,46 @@ function useUrgentAlerts() {
 }
 
 /**
- * Loops a loud Web Audio ring while any alert is in the queue.
- * Plays a two-tone "ding-dong" pattern at ~0.85 gain — much louder than
- * the regular notification sounds.
+ * Plays a single bell-like chime. Exported so station order alerts can sound
+ * without showing the red overlay.
+ */
+export function playUrgentRing() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const master = ctx.createGain();
+    master.gain.value = 1.0;
+    master.connect(ctx.destination);
+
+    // Warm, bell-like chime using sine tones with soft envelopes.
+    const chime = (freq: number, start: number, dur: number, vol = 0.5) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = freq;
+      const t0 = ctx.currentTime + start;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol, t0 + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g);
+      g.connect(master);
+      o.start(t0);
+      o.stop(t0 + dur + 0.05);
+    };
+    // Pleasant major third (E5 + G#5) then resolving B5 — now louder.
+    chime(659.25, 0, 1.2, 0.75);
+    chime(830.61, 0.02, 1.2, 0.5);
+    chime(987.77, 0.55, 1.0, 0.45);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Loops the urgent ring while any alert is in the queue.
  */
 function useLoopingRing(active: boolean) {
   const timerRef = useRef<number | null>(null);
-
-  const ring = useCallback(() => {
-    try {
-      const ctx = getAudioContext();
-      if (!ctx) return;
-      const master = ctx.createGain();
-      master.gain.value = 0.95;
-      master.connect(ctx.destination);
-
-      // Warm, bell-like chime using sine tones with soft envelopes.
-      const chime = (freq: number, start: number, dur: number, vol = 0.5) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = "sine";
-        o.frequency.value = freq;
-        const t0 = ctx.currentTime + start;
-        g.gain.setValueAtTime(0.0001, t0);
-        g.gain.exponentialRampToValueAtTime(vol, t0 + 0.04);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-        o.connect(g);
-        g.connect(master);
-        o.start(t0);
-        o.stop(t0 + dur + 0.05);
-      };
-      // Pleasant major third (E5 + G#5) then resolving B5
-      chime(659.25, 0, 1.2, 0.5);
-      chime(830.61, 0.02, 1.2, 0.32);
-      chime(987.77, 0.55, 1.0, 0.28);
-    } catch {
-      // ignore
-    }
-  }, []);
 
   useEffect(() => {
     if (!active) {
@@ -91,15 +93,15 @@ function useLoopingRing(active: boolean) {
       }
       return;
     }
-    ring();
-    timerRef.current = window.setInterval(ring, 2600);
+    playUrgentRing();
+    timerRef.current = window.setInterval(playUrgentRing, 2600);
     return () => {
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
         timerRef.current = null;
       }
     };
-  }, [active, ring]);
+  }, [active]);
 }
 
 export function UrgentAlertOverlay() {
