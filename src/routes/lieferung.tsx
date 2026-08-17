@@ -31,6 +31,8 @@ import { takeawayPrice } from "@/lib/takeaway-pricing";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
 import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
 import { sendOrderReceivedSms } from "@/lib/order-sms.functions";
+import { searchStreets } from "@/lib/addresses.functions";
+
 
 
 
@@ -133,6 +135,30 @@ function Lieferung() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+
+  // Strassen-Autocomplete auf Basis der PLZ
+  const [streetQuery, setStreetQuery] = useState("");
+  const [streetOpen, setStreetOpen] = useState(false);
+  const [debouncedStreet, setDebouncedStreet] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedStreet(streetQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [streetQuery]);
+
+  const streetsQuery = useQuery({
+    queryKey: ["streets", form.zip, debouncedStreet],
+    enabled: form.zip.length === 4,
+    staleTime: 10 * 60 * 1000,
+    queryFn: () => searchStreets({ data: { zip: form.zip, query: debouncedStreet || undefined } }),
+  });
+  const streetOptions: string[] = streetsQuery.data?.streets ?? [];
+
+  // Ort automatisch aus der PLZ übernehmen
+  useEffect(() => {
+    const city = streetsQuery.data?.city;
+    if (city) setForm((f) => (f.city ? f : { ...f, city }));
+  }, [streetsQuery.data?.city]);
+
 
 
   const [activeCategory, setActiveCategory] = useState(DELIVERY_MENU[0]?.category ?? "");
@@ -753,10 +779,97 @@ function Lieferung() {
                           [
                             ["last_name", "Name"],
                             ["first_name", "Vorname"],
-                            ["street", "Strasse"],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <div key={key} className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              {label}
+                            </label>
+                            <input
+                              value={(form as any)[key]}
+                              onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                              className="glass rounded-xl px-3 py-2.5 w-full text-sm outline-none bg-transparent"
+                            />
+                          </div>
+                        ))}
+
+                        {/* PLZ zuerst — daraus werden Ort und Strassenliste geladen */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">PLZ *</label>
+                          <input
+                            inputMode="numeric"
+                            value={form.zip}
+                            onChange={(e) => {
+                              const zip = e.target.value.replace(/\D/g, "").slice(0, 4);
+                              setForm((f) => ({ ...f, zip, street: "", house_no: "" }));
+                              setStreetQuery("");
+                            }}
+                            placeholder="8048"
+                            className="glass rounded-xl px-3 py-2.5 w-full text-sm outline-none bg-transparent"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Ort</label>
+                          <input
+                            value={form.city}
+                            onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                            placeholder={streetsQuery.isFetching ? "wird geladen…" : "Ort"}
+                            className="glass rounded-xl px-3 py-2.5 w-full text-sm outline-none bg-transparent"
+                          />
+                        </div>
+
+                        {/* Strasse mit Vorschlägen aus der PLZ */}
+                        <div className="space-y-1 col-span-2 relative">
+                          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Strasse * {form.zip.length === 4 ? `(PLZ ${form.zip})` : "— zuerst PLZ eingeben"}
+                          </label>
+                          <input
+                            disabled={form.zip.length !== 4}
+                            value={form.street}
+                            onFocus={() => setStreetOpen(true)}
+                            onChange={(e) => {
+                              setForm((f) => ({ ...f, street: e.target.value }));
+                              setStreetQuery(e.target.value);
+                              setStreetOpen(true);
+                            }}
+                            placeholder={
+                              form.zip.length !== 4
+                                ? "Zuerst PLZ erfassen"
+                                : streetsQuery.isFetching
+                                  ? "Strassen werden geladen…"
+                                  : "Strasse suchen / wählen"
+                            }
+                            className="glass rounded-xl px-3 py-2.5 w-full text-sm outline-none bg-transparent disabled:opacity-40"
+                          />
+                          {streetOpen && form.zip.length === 4 && (
+                            <div className="absolute z-30 left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto glass-strong rounded-xl p-1">
+                              {streetsQuery.isFetching && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground">Strassen werden geladen…</div>
+                              )}
+                              {!streetsQuery.isFetching && streetOptions.length === 0 && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground">
+                                  Keine Strasse gefunden — frei eintippen möglich
+                                </div>
+                              )}
+                              {streetOptions.map((s) => (
+                                <button
+                                  key={s}
+                                  onClick={() => {
+                                    setForm((f) => ({ ...f, street: s }));
+                                    setStreetOpen(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-white/10"
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {(
+                          [
                             ["house_no", "Nr."],
-                            ["zip", "PLZ"],
-                            ["city", "Ort"],
                             ["phone", "Telefon"],
                             ["note", "Notiz"],
                           ] as const
@@ -773,6 +886,7 @@ function Lieferung() {
                           </div>
                         ))}
                       </div>
+
                       <button
                         onClick={() => createCustomer.mutate()}
                         disabled={createCustomer.isPending}
