@@ -40,8 +40,8 @@ function ReviewPage() {
   useEffect(() => {
     const r = data?.review;
     if (!r) return;
-    if (r.newsletterOptIn != null) {
-      setAccepted(r.newsletterOptIn);
+    if (r.newsletterOptIn != null || r.alreadySubscribed) {
+      setAccepted(r.newsletterOptIn ?? r.alreadySubscribed);
       setPhase("done");
     }
   }, [data]);
@@ -84,6 +84,7 @@ function ReviewPage() {
           </p>
         </header>
 
+        {!data.review.alreadyReviewed && (
         <section className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
           <Star className="mx-auto size-9 fill-primary text-primary" />
           <h2 className="mt-3 text-lg font-semibold text-card-foreground">
@@ -101,8 +102,9 @@ function ReviewPage() {
             Bei Google bewerten
           </a>
         </section>
+        )}
 
-        {phase === "newsletter" && (
+        {phase === "newsletter" && !data.review.alreadySubscribed && (
           <section className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
             <h2 className="text-lg font-semibold text-card-foreground">Angebote per SMS?</h2>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -135,7 +137,7 @@ function ReviewPage() {
             <h2 className="mt-3 text-lg font-semibold text-card-foreground">Vielen Dank!</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               {accepted
-                ? "Du erhältst künftig unsere Angebote per SMS."
+                ? "Du erhältst bereits unsere Angebote per SMS."
                 : "Wir freuen uns auf deine nächste Bestellung."}
             </p>
           </section>
