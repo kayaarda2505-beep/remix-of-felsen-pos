@@ -572,6 +572,7 @@ function OrderPage() {
       </AnimatePresence>
 
       <ProductModifierDialog
+        sides={products.filter((p) => /beilag/i.test(p.category)).map((p) => ({ id: p.id, name: p.name, price: p.price }))}
         product={modProduct}
         open={!!modProduct}
         onClose={() => setModProduct(null)}
