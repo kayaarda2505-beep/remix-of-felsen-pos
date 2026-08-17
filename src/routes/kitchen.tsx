@@ -107,8 +107,10 @@ function KitchenView() {
           ? `${r.customers.first_name ?? ""} ${r.customers.last_name ?? ""}`.trim()
           : "";
         m[r.id] =
+          (r.order_type === "takeaway" ? "Takeaway" : null) ??
           r.dining_tables?.name ??
           (cust || (r.order_type === "delivery" ? "Lieferung" : "Direkt"));
+
       });
       return m;
     },

@@ -21,7 +21,9 @@ import {
   Smartphone,
   Send,
   SplitSquareHorizontal,
+  ShoppingBag,
 } from "lucide-react";
+
 
 
 import { toast } from "sonner";
@@ -61,9 +63,11 @@ interface LocalLine {
   id: string;
   product: Product;
   qty: number;
+  unitPrice: number;
   modifiers: string[];
   note?: string;
 }
+
 
 function POS() {
   const qc = useQueryClient();
@@ -81,6 +85,8 @@ function POS() {
   const [pendingByOrder, setPendingByOrder] = useState<Record<string, LocalLine[]>>({});
   const [payMode, setPayMode] = useState<null | "cash" | "card">(null);
   const [splitOpen, setSplitOpen] = useState(false);
+  const [takeaway, setTakeaway] = useState(false);
+
 
 
   const { data: openOrders = [] } = useQuery<OpenOrder[]>({
@@ -191,6 +197,15 @@ function POS() {
 
   const activeOrder = openOrders.find((o) => o.id === activeOrderId) ?? null;
 
+  // Beilagen, die man entfernen oder zusätzlich bestellen kann
+  const sideOptions = useMemo(
+    () =>
+      products
+        .filter((p) => /beilag/i.test(p.category))
+        .map((p) => ({ id: p.id, name: p.name, price: p.price })),
+    [products],
+  );
+
   const visible = useMemo(
     () =>
       products.filter(
@@ -214,6 +229,7 @@ function POS() {
           id: `${p.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           product: p,
           qty: c.qty,
+          unitPrice: +(p.price + (c.priceDelta ?? 0)).toFixed(2),
           modifiers: c.modifiers,
           note: c.note,
         },
@@ -249,6 +265,7 @@ function POS() {
             id: `${p.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             product: p,
             qty: c.qty,
+            unitPrice: +(p.price + (c.priceDelta ?? 0)).toFixed(2),
             modifiers: c.modifiers,
             note: c.note,
           },
@@ -279,7 +296,7 @@ function POS() {
         product_id: l.product.id,
         product_name: l.product.name,
         category: l.product.category,
-        unit_price: l.product.price,
+        unit_price: l.unitPrice,
         qty: l.qty,
         modifiers: l.modifiers,
         note: l.note ?? null,
@@ -391,9 +408,10 @@ function POS() {
   const payWalkIn = useMutation({
     mutationFn: async ({ method, extraTip = 0 }: { method: string; extraTip?: number }) => {
       if (walkInCart.length === 0) return;
+      const channelName = takeaway ? "Takeaway" : "Theke";
       const { data: order, error: oErr } = await supabase
         .from("orders")
-        .insert({ status: "open", guests: 1 })
+        .insert({ status: "open", guests: 1, order_type: takeaway ? "takeaway" : "dine_in", opened_by_name: channelName })
         .select("id")
         .single();
       if (oErr || !order) throw oErr ?? new Error("order");
@@ -402,7 +420,7 @@ function POS() {
         product_id: l.product.id,
         product_name: l.product.name,
         category: l.product.category,
-        unit_price: l.product.price,
+        unit_price: l.unitPrice,
         qty: l.qty,
         modifiers: l.modifiers,
         note: l.note ?? null,
@@ -410,17 +428,17 @@ function POS() {
       const { error: iErr } = await supabase.from("order_items").insert(rows);
       if (iErr) throw iErr;
       const effectiveTip = +(tip + extraTip).toFixed(2);
-      const itemsSubtotal = walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
+      const itemsSubtotal = walkInCart.reduce((s, l) => s + l.unitPrice * l.qty, 0);
       const totalAmt = +(itemsSubtotal + effectiveTip).toFixed(2);
       const { error: payErr } = await supabase.from("payment_requests").insert({
         order_id: order.id,
-        table_name: "Theke",
+        table_name: channelName,
         amount: totalAmt,
         tip: effectiveTip,
         method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
         status: "paid",
         handled_at: new Date().toISOString(),
-        note: `Theke · ${method}`,
+        note: `${channelName} · ${method}`,
       });
       if (payErr) throw payErr;
       const { error: uErr } = await supabase
@@ -432,14 +450,14 @@ function POS() {
         const items: ReceiptItem[] = walkInCart.map((l) => ({
           product_name: l.product.name,
           qty: l.qty,
-          unit_price: l.product.price,
+          unit_price: l.unitPrice,
           category: l.product.category,
           modifiers: l.modifiers,
           note: l.note ?? null,
         }));
         const err = await printBill({
           printers,
-          tableName: "Theke",
+          tableName: channelName,
           items,
           subtotal: itemsSubtotal,
           total: totalAmt,
@@ -461,16 +479,17 @@ function POS() {
       qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       setWalkInCart([]);
       setTip(0);
+      setTakeaway(false);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
 
 
   const isTab = !!activeOrderId;
-  const pendingSubtotal = pendingCart.reduce((s, l) => s + l.product.price * l.qty, 0);
+  const pendingSubtotal = pendingCart.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const subtotal = isTab
     ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0) + pendingSubtotal
-    : walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
+    : walkInCart.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const total = subtotal + tip;
   const outstanding = Math.max(0, +total.toFixed(2));
   const hasPending = pendingCart.length > 0;
@@ -498,7 +517,7 @@ function POS() {
   // Zwischenrechnung drucken (vor dem Bezahlen-Dialog)
   const printInterim = async () => {
     if (!isDesktopApp()) return;
-    const tableName = isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : "Theke";
+    const tableName = isTab ? activeOrder?.dining_tables?.name ?? "Tisch" : takeaway ? "Takeaway" : "Theke";
     const items: ReceiptItem[] = isTab
       ? tabItems.map((it) => ({
           product_name: it.product_name,
@@ -509,7 +528,7 @@ function POS() {
       : walkInCart.map((l) => ({
           product_name: l.product.name,
           qty: l.qty,
-          unit_price: l.product.price,
+          unit_price: l.unitPrice,
           modifiers: l.modifiers,
           note: l.note ?? null,
         }));
@@ -557,7 +576,7 @@ function POS() {
   return (
     <div className="p-3 lg:p-4 pb-24 md:pb-3 h-screen flex flex-col w-full max-w-[1800px] mx-auto overflow-hidden">
       <div className="flex items-start justify-between gap-2">
-        <PageHeader title="Kasse" subtitle={isTab && activeOrder ? `Tisch ${activeOrder.dining_tables?.name ?? "?"} · offen` : "Theke / Walk-in"} />
+        <PageHeader title="Kasse" subtitle={isTab && activeOrder ? `Tisch ${activeOrder.dining_tables?.name ?? "?"} · offen` : takeaway ? "Takeaway · zum Mitnehmen" : "Theke / Walk-in"} />
         <button
           onClick={toggleFullscreen}
           title={isFullscreen ? "Vollbild verlassen" : "Vollbild (Taskleiste ausblenden)"}
@@ -570,13 +589,28 @@ function POS() {
       {/* Open tabs row */}
       <div className="flex gap-2 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
         <button
-          onClick={() => setActiveOrderId(null)}
+          onClick={() => {
+            setActiveOrderId(null);
+            setTakeaway(false);
+          }}
           className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium border-2 transition-all ${
-            !isTab ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground"
+            !isTab && !takeaway ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground"
           }`}
         >
           Theke
         </button>
+        <button
+          onClick={() => {
+            setActiveOrderId(null);
+            setTakeaway(true);
+          }}
+          className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium border-2 transition-all flex items-center gap-2 ${
+            !isTab && takeaway ? "border-accent bg-accent/10 text-foreground" : "border-transparent glass text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" /> Takeaway
+        </button>
+
         {openOrders
           .filter((o) => o.total > 0)
           .map((o) => (
@@ -686,7 +720,7 @@ function POS() {
         <aside className="glass-strong rounded-3xl p-4 flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-semibold">{isTab ? `Tab Tisch ${activeOrder?.dining_tables?.name ?? ""}` : "Bestellung"}</h3>
+              <h3 className="font-semibold">{isTab ? `Tab Tisch ${activeOrder?.dining_tables?.name ?? ""}` : takeaway ? "Takeaway-Bestellung" : "Bestellung"}</h3>
               {isTab && activeOrder?.opened_at && (
                 <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                   <Clock className="w-3 h-3" />
@@ -786,9 +820,24 @@ function POS() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{l.product.name}</div>
                         <div className="text-xs text-muted-foreground tabular-nums">
-                          CHF {l.product.price.toFixed(2)}
+                          CHF {l.unitPrice.toFixed(2)}
                         </div>
+                        {(l.modifiers.length > 0 || l.note) && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {l.modifiers.map((m) => (
+                              <span key={m} className="text-[10px] px-1.5 py-0.5 rounded-md bg-accent/15 text-accent border border-accent/30">
+                                {m}
+                              </span>
+                            ))}
+                            {l.note && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-muted-foreground border border-border/40 flex items-center gap-1">
+                                <Pencil className="w-2.5 h-2.5" /> {l.note}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
+
                       <div className="flex items-center gap-1 glass rounded-lg p-0.5 shrink-0">
                         <button onClick={() => incWalkIn(l.id, -1)} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10">
                           <Minus className="w-3 h-3" />
@@ -799,7 +848,7 @@ function POS() {
                         </button>
                       </div>
                       <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
-                        {(l.product.price * l.qty).toFixed(2)}
+                        {(l.unitPrice * l.qty).toFixed(2)}
                       </div>
                     </motion.div>
                   ))}
@@ -821,7 +870,7 @@ function POS() {
                         <div className="text-sm font-medium truncate">{l.product.name}</div>
                       </div>
                       <div className="text-xs text-muted-foreground tabular-nums">
-                        CHF {l.product.price.toFixed(2)}
+                        CHF {l.unitPrice.toFixed(2)}
                       </div>
                       {(l.modifiers.length > 0 || l.note) && (
                         <div className="mt-1 flex flex-wrap gap-1">
@@ -854,7 +903,7 @@ function POS() {
                       </button>
                     </div>
                     <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
-                      {(l.product.price * l.qty).toFixed(2)}
+                      {(l.unitPrice * l.qty).toFixed(2)}
                     </div>
                   </motion.div>
                 ))}
@@ -1073,6 +1122,7 @@ function POS() {
       <ProductModifierDialog
         product={editing}
         open={!!editing}
+        sides={sideOptions}
         onClose={() => setEditing(null)}
         onConfirm={(c) => {
           if (!editing) return;
