@@ -84,10 +84,22 @@ export function ProductModifierDialog({
 
   const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
 
-  const extrasDelta = sides.reduce((s, o) => s + (extraSides[o.id] ?? 0) * o.price, 0);
+  const toppingOptions = product && isPizzaItem(product.name, product.category)
+    ? PIZZA_TOPPINGS.map((t) => ({
+        ...t,
+        price: toppingPrice(t, product.name, product.category),
+      }))
+    : [];
+
+  const extrasDelta =
+    sides.reduce((s, o) => s + (extraSides[o.id] ?? 0) * o.price, 0) +
+    toppingOptions.reduce((s, t) => s + (extraSides[t.id] ?? 0) * t.price, 0);
   const sideModifiers = [
     ...removedIngredients.map((n) => `ohne ${n}`),
     ...removedSides.map((n) => `ohne ${n}`),
+    ...toppingOptions
+      .filter((t) => (extraSides[t.id] ?? 0) > 0)
+      .map((t) => `+ ${t.name}${(extraSides[t.id] ?? 0) > 1 ? ` x${extraSides[t.id]}` : ""}`),
     ...sides
       .filter((o) => (extraSides[o.id] ?? 0) > 0)
       .map((o) => `+ ${o.name}${(extraSides[o.id] ?? 0) > 1 ? ` x${extraSides[o.id]}` : ""}`),
