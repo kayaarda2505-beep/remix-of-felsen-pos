@@ -822,7 +822,22 @@ function POS() {
                         <div className="text-xs text-muted-foreground tabular-nums">
                           CHF {l.unitPrice.toFixed(2)}
                         </div>
+                        {(l.modifiers.length > 0 || l.note) && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {l.modifiers.map((m) => (
+                              <span key={m} className="text-[10px] px-1.5 py-0.5 rounded-md bg-accent/15 text-accent border border-accent/30">
+                                {m}
+                              </span>
+                            ))}
+                            {l.note && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-muted-foreground border border-border/40 flex items-center gap-1">
+                                <Pencil className="w-2.5 h-2.5" /> {l.note}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
+
                       <div className="flex items-center gap-1 glass rounded-lg p-0.5 shrink-0">
                         <button onClick={() => incWalkIn(l.id, -1)} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10">
                           <Minus className="w-3 h-3" />
