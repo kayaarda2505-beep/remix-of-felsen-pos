@@ -89,19 +89,19 @@ async function notify(
     const recipient = toMsisdn(phone);
     if (!recipient) return { sent: false, error: "Keine gültige Mobilnummer" };
 
-    const hi = firstName ? `${firstName}, ` : "";
+    const hi = firstName ? `${firstName}` : "Ciao";
     const eta = etaMinutes ?? 25;
     let message: string;
     if (type === "takeaway") {
       message =
         stage === "received"
-          ? `Piratino: ${hi}wir haben deine Bestellung erhalten (CHF ${Number(order.total ?? 0).toFixed(2)}). Abholbereit in ca. ${eta} Minuten.`
-          : `Piratino: ${hi}deine Bestellung ist abholbereit. Badenerstrasse 696, 8048 Zürich.`;
+          ? `Piratino: ${hi}! Deine Bestellung CHF ${Number(order.total ?? 0).toFixed(2)} ist bei uns eingegangen. Wir machen sie frisch & sie ist in ca. ${eta} Min. abholbereit. Danke für deinen Besuch!`
+          : `Piratino: ${hi}! Deine Bestellung ist frisch abholbereit. Wir freuen uns auf dich - Badenerstrasse 696, 8048 Zürich.`;
     } else {
       message =
         stage === "received"
-          ? `Piratino: ${hi}wir haben deine Bestellung erhalten (CHF ${Number(order.total ?? 0).toFixed(2)}). Wir starten sofort mit der Zubereitung.`
-          : `Piratino: ${hi}deine Bestellung ist bereit und geht gleich auf den Weg zu dir.`;
+          ? `Piratino: ${hi}! Deine Lieferbestellung CHF ${Number(order.total ?? 0).toFixed(2)} ist bei uns eingegangen. Der Pizzaiolo macht sich gleich ans Werk - wir melden uns, sobald sie unterwegs ist.`
+          : `Piratino: ${hi}! Deine Bestellung ist bereit und geht auf die Reise zu dir. Guten Appetit!`;
     }
 
     await sendSms(recipient, message, reference);

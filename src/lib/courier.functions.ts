@@ -116,7 +116,7 @@ async function sendTrackingSms(orderId: string, force = false): Promise<{ sent: 
     const base = process.env["PUBLIC_SITE_URL"] ?? "https://felsens-pos-glow.lovable.app";
     await sendSms(
       recipient,
-      `Piratino: Deine Bestellung ist unterwegs! Live-Standort & Ankunftszeit: ${base}/track/${token}`,
+      `Piratino: Deine Bestellung ist unterwegs! Verfolge den Kurier live & sieh die voraussichtliche Ankunftszeit: ${base}/track/${token}`,
       `order-${orderId}-${Date.now()}`,
     );
     await (supabaseAdmin as any)

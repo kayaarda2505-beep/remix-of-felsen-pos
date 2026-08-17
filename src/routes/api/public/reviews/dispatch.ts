@@ -40,8 +40,8 @@ async function dispatchDueReviews() {
     }
 
     const message = status.alreadyReviewed
-      ? `Piratino: Danke für deine Bestellung! Angebote per SMS erhalten? Hier Ja/Nein: ${base}/bewertung/${r.token}`
-      : `Piratino: Wie hat's geschmeckt? Bewerte uns direkt bei Google: https://maps.google.com/?cid=4104131751984087472 - Angebote per SMS erhalten? Hier Ja/Nein: ${base}/bewertung/${r.token}`;
+      ? `Piratino: Danke für deinen Besuch! Möchtest du über neue Angebote per SMS informiert werden? Hier Ja/Nein: ${base}/bewertung/${r.token}`
+      : `Piratino: Wir hoffen, es hat dir geschmeckt! Freuen uns über deine Bewertung bei Google: https://maps.google.com/?cid=4104131751984087472 - Angebote per SMS? Hier Ja/Nein: ${base}/bewertung/${r.token}`;
 
     try {
       await sendSms(recipient, message, `review-${r.id}`);
