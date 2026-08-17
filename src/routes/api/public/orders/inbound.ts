@@ -168,8 +168,8 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
 
         // Bestätigungs-SMS (darf die Bestellung nicht blockieren)
         try {
-          const { notifyOrderReceived } = await import("@/lib/order-sms.server");
-          await notifyOrderReceived(order.id as string, isDelivery ? undefined : 15);
+          const { notify } = await import("@/lib/order-sms.server");
+          await notify(order.id as string, "received", isDelivery ? undefined : 15);
         } catch (e) {
           console.error("[inbound] sms", e);
         }
