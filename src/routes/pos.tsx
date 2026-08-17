@@ -197,6 +197,15 @@ function POS() {
 
   const activeOrder = openOrders.find((o) => o.id === activeOrderId) ?? null;
 
+  // Beilagen, die man entfernen oder zusätzlich bestellen kann
+  const sideOptions = useMemo(
+    () =>
+      products
+        .filter((p) => /beilag/i.test(p.category))
+        .map((p) => ({ id: p.id, name: p.name, price: p.price })),
+    [products],
+  );
+
   const visible = useMemo(
     () =>
       products.filter(
@@ -567,7 +576,7 @@ function POS() {
   return (
     <div className="p-3 lg:p-4 pb-24 md:pb-3 h-screen flex flex-col w-full max-w-[1800px] mx-auto overflow-hidden">
       <div className="flex items-start justify-between gap-2">
-        <PageHeader title="Kasse" subtitle={isTab && activeOrder ? `Tisch ${activeOrder.dining_tables?.name ?? "?"} · offen` : "Theke / Walk-in"} />
+        <PageHeader title="Kasse" subtitle={isTab && activeOrder ? `Tisch ${activeOrder.dining_tables?.name ?? "?"} · offen` : takeaway ? "Takeaway · zum Mitnehmen" : "Theke / Walk-in"} />
         <button
           onClick={toggleFullscreen}
           title={isFullscreen ? "Vollbild verlassen" : "Vollbild (Taskleiste ausblenden)"}
@@ -711,7 +720,7 @@ function POS() {
         <aside className="glass-strong rounded-3xl p-4 flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-semibold">{isTab ? `Tab Tisch ${activeOrder?.dining_tables?.name ?? ""}` : "Bestellung"}</h3>
+              <h3 className="font-semibold">{isTab ? `Tab Tisch ${activeOrder?.dining_tables?.name ?? ""}` : takeaway ? "Takeaway-Bestellung" : "Bestellung"}</h3>
               {isTab && activeOrder?.opened_at && (
                 <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                   <Clock className="w-3 h-3" />
@@ -1098,6 +1107,7 @@ function POS() {
       <ProductModifierDialog
         product={editing}
         open={!!editing}
+        sides={sideOptions}
         onClose={() => setEditing(null)}
         onConfirm={(c) => {
           if (!editing) return;
