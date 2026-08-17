@@ -1787,10 +1787,53 @@ function MenuConfigDialog({
             </div>
           )}
 
+          {toppingOptions.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                Pizzabeilagen hinzufügen
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {toppingOptions.map((t) => {
+                  const n = extras[t.id] ?? 0;
+                  return (
+                    <div
+                      key={t.id}
+                      className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${
+                        n > 0 ? "bg-accent/10 border-accent/40" : "glass border-border/40"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs truncate">{t.name}</div>
+                        <div className="text-[10px] text-muted-foreground tabular-nums">
+                          +CHF {t.price.toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={() => bump(t.id, -1)}
+                          className="w-7 h-7 rounded-md flex items-center justify-center active:bg-white/10"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="w-4 text-center text-xs tabular-nums">{n}</span>
+                        <button
+                          onClick={() => bump(t.id, 1)}
+                          className="w-7 h-7 rounded-md flex items-center justify-center active:bg-white/10"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {SIDE_OPTIONS.length > 0 && (
             <div>
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
-                Beilagen hinzufügen
+                Saucen &amp; Beilagen hinzufügen
               </div>
               <div className="space-y-1.5">
                 {SIDE_OPTIONS.map((o) => {
