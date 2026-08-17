@@ -21,7 +21,9 @@ import {
   Smartphone,
   Send,
   SplitSquareHorizontal,
+  ShoppingBag,
 } from "lucide-react";
+
 
 
 import { toast } from "sonner";
