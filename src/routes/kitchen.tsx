@@ -303,9 +303,20 @@ function KitchenView() {
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-mono text-xs text-muted-foreground">#{t.orderId.slice(0, 6)}</div>
-                    <div className="text-lg font-semibold">{t.tableName}</div>
+                    <div className="text-lg font-semibold truncate">{t.tableName}</div>
+                    <span className={`inline-flex items-center gap-1 text-[10px] mt-1 px-2 py-0.5 rounded-md font-medium ${
+                      t.kind === "delivery" ? "bg-primary/20 text-primary"
+                      : t.kind === "takeaway" ? "bg-warning/20 text-warning"
+                      : "bg-white/10 text-muted-foreground"
+                    }`}>
+                      {t.kind === "delivery" ? <Bike className="w-3 h-3" /> : t.kind === "takeaway" ? <ShoppingBag className="w-3 h-3" /> : <Utensils className="w-3 h-3" />}
+                      {KIND_LABEL[t.kind]}
+                    </span>
+                    {t.kind === "delivery" && t.address && (
+                      <div className="text-[11px] text-muted-foreground mt-1 truncate">{t.address}</div>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className={`flex items-center gap-1 text-xs ${urgent ? "text-warning" : "text-muted-foreground"}`}>
