@@ -19,37 +19,72 @@ const DEFAULT_MODIFIER_GROUPS: ModifierGroup[] = [
 ];
 
 
+export interface SideOption {
+  id: string;
+  name: string;
+  price: number;
+}
+
 export interface ProductCustomization {
   qty: number;
   modifiers: string[];
   note?: string;
+  priceDelta: number;
 }
 
 export function ProductModifierDialog({
   product,
   open,
+  sides = [],
   onClose,
   onConfirm,
 }: {
   product: Product | null;
   open: boolean;
+  sides?: SideOption[];
   onClose: () => void;
   onConfirm: (c: ProductCustomization) => void;
 }) {
   const [qty, setQty] = useState(1);
   const [mods, setMods] = useState<string[]>([]);
   const [note, setNote] = useState("");
+  const [removedSides, setRemovedSides] = useState<string[]>([]);
+  const [extraSides, setExtraSides] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (open) {
       setQty(1);
       setMods([]);
       setNote("");
+      setRemovedSides([]);
+      setExtraSides({});
     }
   }, [open, product?.id]);
 
   const toggle = (m: string) =>
     setMods((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
+
+  const toggleRemoved = (name: string) =>
+    setRemovedSides((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
+
+  const bumpExtra = (id: string, d: number) =>
+    setExtraSides((prev) => {
+      const next = Math.max(0, (prev[id] ?? 0) + d);
+      const out = { ...prev };
+      if (next === 0) delete out[id];
+      else out[id] = next;
+      return out;
+    });
+
+  const extrasDelta = sides.reduce((s, o) => s + (extraSides[o.id] ?? 0) * o.price, 0);
+  const sideModifiers = [
+    ...removedSides.map((n) => `ohne ${n}`),
+    ...sides
+      .filter((o) => (extraSides[o.id] ?? 0) > 0)
+      .map((o) => `+ ${o.name}${(extraSides[o.id] ?? 0) > 1 ? ` x${extraSides[o.id]}` : ""}`),
+  ];
+  const unitPrice = (product?.price ?? 0) + extrasDelta;
+
 
   return (
     <AnimatePresence>
