@@ -30,9 +30,9 @@ export function TeamPinScreen() {
         _account_number: Number(acc),
       });
       if (error) throw error;
-      const row = (data as Operator[] | null)?.[0];
+      const row = (data as any[] | null)?.[0];
       if (row) {
-        setOperator(row);
+        setOperator({ ...row, accountNumber: row.account_number ?? Number(acc) } as Operator);
         return;
       }
     } catch {
@@ -76,9 +76,9 @@ export function TeamPinScreen() {
           _pin: next,
         });
         if (error) throw error;
-        const row = (data as Operator[] | null)?.[0];
+        const row = (data as any[] | null)?.[0];
         if (row) {
-          setOperator(row);
+          setOperator({ ...row, accountNumber: row.account_number ?? Number(account) } as Operator);
         } else if (next.length === 6) {
           setError(true);
           setTimeout(() => setPin(""), 600);

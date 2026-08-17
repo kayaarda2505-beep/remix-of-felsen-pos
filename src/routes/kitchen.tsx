@@ -9,6 +9,8 @@ import { routeForItem } from "@/lib/receipt";
 import { getTutorial, type CocktailTutorial } from "@/lib/cocktailTutorials";
 import { sendOrderReadySms } from "@/lib/order-sms.functions";
 import { getAudioContext, installAudioUnlock } from "@/lib/audio-unlock";
+import { useAuth } from "@/hooks/use-auth";
+import { stationForAccount, STATION_LABEL } from "@/lib/station-accounts";
 
 export const Route = createFileRoute("/kitchen")({
   head: () => ({ meta: [{ title: "Küche, Bar & Pizzastation — Piratino POS" }] }),
@@ -94,7 +96,10 @@ function playAlarm(loud: boolean) {
 
 function KitchenView() {
   const qc = useQueryClient();
-  const [filter, setFilter] = useState<"all" | "bar" | "kueche" | "pizza">("all");
+  const { operator } = useAuth();
+  const lockedStation = stationForAccount(operator?.accountNumber);
+  const [filterState, setFilter] = useState<"all" | "bar" | "kueche" | "pizza">("all");
+  const filter: "all" | "bar" | "kueche" | "pizza" = lockedStation ?? filterState;
   const [tick, setTick] = useState(0);
   const [acked, setAcked] = useState<Record<string, number>>(() => loadAcked());
   const [tutorial, setTutorial] = useState<CocktailTutorial | null>(null);
@@ -283,8 +288,9 @@ function KitchenView() {
     const fresh = relevant.filter((t) => !seenKeys.current!.has(t.key));
     seenKeys.current = new Set(relevant.map((t) => t.key));
     if (fresh.length === 0 || !soundOn) return;
-    playAlarm(fresh.some((t) => t.station === "pizza"));
-  }, [tickets, filter, soundOn]);
+    const loud = lockedStation ? lockedStation === "pizza" : fresh.some((t) => t.station === "pizza");
+    playAlarm(loud);
+  }, [tickets, filter, soundOn, lockedStation]);
 
   const ackTicket = (key: string, orderId?: string) => {
     const next = { ...acked, [key]: Date.now() };
@@ -301,11 +307,11 @@ function KitchenView() {
   return (
     <div className="p-6 lg:p-10 pb-28 md:pb-10 max-w-[1800px] mx-auto">
       <PageHeader
-        title="Küche, Bar & Pizzastation"
-        subtitle="Live Bestellungen — automatisch nach Station sortiert"
+        title={lockedStation ? STATION_LABEL[lockedStation] : "Küche, Bar & Pizzastation"}
+        subtitle={lockedStation ? `Live Bestellungen für ${STATION_LABEL[lockedStation]}` : "Live Bestellungen — automatisch nach Station sortiert"}
         actions={
           <div className="flex gap-2 items-center">
-            <div className="glass rounded-xl p-1 flex gap-1">
+            <div className={`glass rounded-xl p-1 flex gap-1 ${lockedStation ? "hidden" : ""}`}>
               {(["all", "bar", "kueche", "pizza"] as const).map((f) => (
                 <button
                   key={f}
