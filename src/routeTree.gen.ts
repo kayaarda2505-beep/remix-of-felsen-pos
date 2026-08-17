@@ -55,6 +55,7 @@ import { Route as ApiPublicTableTokenRouteImport } from './routes/api/public/tab
 import { Route as ApiPublicReviewsDispatchRouteImport } from './routes/api/public/reviews/dispatch'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicPaymentsCreateTableCheckoutRouteImport } from './routes/api/public/payments/create-table-checkout'
+import { Route as ApiPublicOrdersInboundRouteImport } from './routes/api/public/orders/inbound'
 
 const TablesRoute = TablesRouteImport.update({
   id: '/tables',
@@ -290,6 +291,11 @@ const ApiPublicPaymentsCreateTableCheckoutRoute =
     path: '/api/public/payments/create-table-checkout',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicOrdersInboundRoute = ApiPublicOrdersInboundRouteImport.update({
+  id: '/api/public/orders/inbound',
+  path: '/api/public/orders/inbound',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -333,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/api/public/song-request': typeof ApiPublicSongRequestRoute
   '/api/public/spotify-search': typeof ApiPublicSpotifySearchRoute
   '/order/$token/paid': typeof OrderTokenPaidRoute
+  '/api/public/orders/inbound': typeof ApiPublicOrdersInboundRoute
   '/api/public/payments/create-table-checkout': typeof ApiPublicPaymentsCreateTableCheckoutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/reviews/dispatch': typeof ApiPublicReviewsDispatchRoute
@@ -380,6 +387,7 @@ export interface FileRoutesByTo {
   '/api/public/song-request': typeof ApiPublicSongRequestRoute
   '/api/public/spotify-search': typeof ApiPublicSpotifySearchRoute
   '/order/$token/paid': typeof OrderTokenPaidRoute
+  '/api/public/orders/inbound': typeof ApiPublicOrdersInboundRoute
   '/api/public/payments/create-table-checkout': typeof ApiPublicPaymentsCreateTableCheckoutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/reviews/dispatch': typeof ApiPublicReviewsDispatchRoute
@@ -429,6 +437,7 @@ export interface FileRoutesById {
   '/api/public/song-request': typeof ApiPublicSongRequestRoute
   '/api/public/spotify-search': typeof ApiPublicSpotifySearchRoute
   '/order/$token/paid': typeof OrderTokenPaidRoute
+  '/api/public/orders/inbound': typeof ApiPublicOrdersInboundRoute
   '/api/public/payments/create-table-checkout': typeof ApiPublicPaymentsCreateTableCheckoutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/reviews/dispatch': typeof ApiPublicReviewsDispatchRoute
@@ -479,6 +488,7 @@ export interface FileRouteTypes {
     | '/api/public/song-request'
     | '/api/public/spotify-search'
     | '/order/$token/paid'
+    | '/api/public/orders/inbound'
     | '/api/public/payments/create-table-checkout'
     | '/api/public/payments/webhook'
     | '/api/public/reviews/dispatch'
@@ -526,6 +536,7 @@ export interface FileRouteTypes {
     | '/api/public/song-request'
     | '/api/public/spotify-search'
     | '/order/$token/paid'
+    | '/api/public/orders/inbound'
     | '/api/public/payments/create-table-checkout'
     | '/api/public/payments/webhook'
     | '/api/public/reviews/dispatch'
@@ -574,6 +585,7 @@ export interface FileRouteTypes {
     | '/api/public/song-request'
     | '/api/public/spotify-search'
     | '/order/$token/paid'
+    | '/api/public/orders/inbound'
     | '/api/public/payments/create-table-checkout'
     | '/api/public/payments/webhook'
     | '/api/public/reviews/dispatch'
@@ -611,6 +623,7 @@ export interface RootRouteChildren {
   ApiPublicSmsStatusRoute: typeof ApiPublicSmsStatusRoute
   ApiPublicSongRequestRoute: typeof ApiPublicSongRequestRoute
   ApiPublicSpotifySearchRoute: typeof ApiPublicSpotifySearchRoute
+  ApiPublicOrdersInboundRoute: typeof ApiPublicOrdersInboundRoute
   ApiPublicPaymentsCreateTableCheckoutRoute: typeof ApiPublicPaymentsCreateTableCheckoutRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicReviewsDispatchRoute: typeof ApiPublicReviewsDispatchRoute
@@ -942,6 +955,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsCreateTableCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/orders/inbound': {
+      id: '/api/public/orders/inbound'
+      path: '/api/public/orders/inbound'
+      fullPath: '/api/public/orders/inbound'
+      preLoaderRoute: typeof ApiPublicOrdersInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1019,6 +1039,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSmsStatusRoute: ApiPublicSmsStatusRoute,
   ApiPublicSongRequestRoute: ApiPublicSongRequestRoute,
   ApiPublicSpotifySearchRoute: ApiPublicSpotifySearchRoute,
+  ApiPublicOrdersInboundRoute: ApiPublicOrdersInboundRoute,
   ApiPublicPaymentsCreateTableCheckoutRoute:
     ApiPublicPaymentsCreateTableCheckoutRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
