@@ -78,19 +78,37 @@ export function ProductModifierDialog({
       return out;
     });
 
-  const ingredients = ((product?.description ?? "") as string)
+  // Wenn im Extrawunsch eine konkrete Pizza gewählt wurde (z.B. Mittagsmenü
+  // „Pizza wählen"), sollen deren Zutaten zum Entfernen erscheinen.
+  const { products: allProducts } = useProducts();
+  const chosenProduct = (() => {
+    for (const m of mods) {
+      const clean = m.replace(/\s*\(\+CHF[^)]*\)\s*$/i, "").trim();
+      const base = clean.replace(/\s*-\s*\d{2}\s*cm\s*$/i, "").trim();
+      const hit = allProducts.find(
+        (p) => p.name.toLowerCase() === clean.toLowerCase() || p.name.toLowerCase() === base.toLowerCase(),
+      );
+      if (hit && hit.description) return hit;
+    }
+    return null;
+  })();
+
+  const ingredientSource = chosenProduct ?? product;
+  const ingredients = ((ingredientSource?.description ?? "") as string)
     .split(/,|·/)
     .map((x) => x.trim())
-    .filter((x) => x.length > 1 && x.length < 30);
+    .filter((x) => x.length > 1 && x.length < 30 && !/nach wahl/i.test(x));
 
   const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
 
-  const toppingOptions = product && isPizzaItem(product.name, product.category)
+  const toppingBase = chosenProduct ?? product;
+  const toppingOptions = toppingBase && isPizzaItem(toppingBase.name, toppingBase.category)
     ? PIZZA_TOPPINGS.map((t) => ({
         ...t,
-        price: toppingPrice(t, product.name, product.category),
+        price: toppingPrice(t, toppingBase.name, toppingBase.category),
       }))
     : [];
+
 
   const extrasDelta =
     sides.reduce((s, o) => s + (extraSides[o.id] ?? 0) * o.price, 0) +
