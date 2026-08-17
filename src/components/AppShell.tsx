@@ -22,6 +22,7 @@ import {
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { stationForAccount } from "@/lib/station-accounts";
 import { useTheme } from "@/hooks/use-theme";
 import { PiratinoLogo } from "./PiratinoLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
@@ -534,7 +535,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 
   const navRole = operator?.role as string | undefined;
-  const visibleNav = navRole === "barkeeper"
+  const operatorStation = stationForAccount(operator?.accountNumber);
+  const visibleNav = operatorStation
+    ? nav.filter((n) => n.to === "/kitchen")
+    : navRole === "barkeeper"
     ? nav.filter((n) => BARKEEPER_ALLOWED.has(n.to))
     : navRole === "service"
     ? nav.filter((n) => SERVICE_ALLOWED.has(n.to))
