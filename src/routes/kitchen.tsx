@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock, ChefHat, Wine, Inbox, BookOpen, X, Pizza } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, Clock, ChefHat, Wine, Inbox, BookOpen, X, Pizza, Bike, ShoppingBag, Utensils, Volume2, VolumeX } from "lucide-react";
 import { PageHeader } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { routeForItem } from "@/lib/receipt";
 import { getTutorial, type CocktailTutorial } from "@/lib/cocktailTutorials";
 import { sendOrderReadySms } from "@/lib/order-sms.functions";
+import { getAudioContext, installAudioUnlock } from "@/lib/audio-unlock";
 
 export const Route = createFileRoute("/kitchen")({
   head: () => ({ meta: [{ title: "Küche, Bar & Pizzastation — Piratino POS" }] }),
