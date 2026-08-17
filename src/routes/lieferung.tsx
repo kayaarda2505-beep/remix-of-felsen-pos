@@ -134,6 +134,30 @@ function Lieferung() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
+  // Strassen-Autocomplete auf Basis der PLZ
+  const [streetQuery, setStreetQuery] = useState("");
+  const [streetOpen, setStreetOpen] = useState(false);
+  const [debouncedStreet, setDebouncedStreet] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedStreet(streetQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [streetQuery]);
+
+  const streetsQuery = useQuery({
+    queryKey: ["streets", form.zip, debouncedStreet],
+    enabled: form.zip.length === 4,
+    staleTime: 10 * 60 * 1000,
+    queryFn: () => searchStreets({ data: { zip: form.zip, query: debouncedStreet || undefined } }),
+  });
+  const streetOptions: string[] = streetsQuery.data?.streets ?? [];
+
+  // Ort automatisch aus der PLZ übernehmen
+  useEffect(() => {
+    const city = streetsQuery.data?.city;
+    if (city) setForm((f) => (f.city ? f : { ...f, city }));
+  }, [streetsQuery.data?.city]);
+
+
 
   const [activeCategory, setActiveCategory] = useState(DELIVERY_MENU[0]?.category ?? "");
   const [productSearch, setProductSearch] = useState("");
