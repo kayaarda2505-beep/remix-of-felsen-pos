@@ -277,13 +277,19 @@ export function ProductModifierDialog({
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => {
-                  onConfirm({ qty, modifiers: mods, note: note.trim() || undefined });
+                  onConfirm({
+                    qty,
+                    modifiers: [...mods, ...sideModifiers],
+                    note: note.trim() || undefined,
+                    priceDelta: +extrasDelta.toFixed(2),
+                  });
                   onClose();
                 }}
                 className="flex-1 rounded-2xl py-3.5 bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground font-semibold shadow-[var(--shadow-gold)] tap-highlight-none"
               >
-                Hinzufügen · CHF {(product.price * qty).toFixed(2)}
+                Hinzufügen · CHF {(unitPrice * qty).toFixed(2)}
               </motion.button>
+
             </div>
           </motion.div>
         </motion.div>
