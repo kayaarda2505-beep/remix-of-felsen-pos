@@ -1513,7 +1513,144 @@ function Lieferung() {
         <Plus className="w-4 h-4" /> Bestellung
       </button>
 
+      {/* Takeaway-Übersicht */}
+      <AnimatePresence>
+        {showTakeawayList && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-background/90 backdrop-blur-md overflow-y-auto"
+          >
+            <div className="max-w-2xl mx-auto p-4 pt-6 pb-28">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Piratino</div>
+                  <h1 className="text-xl font-semibold flex items-center gap-2">
+                    <ShoppingBag className="w-5 h-5 text-accent" /> Takeaway
+                  </h1>
+                </div>
+                <button
+                  onClick={() => {
+                    resetAll();
+                    setMode("takeaway");
+                    setShowTakeawayList(false);
+                    setShowWizard(true);
+                  }}
+                  className="rounded-2xl px-4 py-3 text-sm font-semibold bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Neue Bestellung
+                </button>
+                <button
+                  onClick={() => setShowTakeawayList(false)}
+                  className="w-11 h-11 rounded-xl glass flex items-center justify-center"
+                  aria-label="Schliessen"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {(() => {
+                const open = takeawayOrders.filter((o) => o.status === "open");
+                const done = takeawayOrders.filter((o) => o.status !== "open");
+                const Card = ({ o, openState }: { o: any; openState: boolean }) => (
+                  <div key={o.id} className="glass rounded-2xl px-4 py-3 flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">
+                        {o.contact_name || "Takeaway"}
+                        {o.contact_phone ? ` · ${o.contact_phone}` : ""}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
+                        {o.delivery_note ? ` · ${o.delivery_note}` : ""}
+                      </div>
+                    </div>
+                    <span className="tabular-nums font-semibold shrink-0">CHF {Number(o.total).toFixed(2)}</span>
+                    {openState ? (
+                      <button
+                        onClick={() => setPayingTakeaway(o)}
+                        className="shrink-0 rounded-xl px-3 py-2 text-xs font-semibold bg-accent/20 text-accent hover:bg-accent/30"
+                      >
+                        Abschliessen
+                      </button>
+                    ) : (
+                      <span className="shrink-0 text-xs text-emerald-400">Bezahlt</span>
+                    )}
+                  </div>
+                );
+                return (
+                  <div className="space-y-6">
+                    <section>
+                      <h2 className="text-sm font-semibold mb-2">Offen ({open.length})</h2>
+                      {open.length === 0 ? (
+                        <div className="text-xs text-muted-foreground">Keine offenen Takeaway-Bestellungen.</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {open.map((o) => (
+                            <Card key={o.id} o={o} openState />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                    <section>
+                      <h2 className="text-sm font-semibold mb-2">Heute abgeschlossen ({done.length})</h2>
+                      {done.length === 0 ? (
+                        <div className="text-xs text-muted-foreground">Noch nichts abgeschlossen.</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {done.map((o) => (
+                            <Card key={o.id} o={o} openState={false} />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {payingTakeaway && (
+              <div
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                onClick={() => !payTakeaway.isPending && setPayingTakeaway(null)}
+              >
+                <div className="glass-strong rounded-3xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+                  <div className="text-center mb-5">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                      {payingTakeaway.contact_name || "Takeaway"}
+                    </div>
+                    <div className="text-3xl font-semibold tabular-nums mt-1">
+                      CHF {Number(payingTakeaway.total).toFixed(2)}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2">Womit wurde bezahlt?</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      disabled={payTakeaway.isPending}
+                      onClick={() => payTakeaway.mutate({ order: payingTakeaway, method: "cash" })}
+                      className="rounded-2xl py-5 glass flex flex-col items-center gap-1.5 text-sm font-medium disabled:opacity-40"
+                    >
+                      {payTakeaway.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Banknote className="w-5 h-5" />}
+                      Bar
+                    </button>
+                    <button
+                      disabled={payTakeaway.isPending}
+                      onClick={() => payTakeaway.mutate({ order: payingTakeaway, method: "card_terminal" })}
+                      className="rounded-2xl py-5 glass flex flex-col items-center gap-1.5 text-sm font-medium disabled:opacity-40"
+                    >
+                      {payTakeaway.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
+                      Karte
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Wizard als Overlay */}
+
       <AnimatePresence>
         {showWizard && (
           <motion.div
