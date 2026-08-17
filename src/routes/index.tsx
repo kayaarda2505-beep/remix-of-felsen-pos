@@ -722,8 +722,8 @@ function ServiceTablet() {
             exit={{ opacity: 0, x: -20 }}
             className="flex-1 flex min-h-0"
           >
-            {/* Categories rail */}
-            <nav className="w-24 md:w-36 shrink-0 border-r border-border/40 overflow-y-auto bg-sidebar/40">
+            {/* Categories rail — nur ab Tablet */}
+            <nav className="hidden md:block w-36 shrink-0 border-r border-border/40 overflow-y-auto bg-sidebar/40">
               {categories.map((c) => (
                 <button
                   key={c}
@@ -731,7 +731,7 @@ function ServiceTablet() {
                     setActiveCat(c);
                     setSearch("");
                   }}
-                  className={`w-full text-left px-3 md:px-4 py-4 text-xs md:text-sm font-medium border-l-2 transition-all tap-highlight-none ${
+                  className={`w-full text-left px-4 py-4 text-sm font-medium border-l-2 transition-all tap-highlight-none ${
                     activeCat === c && !search
                       ? "border-accent bg-white/[0.04] text-foreground"
                       : "border-transparent text-muted-foreground"
@@ -744,17 +744,42 @@ function ServiceTablet() {
 
             {/* Products */}
             <div className="flex-1 flex flex-col min-w-0">
-              <div className="p-3 md:p-4 border-b border-border/40">
-                <div className="glass rounded-xl flex items-center gap-2 px-3 py-2.5">
+              <div className="p-3 md:p-4 border-b border-border/40 space-y-2.5">
+                <div className="glass rounded-xl flex items-center gap-2 px-3 py-3">
                   <Search className="w-4 h-4 text-muted-foreground" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Produkt suchen…"
-                    className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
+                    className="bg-transparent outline-none text-base md:text-sm flex-1 placeholder:text-muted-foreground"
                   />
+                  {search && (
+                    <button onClick={() => setSearch("")} className="w-8 h-8 -mr-1 rounded-lg flex items-center justify-center active:bg-white/10">
+                      <X className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
+                {/* Mobile: Kategorien als horizontale Chips */}
+                <div className="md:hidden -mx-3 px-3 flex gap-2 overflow-x-auto scrollbar-none">
+                  {categories.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setActiveCat(c);
+                        setSearch("");
+                      }}
+                      className={`shrink-0 rounded-xl px-3.5 py-2.5 text-sm font-medium border tap-highlight-none transition-colors ${
+                        activeCat === c && !search
+                          ? "border-accent/60 bg-accent/20 text-foreground"
+                          : "border-transparent bg-white/[0.05] text-muted-foreground"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
                 </div>
               </div>
+
 
               <div className="flex-1 overflow-y-auto p-3 md:p-4 pb-28 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3 auto-rows-min">
                 {visible.map((p) => {
@@ -765,22 +790,61 @@ function ServiceTablet() {
                   const oos = left <= 0;
                   const low = !oos && left !== Infinity && left <= 3;
                   const stockLabel = left === Infinity ? null : `${left} Stk.`;
+                  const hasOptions = !!p.modifier_groups && p.modifier_groups.length > 0;
                   return (
-                    <motion.button
+                    <motion.div
                       key={p.id}
-                      whileTap={oos ? undefined : { scale: 0.97 }}
-                      onClick={() => {
-                        if (oos) {
-                          toast.error(`${p.name} ist ausverkauft — Zutat fehlt im Lager`);
-                          return;
-                        }
-                        setEditing(p);
-                      }}
-                      disabled={oos}
-                      className={`glass rounded-2xl p-4 text-left tap-highlight-none transition-all relative ${
-                        oos ? "opacity-40 grayscale cursor-not-allowed" : ""
+                      className={`glass rounded-2xl transition-all relative flex items-stretch ${
+                        oos ? "opacity-40 grayscale" : ""
                       } ${inCartQty > 0 && !oos ? "border-accent/60 shadow-[var(--shadow-gold)]" : ""}`}
                     >
+                      <button
+                        onClick={() => {
+                          if (oos) {
+                            toast.error(`${p.name} ist ausverkauft — Zutat fehlt im Lager`);
+                            return;
+                          }
+                          setEditing(p);
+                        }}
+                        disabled={oos}
+                        className="flex-1 min-w-0 text-left p-4 tap-highlight-none active:scale-[0.99] transition-transform"
+                      >
+                        <div className="font-medium leading-tight pr-14">{p.name}</div>
+                        {p.description && (
+                          <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                            {p.description}
+                          </div>
+                        )}
+                        {p.meta && (
+                          <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
+                            {p.meta}
+                          </div>
+                        )}
+                        <div className="text-base font-semibold tabular-nums mt-2">
+                          CHF {p.price.toFixed(2)}
+                        </div>
+                      </button>
+
+                      {/* Schnell hinzufügen (nur ohne Pflicht-Optionen) */}
+                      {!oos && !hasOptions && (
+                        <button
+                          onClick={() => addLine(p, { qty: 1, modifiers: [], note: undefined, priceDelta: 0 } as ProductCustomization)}
+                          aria-label={`${p.name} hinzufügen`}
+                          className="shrink-0 w-16 my-3 mr-3 rounded-xl bg-accent/20 border border-accent/40 flex items-center justify-center active:scale-95 transition-transform tap-highlight-none"
+                        >
+                          <Plus className="w-6 h-6 text-accent" />
+                        </button>
+                      )}
+                      {!oos && hasOptions && (
+                        <button
+                          onClick={() => setEditing(p)}
+                          aria-label={`${p.name} konfigurieren`}
+                          className="shrink-0 w-16 my-3 mr-3 rounded-xl bg-white/[0.06] border border-border/40 flex items-center justify-center active:scale-95 transition-transform tap-highlight-none"
+                        >
+                          <Pencil className="w-5 h-5 text-muted-foreground" />
+                        </button>
+                      )}
+
                       {oos && (
                         <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-destructive/20 text-destructive border border-destructive/40">
                           Ausverkauft
@@ -791,37 +855,20 @@ function ServiceTablet() {
                           nur {left}
                         </span>
                       )}
-                      {!oos && !low && stockLabel && (
+                      {inCartQty > 0 && !oos && (
+                        <div className="absolute top-2 right-2 min-w-6 h-6 px-1.5 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center">
+                          {inCartQty}
+                        </div>
+                      )}
+                      {!oos && !low && inCartQty === 0 && stockLabel && (
                         <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-success/15 text-success border border-success/30">
                           {stockLabel}
                         </span>
                       )}
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium leading-tight">{p.name}</div>
-                          {p.description && (
-                            <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
-                              {p.description}
-                            </div>
-                          )}
-                          {p.meta && (
-                            <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
-                              {p.meta}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="text-base font-semibold tabular-nums">{p.price.toFixed(2)}</div>
-                        </div>
-                      </div>
-                      {inCartQty > 0 && !oos && !low && (
-                        <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center">
-                          {inCartQty}
-                        </div>
-                      )}
-                    </motion.button>
+                    </motion.div>
                   );
                 })}
+
                 {visible.length === 0 && (
                   <div className="col-span-full text-center py-12 text-sm text-muted-foreground">
                     Keine Treffer
