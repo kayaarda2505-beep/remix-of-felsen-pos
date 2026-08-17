@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
-import { X, Minus, Plus, Check } from "lucide-react";
+import { X, Minus, Plus, Check, Search } from "lucide-react";
 import { useProducts, type ModifierGroup, type Product } from "@/hooks/use-products";
 import { PIZZA_TOPPINGS, isPizzaItem, toppingPrice } from "@/lib/pizza-toppings";
 
@@ -51,6 +51,7 @@ export function ProductModifierDialog({
   const [note, setNote] = useState("");
   const [removedSides, setRemovedSides] = useState<string[]>([]);
   const [extraSides, setExtraSides] = useState<Record<string, number>>({});
+  const [groupSearch, setGroupSearch] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open) {
@@ -60,6 +61,7 @@ export function ProductModifierDialog({
       setRemovedSides([]);
       setRemovedIngredients([]);
       setExtraSides({});
+      setGroupSearch({});
     }
   }, [open, product?.id]);
 
@@ -176,13 +178,35 @@ export function ProductModifierDialog({
                     product.modifier_groups && product.modifier_groups.length > 0
                       ? product.modifier_groups
                       : DEFAULT_MODIFIER_GROUPS;
-                  return groups.map((group) => (
+                  return groups.map((group) => {
+                    const searchable = group.items.length > 8;
+                    const term = (groupSearch[group.label] ?? "").toLowerCase().trim();
+                    const items = term
+                      ? group.items.filter((i) => i.label.toLowerCase().includes(term))
+                      : group.items;
+                    return (
                     <div key={group.label}>
                       <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70 mb-1.5">
                         {group.label}
                       </div>
+                      {searchable && (
+                        <div className="relative mb-2">
+                          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                          <input
+                            value={groupSearch[group.label] ?? ""}
+                            onChange={(e) =>
+                              setGroupSearch((prev) => ({ ...prev, [group.label]: e.target.value }))
+                            }
+                            placeholder={`${group.label} suchen…`}
+                            className="w-full glass rounded-xl pl-9 pr-3 py-2 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
+                          />
+                        </div>
+                      )}
                       <div className="flex flex-wrap gap-2">
-                        {group.items.map((item) => {
+                        {items.length === 0 && (
+                          <div className="text-xs text-muted-foreground">Nichts gefunden.</div>
+                        )}
+                        {items.map((item) => {
                           const label =
                             item.price_delta && item.price_delta !== 0
                               ? `${item.label} (+CHF ${item.price_delta.toFixed(2)})`
@@ -205,7 +229,9 @@ export function ProductModifierDialog({
                         })}
                       </div>
                     </div>
-                  ));
+                    );
+                  });
+
                 })()}
               </section>
 
