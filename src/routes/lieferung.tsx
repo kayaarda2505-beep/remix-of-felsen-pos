@@ -15,6 +15,8 @@ import {
   Phone,
   Plus,
   Search,
+  ShoppingBag,
+
   Trash2,
   UserPlus,
   X,
