@@ -207,11 +207,14 @@ function KitchenView() {
         const key = `${it.order_id}-${station}-${batch}`;
         if (acked[key] && batch <= acked[key]) continue;
         if (!ticket) {
+          const info = orderMap[it.order_id];
           ticket = {
             key,
             orderId: it.order_id,
             station,
-            tableName: orderMap[it.order_id] ?? "…",
+            tableName: info?.label ?? "…",
+            kind: info?.kind ?? "counter",
+            address: info?.address ?? null,
             items: [],
             firstSent: sentMs,
             batch,
