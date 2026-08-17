@@ -30,7 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
 import { printBill, routeForCategory, routeForItem } from "@/lib/receipt";
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
-import { UrgentAlertOverlay, pushUrgentAlert } from "@/components/UrgentAlert";
+import { UrgentAlertOverlay, pushUrgentAlert, playUrgentRing } from "@/components/UrgentAlert";
 import { installAudioUnlock, getAudioContext } from "@/lib/audio-unlock";
 
 async function autoPrintServiceCall(r: any) {
