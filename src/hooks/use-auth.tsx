@@ -9,6 +9,7 @@ export interface Operator {
   name: string;
   role: TeamRole;
   color: string;
+  accountNumber?: number | null;
 }
 
 interface AuthState {
