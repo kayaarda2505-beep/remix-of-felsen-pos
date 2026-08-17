@@ -1661,7 +1661,9 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
 
 const SIDE_OPTIONS = (
   DELIVERY_MENU.find((c) => /beilag/i.test(c.category))?.items ?? []
-).map((i) => ({ id: i.id, name: i.name, price: i.price }));
+)
+  .map((i) => ({ id: i.id, name: i.name, price: i.price }))
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 function MenuConfigDialog({
   item,
