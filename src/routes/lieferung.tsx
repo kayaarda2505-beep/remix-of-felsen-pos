@@ -298,7 +298,13 @@ function Lieferung() {
   const changeQty = (key: string, delta: number) =>
     setCart((prev) => prev.map((l) => (l.key === key ? { ...l, qty: l.qty + delta } : l)).filter((l) => l.qty > 0));
 
-  const subtotal = cart.reduce((s, l) => s + l.item.price * l.qty, 0);
+  const priceOf = useCallback(
+    (item: { name: string; price: number }, category: string) =>
+      mode === "takeaway" ? takeawayPrice({ name: item.name, category, price: item.price }) : item.price,
+    [mode],
+  );
+
+  const subtotal = cart.reduce((s, l) => s + priceOf(l.item, l.category) * l.qty, 0);
   const itemCount = cart.reduce((s, l) => s + l.qty, 0);
 
   const resetAll = () => {
@@ -307,8 +313,11 @@ function Lieferung() {
     setCustomer(null);
     setSearch("");
     setProductSearch("");
+    setTaName("");
+    setTaPhone("");
     setStep("customer");
   };
+
 
   const saveOrder = useMutation({
     mutationFn: async ({ pay }: { pay: "open" | "cash" | "card" }) => {
