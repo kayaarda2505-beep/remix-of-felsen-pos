@@ -29,7 +29,7 @@ export const Route = createFileRoute("/order/$token")({
   component: OrderPage,
 });
 
-type CartItem = { key: string; product: Product; qty: number; modifiers: string[]; note?: string };
+type CartItem = { key: string; product: Product; qty: number; unitPrice: number; modifiers: string[]; note?: string };
 
 const cartKey = (productId: string, modifiers: string[], note?: string) =>
   `${productId}|${[...modifiers].sort().join(",")}|${(note ?? "").trim()}`;
@@ -156,7 +156,7 @@ function OrderPage() {
     () => products.filter((p) => p.category === effectiveCat),
     [products, effectiveCat],
   );
-  const total = cart.reduce((s, c) => s + c.product.price * c.qty, 0);
+  const total = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
   const count = cart.reduce((s, c) => s + c.qty, 0);
 
   const addPlain = (p: Product) => {
@@ -164,7 +164,7 @@ function OrderPage() {
     setCart((c) => {
       const ex = c.find((x) => x.key === key);
       if (ex) return c.map((x) => (x.key === key ? { ...x, qty: x.qty + 1 } : x));
-      return [...c, { key, product: p, qty: 1, modifiers: [] }];
+      return [...c, { key, product: p, qty: 1, unitPrice: p.price, modifiers: [] }];
     });
   };
 
@@ -173,7 +173,7 @@ function OrderPage() {
     setCart((c) => {
       const ex = c.find((x) => x.key === key);
       if (ex) return c.map((x) => (x.key === key ? { ...x, qty: x.qty + cust.qty } : x));
-      return [...c, { key, product: p, qty: cust.qty, modifiers: cust.modifiers, note: cust.note }];
+      return [...c, { key, product: p, qty: cust.qty, unitPrice: +(p.price + (cust.priceDelta ?? 0)).toFixed(2), modifiers: cust.modifiers, note: cust.note }];
     });
   };
 
@@ -197,7 +197,7 @@ function OrderPage() {
             product_id: c.product.id,
             product_name: c.product.name,
             category: c.product.category,
-            unit_price: c.product.price,
+            unit_price: c.unitPrice,
             qty: c.qty,
             note: c.note ?? null,
             modifiers: c.modifiers,
@@ -384,7 +384,7 @@ function OrderPage() {
                           </div>
                         )}
                         <div className="text-[11px] text-muted-foreground tabular-nums mt-0.5">
-                          CHF {c.product.price.toFixed(2)}
+                          CHF {c.unitPrice.toFixed(2)}
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
@@ -397,7 +397,7 @@ function OrderPage() {
                         </button>
                       </div>
                       <div className="w-16 text-right tabular-nums text-sm mt-1">
-                        CHF {(c.product.price * c.qty).toFixed(2)}
+                        CHF {(c.unitPrice * c.qty).toFixed(2)}
                       </div>
                     </div>
                   ))
