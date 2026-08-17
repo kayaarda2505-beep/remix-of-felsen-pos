@@ -1213,12 +1213,24 @@ function Lieferung() {
         <button
           onClick={() => {
             resetAll();
+            setMode("delivery");
             setShowWizard(true);
           }}
           className="rounded-2xl px-4 py-3 text-sm font-semibold bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground flex items-center gap-2 active:scale-95 transition-transform"
         >
           <Plus className="w-4 h-4" /> Neue Bestellung
         </button>
+        <button
+          onClick={() => {
+            resetAll();
+            setMode("takeaway");
+            setShowWizard(true);
+          }}
+          className="rounded-2xl px-4 py-3 text-sm font-semibold glass-map flex items-center gap-2 active:scale-95 transition-transform"
+        >
+          <ShoppingBag className="w-4 h-4" /> Takeaway
+        </button>
+
       </header>
 
       <div className="absolute inset-0 z-10 pointer-events-none px-4 lg:px-6 pt-24 pb-4 flex justify-end">
