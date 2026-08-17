@@ -273,6 +273,19 @@ function KitchenView() {
 
   const visible = tickets.filter((t) => filter === "all" || t.station === filter);
 
+  // Neue Tickets => Signalton (Pizzastation deutlich lauter)
+  useEffect(() => {
+    const relevant = tickets.filter((t) => filter === "all" || t.station === filter);
+    if (seenKeys.current === null) {
+      seenKeys.current = new Set(relevant.map((t) => t.key));
+      return;
+    }
+    const fresh = relevant.filter((t) => !seenKeys.current!.has(t.key));
+    seenKeys.current = new Set(relevant.map((t) => t.key));
+    if (fresh.length === 0 || !soundOn) return;
+    playAlarm(fresh.some((t) => t.station === "pizza"));
+  }, [tickets, filter, soundOn]);
+
   const ackTicket = (key: string, orderId?: string) => {
     const next = { ...acked, [key]: Date.now() };
     setAcked(next);
