@@ -57,6 +57,7 @@ export function ProductModifierDialog({
       setMods([]);
       setNote("");
       setRemovedSides([]);
+      setRemovedIngredients([]);
       setExtraSides({});
     }
   }, [open, product?.id]);
@@ -76,8 +77,16 @@ export function ProductModifierDialog({
       return out;
     });
 
+  const ingredients = ((product?.description ?? "") as string)
+    .split(/,|·/)
+    .map((x) => x.trim())
+    .filter((x) => x.length > 1 && x.length < 30);
+
+  const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
+
   const extrasDelta = sides.reduce((s, o) => s + (extraSides[o.id] ?? 0) * o.price, 0);
   const sideModifiers = [
+    ...removedIngredients.map((n) => `ohne ${n}`),
     ...removedSides.map((n) => `ohne ${n}`),
     ...sides
       .filter((o) => (extraSides[o.id] ?? 0) > 0)
@@ -168,6 +177,36 @@ export function ProductModifierDialog({
                   ));
                 })()}
               </section>
+
+              {ingredients.length > 0 && (
+                <section className="space-y-2">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Zutaten entfernen
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {ingredients.map((ing) => {
+                      const active = removedIngredients.includes(ing);
+                      return (
+                        <button
+                          key={`ing-${ing}`}
+                          onClick={() =>
+                            setRemovedIngredients((prev) =>
+                              prev.includes(ing) ? prev.filter((x) => x !== ing) : [...prev, ing],
+                            )
+                          }
+                          className={`px-3.5 py-2 rounded-full text-sm font-medium border transition-all tap-highlight-none active:scale-95 ${
+                            active
+                              ? "bg-destructive/20 text-destructive border-destructive/50"
+                              : "glass border-border/40 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          ohne {ing}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
               {sides.length > 0 && (
                 <section className="space-y-3">
