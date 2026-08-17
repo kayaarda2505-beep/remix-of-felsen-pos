@@ -71,6 +71,8 @@ interface CartLine {
   category: string;
   qty: number;
   note?: string;
+  /** Aufpreis für zusätzliche Beilagen (pro Stück) */
+  extra?: number;
 }
 
 interface DeliveryReceipt {
@@ -314,11 +316,21 @@ function Lieferung() {
     return (cat?.items ?? []).map((i) => ({ ...i, category: cat!.category }));
   }, [activeCategory, productSearch]);
 
-  const addItem = (item: DeliveryMenuItem & { category: string }, note?: string) =>
+  const addItem = (
+    item: DeliveryMenuItem & { category: string },
+    note?: string,
+    extra = 0,
+    qty = 1,
+  ) =>
     setCart((prev) => {
-      const found = prev.find((l) => l.item.id === item.id && (l.note ?? "") === (note ?? ""));
-      if (found) return prev.map((l) => (l.key === found.key ? { ...l, qty: l.qty + 1 } : l));
-      return [...prev, { key: `${item.id}-${Date.now()}`, item, category: item.category, qty: 1, note }];
+      const found = prev.find(
+        (l) => l.item.id === item.id && (l.note ?? "") === (note ?? "") && (l.extra ?? 0) === extra,
+      );
+      if (found) return prev.map((l) => (l.key === found.key ? { ...l, qty: l.qty + qty } : l));
+      return [
+        ...prev,
+        { key: `${item.id}-${Date.now()}`, item, category: item.category, qty, note, extra },
+      ];
     });
 
   const changeQty = (key: string, delta: number) =>
@@ -330,7 +342,12 @@ function Lieferung() {
     [mode],
   );
 
-  const subtotal = cart.reduce((s, l) => s + priceOf(l.item, l.category) * l.qty, 0);
+  const lineUnit = useCallback(
+    (l: CartLine) => priceOf(l.item, l.category) + (l.extra ?? 0),
+    [priceOf],
+  );
+
+  const subtotal = cart.reduce((s, l) => s + lineUnit(l) * l.qty, 0);
   const itemCount = cart.reduce((s, l) => s + l.qty, 0);
 
   const resetAll = () => {
@@ -382,9 +399,9 @@ function Lieferung() {
           product_id: l.item.id,
           product_name: l.item.name,
           category: l.category,
-          unit_price: priceOf(l.item, l.category),
+          unit_price: lineUnit(l),
           qty: l.qty,
-          modifiers: [],
+          modifiers: l.note ? l.note.split(" · ") : [],
           note: l.note ?? null,
         })),
       );
@@ -409,8 +426,8 @@ function Lieferung() {
           const items: ReceiptItem[] = cart.map((l) => ({
             product_name: l.item.name,
             qty: l.qty,
-            unit_price: priceOf(l.item, l.category),
-            modifiers: [],
+            unit_price: lineUnit(l),
+            modifiers: l.note ? l.note.split(" · ") : [],
           }));
           await printBill({
             printers: (printers ?? []) as any,
@@ -458,7 +475,7 @@ function Lieferung() {
           phone: guestPhone,
           note: deliveryNote.trim(),
           customerNote: isTakeaway ? `Abholbereit in ca. ${eta} Min.` : customer?.note ?? "",
-          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: priceOf(l.item, l.category) })),
+          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: lineUnit(l) })),
           total: subtotal,
           createdAt: new Date().toISOString(),
         } as DeliveryReceipt,
@@ -1066,7 +1083,7 @@ function Lieferung() {
                     <motion.button
                       key={item.id}
                       whileTap={{ scale: 0.96 }}
-                      onClick={() => (item.modifierGroups?.length ? setConfigItem(item) : addItem(item))}
+                      onClick={() => setConfigItem(item)}
                       className="glass rounded-2xl p-4 text-left min-h-28 flex flex-col justify-between hover:border-accent/40 transition-colors relative"
                     >
                       {inCart > 0 && (
@@ -1120,9 +1137,10 @@ function Lieferung() {
             {configItem && (
               <MenuConfigDialog
                 item={configItem}
+                basePrice={priceOf(configItem, configItem.category)}
                 onClose={() => setConfigItem(null)}
-                onConfirm={(note) => {
-                  addItem(configItem, note);
+                onConfirm={({ note, extra, qty }) => {
+                  addItem(configItem, note, extra, qty);
                   setConfigItem(null);
                 }}
               />
@@ -1186,8 +1204,11 @@ function Lieferung() {
                     <div key={l.key} className="flex items-start gap-3 p-2.5 rounded-xl bg-white/[0.03]">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{l.item.name}</div>
+                        {l.note && (
+                          <div className="text-[11px] text-accent mt-0.5 leading-snug">{l.note}</div>
+                        )}
                         <div className="text-xs text-muted-foreground tabular-nums">
-                          CHF {priceOf(l.item, l.category).toFixed(2)}
+                          CHF {lineUnit(l).toFixed(2)}
                         </div>
 
                       </div>
@@ -1207,7 +1228,7 @@ function Lieferung() {
                         </button>
                       </div>
                       <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
-                        {(priceOf(l.item, l.category) * l.qty).toFixed(2)}
+                        {(lineUnit(l) * l.qty).toFixed(2)}
                       </div>
 
                     </div>
