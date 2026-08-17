@@ -1026,7 +1026,19 @@ function Lieferung() {
             className="flex-1 min-h-0 overflow-y-auto"
           >
             <div className="max-w-3xl mx-auto space-y-4">
-              {customer && (
+              {mode === "takeaway" ? (
+                <div className="glass-strong rounded-3xl p-5">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Takeaway</div>
+                  <div className="text-sm font-medium">{taName || "Abholung"}</div>
+                  <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Phone className="w-3 h-3" /> {taPhone}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Abholbereit in ca. {estimateMinutes(itemCount)} Min.
+                  </div>
+                </div>
+              ) : (
+                customer && (
                 <div className="glass-strong rounded-3xl p-5">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Lieferadresse</div>
                   <div className="text-sm font-medium">{customerName(customer)}</div>
@@ -1037,11 +1049,13 @@ function Lieferung() {
                     </div>
                   )}
                 </div>
+                )
               )}
 
               <div className="glass-strong rounded-3xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-semibold">Lieferbestellung</h2>
+                  <h2 className="font-semibold">{mode === "takeaway" ? "Takeaway-Bestellung" : "Lieferbestellung"}</h2>
+
                   <button
                     onClick={() => setCart([])}
                     className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
