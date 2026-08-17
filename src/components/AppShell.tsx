@@ -446,25 +446,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     const station = routeForCategory(it.category);
     handledDrinkItemIds.current.add(it.id);
 
-    let tableName: string | null = null;
-    if (it.order_id) {
-      const { data: o } = await supabase
-        .from("orders")
-        .select("table_name")
-        .eq("id", it.order_id)
-        .maybeSingle();
-      tableName = (o as any)?.table_name ?? null;
-    }
-    playServiceDing();
-    const label = station === "bar" ? "Drink-Bestellung" : "Küchen-Bestellung";
-    pushUrgentAlert({
-      id: `order-${it.id}`,
-      kind: "service",
-      title: `Neue ${label}${tableName ? ` · Tisch ${tableName}` : ""}`,
-      description: `${it.qty ?? 1}× ${it.product_name ?? "Artikel"}`,
-      href: "/kitchen",
-    });
-  }, [operatorRole, playServiceDing]);
+    // Kein rotes Popup mehr für Küchen-/Bar-Bestellungen – nur noch der laute Ton.
+    playUrgentRing();
+  }, [operatorRole]);
 
   useEffect(() => {
     if (!operatorStationKey && operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
