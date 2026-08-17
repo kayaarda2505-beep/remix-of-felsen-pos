@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { X, Minus, Plus, Check } from "lucide-react";
 import type { ModifierGroup, Product } from "@/hooks/use-products";
+import { PIZZA_TOPPINGS, isPizzaItem, toppingPrice } from "@/lib/pizza-toppings";
 
 const DEFAULT_MODIFIER_GROUPS: ModifierGroup[] = [
   {
@@ -84,10 +85,22 @@ export function ProductModifierDialog({
 
   const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
 
-  const extrasDelta = sides.reduce((s, o) => s + (extraSides[o.id] ?? 0) * o.price, 0);
+  const toppingOptions = product && isPizzaItem(product.name, product.category)
+    ? PIZZA_TOPPINGS.map((t) => ({
+        ...t,
+        price: toppingPrice(t, product.name, product.category),
+      }))
+    : [];
+
+  const extrasDelta =
+    sides.reduce((s, o) => s + (extraSides[o.id] ?? 0) * o.price, 0) +
+    toppingOptions.reduce((s, t) => s + (extraSides[t.id] ?? 0) * t.price, 0);
   const sideModifiers = [
     ...removedIngredients.map((n) => `ohne ${n}`),
     ...removedSides.map((n) => `ohne ${n}`),
+    ...toppingOptions
+      .filter((t) => (extraSides[t.id] ?? 0) > 0)
+      .map((t) => `+ ${t.name}${(extraSides[t.id] ?? 0) > 1 ? ` x${extraSides[t.id]}` : ""}`),
     ...sides
       .filter((o) => (extraSides[o.id] ?? 0) > 0)
       .map((o) => `+ ${o.name}${(extraSides[o.id] ?? 0) > 1 ? ` x${extraSides[o.id]}` : ""}`),
@@ -202,6 +215,49 @@ export function ProductModifierDialog({
                         >
                           ohne {ing}
                         </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {toppingOptions.length > 0 && (
+                <section className="space-y-2">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Pizzabeilagen hinzufügen
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {toppingOptions.map((t) => {
+                      const n = extraSides[t.id] ?? 0;
+                      return (
+                        <div
+                          key={t.id}
+                          className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${
+                            n > 0 ? "bg-accent/10 border-accent/40" : "glass border-border/40"
+                          }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs truncate">{t.name}</div>
+                            <div className="text-[10px] text-muted-foreground tabular-nums">
+                              +CHF {t.price.toFixed(2)}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button
+                              onClick={() => bumpExtra(t.id, -1)}
+                              className="w-7 h-7 rounded-md flex items-center justify-center active:bg-white/10"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="w-4 text-center text-xs tabular-nums">{n}</span>
+                            <button
+                              onClick={() => bumpExtra(t.id, 1)}
+                              className="w-7 h-7 rounded-md flex items-center justify-center active:bg-white/10"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
