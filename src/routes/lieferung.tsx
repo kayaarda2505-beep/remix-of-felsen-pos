@@ -272,6 +272,58 @@ function Lieferung() {
     },
   });
 
+  // ── Takeaway-Übersicht ────────────────────────────────────────────
+  const [showTakeawayList, setShowTakeawayList] = useState(false);
+  const [payingTakeaway, setPayingTakeaway] = useState<any | null>(null);
+
+  const { data: takeawayOrders = [] } = useQuery({
+    queryKey: ["orders", "takeaway", "today"],
+    enabled: showTakeawayList,
+    queryFn: async () => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, total, status, opened_at, closed_at, delivery_address, delivery_note, contact_name, contact_phone")
+        .eq("order_type", "takeaway")
+        .gte("opened_at", start.toISOString())
+        .order("opened_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 10000,
+  });
+
+  const payTakeaway = useMutation({
+    mutationFn: async ({ order, method }: { order: any; method: "cash" | "card_terminal" }) => {
+      const amount = Number(order.total || 0);
+      const label = order.contact_name || "Takeaway";
+      const { error: payErr } = await supabase.from("payment_requests").insert({
+        order_id: order.id,
+        table_name: `TAKEAWAY · ${label}`,
+        amount,
+        tip: 0,
+        method,
+        status: "paid",
+        handled_at: new Date().toISOString(),
+        note: `Takeaway · ${method === "cash" ? "Bar" : "Karte"}`,
+      });
+      if (payErr) throw payErr;
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: "paid", closed_at: new Date().toISOString() })
+        .eq("id", order.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setPayingTakeaway(null);
+      qc.invalidateQueries({ queryKey: ["orders", "takeaway", "today"] });
+      toast.success("Takeaway-Bestellung abgeschlossen");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
+  });
+
+
   const createCustomer = useMutation({
     mutationFn: async () => {
       if (!form.street.trim() || !form.zip.trim() || !form.city.trim())
