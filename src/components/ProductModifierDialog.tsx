@@ -169,6 +169,79 @@ export function ProductModifierDialog({
                 })()}
               </section>
 
+              {sides.length > 0 && (
+                <section className="space-y-3">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Beilagen
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70 mb-1.5">
+                      Entfernen
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {sides.map((s) => {
+                        const active = removedSides.includes(s.name);
+                        return (
+                          <button
+                            key={`rm-${s.id}`}
+                            onClick={() => toggleRemoved(s.name)}
+                            className={`px-3.5 py-2 rounded-full text-sm font-medium border transition-all tap-highlight-none active:scale-95 ${
+                              active
+                                ? "bg-destructive/20 text-destructive border-destructive/50"
+                                : "glass border-border/40 text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            ohne {s.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70 mb-1.5">
+                      Zusätzlich
+                    </div>
+                    <div className="space-y-1.5">
+                      {sides.map((s) => {
+                        const n = extraSides[s.id] ?? 0;
+                        return (
+                          <div
+                            key={`add-${s.id}`}
+                            className={`flex items-center gap-3 rounded-xl px-3 py-2 border ${
+                              n > 0 ? "bg-accent/10 border-accent/40" : "glass border-border/40"
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm truncate">{s.name}</div>
+                              <div className="text-[11px] text-muted-foreground tabular-nums">
+                                +CHF {s.price.toFixed(2)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 glass rounded-lg p-0.5">
+                              <button
+                                onClick={() => bumpExtra(s.id, -1)}
+                                className="w-8 h-8 rounded-md flex items-center justify-center active:bg-white/10"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="w-6 text-center text-sm tabular-nums">{n}</span>
+                              <button
+                                onClick={() => bumpExtra(s.id, 1)}
+                                className="w-8 h-8 rounded-md flex items-center justify-center active:bg-white/10"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </section>
+              )}
+
               <section>
                 <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
                   Notiz an Bar / Küche
@@ -181,6 +254,7 @@ export function ProductModifierDialog({
                   className="w-full glass rounded-xl p-3 text-sm bg-transparent outline-none resize-none placeholder:text-muted-foreground"
                 />
               </section>
+
             </div>
 
             {/* Footer */}
