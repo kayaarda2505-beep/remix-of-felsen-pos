@@ -1,22 +1,55 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const ReceivedSchema = z.object({
+  orderId: z.string().uuid(),
+  etaMinutes: z.number().int().min(5).max(180).optional(),
+});
 const IdSchema = z.object({ orderId: z.string().uuid() });
 
 type Stage = "received" | "ready";
 
-async function notify(orderId: string, stage: Stage): Promise<{ sent: boolean; error?: string }> {
+/** Plant 30 Minuten nach Abholung/Lieferung eine Bewertungs-SMS ein. */
+async function scheduleReview(admin: any, orderId: string, phone: string, name: string | null, customerId: string | null) {
+  try {
+    const { data: existing } = await admin
+      .from("review_requests")
+      .select("id")
+      .eq("order_id", orderId)
+      .maybeSingle();
+    if (existing) return;
+    await admin.from("review_requests").insert({
+      order_id: orderId,
+      customer_id: customerId,
+      phone,
+      customer_name: name,
+      token: crypto.randomUUID().replace(/-/g, ""),
+      send_after: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    });
+  } catch (e) {
+    console.error("[order-sms] scheduleReview", e);
+  }
+}
+
+async function notify(
+  orderId: string,
+  stage: Stage,
+  etaMinutes?: number,
+): Promise<{ sent: boolean; error?: string }> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
 
     const { data: order } = await admin
       .from("orders")
-      .select("id, order_type, customer_id, total")
+      .select("id, order_type, customer_id, total, contact_phone, contact_name")
       .eq("id", orderId)
       .maybeSingle();
-    if (!order || order.order_type !== "delivery") return { sent: false, error: "Keine Lieferbestellung" };
-    if (!order.customer_id) return { sent: false, error: "Kein Kunde hinterlegt" };
+    if (!order) return { sent: false, error: "Bestellung nicht gefunden" };
+
+    const type = order.order_type as string;
+    if (type !== "delivery" && type !== "takeaway")
+      return { sent: false, error: "Keine Liefer-/Takeaway-Bestellung" };
 
     const reference = `${stage}-${orderId}`;
 
@@ -28,21 +61,42 @@ async function notify(orderId: string, stage: Stage): Promise<{ sent: boolean; e
       .limit(1);
     if (existing && existing.length > 0) return { sent: false, error: "Bereits gesendet" };
 
-    const { data: customer } = await admin
-      .from("customers")
-      .select("first_name, phone")
-      .eq("id", order.customer_id)
-      .maybeSingle();
+    let phone: string | null = order.contact_phone ?? null;
+    let firstName: string | null = order.contact_name ?? null;
+    let fullName: string | null = order.contact_name ?? null;
+
+    if (order.customer_id) {
+      const { data: customer } = await admin
+        .from("customers")
+        .select("first_name, last_name, phone")
+        .eq("id", order.customer_id)
+        .maybeSingle();
+      if (customer) {
+        phone = customer.phone ?? phone;
+        firstName = customer.first_name ?? firstName;
+        fullName =
+          [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim() || fullName;
+      }
+    }
 
     const { toMsisdn, sendSms } = await import("@/lib/sms.server");
-    const recipient = toMsisdn(customer?.phone);
+    const recipient = toMsisdn(phone);
     if (!recipient) return { sent: false, error: "Keine gültige Mobilnummer" };
 
-    const hi = customer?.first_name ? `${customer.first_name}, ` : "";
-    const message =
-      stage === "received"
-        ? `Piratino: ${hi}wir haben deine Bestellung erhalten (CHF ${Number(order.total ?? 0).toFixed(2)}). Wir starten sofort mit der Zubereitung.`
-        : `Piratino: ${hi}deine Bestellung ist bereit und geht gleich auf den Weg zu dir.`;
+    const hi = firstName ? `${firstName}, ` : "";
+    const eta = etaMinutes ?? 25;
+    let message: string;
+    if (type === "takeaway") {
+      message =
+        stage === "received"
+          ? `Piratino: ${hi}wir haben deine Bestellung erhalten (CHF ${Number(order.total ?? 0).toFixed(2)}). Abholbereit in ca. ${eta} Minuten.`
+          : `Piratino: ${hi}deine Bestellung ist abholbereit. Badenerstrasse 696, 8048 Zürich.`;
+    } else {
+      message =
+        stage === "received"
+          ? `Piratino: ${hi}wir haben deine Bestellung erhalten (CHF ${Number(order.total ?? 0).toFixed(2)}). Wir starten sofort mit der Zubereitung.`
+          : `Piratino: ${hi}deine Bestellung ist bereit und geht gleich auf den Weg zu dir.`;
+    }
 
     await sendSms(recipient, message, reference);
 
@@ -50,8 +104,13 @@ async function notify(orderId: string, stage: Stage): Promise<{ sent: boolean; e
       recipient: String(recipient),
       reference,
       status: "sent",
-      raw: { stage, order_id: orderId },
+      raw: { stage, order_id: orderId, order_type: type },
     });
+
+    // Takeaway: 30 Minuten nach "abholbereit" Bewertung + Newsletter anfragen
+    if (type === "takeaway" && stage === "ready") {
+      await scheduleReview(admin, orderId, String(phone), fullName, order.customer_id ?? null);
+    }
 
     return { sent: true };
   } catch (e) {
@@ -61,8 +120,8 @@ async function notify(orderId: string, stage: Stage): Promise<{ sent: boolean; e
 }
 
 export const sendOrderReceivedSms = createServerFn({ method: "POST" })
-  .inputValidator((input) => IdSchema.parse(input))
-  .handler(async ({ data }) => notify(data.orderId, "received"));
+  .inputValidator((input) => ReceivedSchema.parse(input))
+  .handler(async ({ data }) => notify(data.orderId, "received", data.etaMinutes));
 
 export const sendOrderReadySms = createServerFn({ method: "POST" })
   .inputValidator((input) => IdSchema.parse(input))
