@@ -28,6 +28,7 @@ import {
 
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
+import { takeawayPrice } from "@/lib/takeaway-pricing";
 import { PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/hooks/use-auth";
 import { useProducts, type Product } from "@/hooks/use-products";
@@ -556,7 +557,8 @@ function POS() {
       toast.error(`${p.name} ist ausverkauft — Zutat fehlt im Lager`);
       return;
     }
-    setEditing(p);
+    const price = !isTab && takeaway ? takeawayPrice(p) : p.price;
+    setEditing(price === p.price ? p : { ...p, price });
   };
 
   if (operator && !["manager", "barkeeper", "kasse"].includes(operator.role as string)) {
@@ -707,7 +709,7 @@ function POS() {
                       )}
                     </div>
                     <div className="text-base font-semibold tabular-nums mt-2">
-                      CHF {p.price.toFixed(2)}
+                      CHF {(!isTab && takeaway ? takeawayPrice(p) : p.price).toFixed(2)}
                     </div>
                   </motion.button>
                 );
