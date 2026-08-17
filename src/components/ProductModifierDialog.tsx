@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { X, Minus, Plus, Check } from "lucide-react";
-import type { ModifierGroup, Product } from "@/hooks/use-products";
+import { useProducts, type ModifierGroup, type Product } from "@/hooks/use-products";
 import { PIZZA_TOPPINGS, isPizzaItem, toppingPrice } from "@/lib/pizza-toppings";
 
 const DEFAULT_MODIFIER_GROUPS: ModifierGroup[] = [
