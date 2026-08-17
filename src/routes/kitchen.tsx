@@ -16,6 +16,16 @@ export const Route = createFileRoute("/kitchen")({
 
 type Station = "bar" | "kueche" | "pizza";
 
+type OrderKind = "table" | "takeaway" | "delivery" | "counter";
+interface OrderInfo { label: string; kind: OrderKind; address: string | null }
+
+const KIND_LABEL: Record<OrderKind, string> = {
+  table: "Tisch / Service",
+  takeaway: "Takeaway — Abholung",
+  delivery: "Lieferung",
+  counter: "Theke / Direkt",
+};
+
 interface TicketItem {
   id: string;
   product_id: string;
