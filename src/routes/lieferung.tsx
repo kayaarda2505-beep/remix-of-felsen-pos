@@ -25,9 +25,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { DeliveryMap, type MapPin as MapPinData } from "@/components/DeliveryMap";
 import { geocodeCustomers } from "@/lib/geo.functions";
 import { DELIVERY_MENU, type DeliveryMenuItem } from "@/lib/delivery-menu";
+import { takeawayPrice } from "@/lib/takeaway-pricing";
 import { printBill, type ReceiptItem } from "@/lib/receipt";
 import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
 import { sendOrderReceivedSms } from "@/lib/order-sms.functions";
+
 
 
 export const Route = createFileRoute("/lieferung")({
