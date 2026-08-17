@@ -41,6 +41,8 @@ interface Ticket {
   orderId: string;
   station: Station;
   tableName: string;
+  kind: OrderKind;
+  address: string | null;
   items: TicketItem[];
   firstSent: number;       // ms timestamp of earliest item
   batch: number;           // bucket timestamp (sent_at rounded to 5s)
