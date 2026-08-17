@@ -856,7 +856,7 @@ function ServiceTablet() {
                         </span>
                       )}
                       {inCartQty > 0 && !oos && (
-                        <div className="absolute top-2 left-2 min-w-6 h-6 px-1.5 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center">
+                        <div className="absolute top-2 right-2 min-w-6 h-6 px-1.5 rounded-full bg-accent text-accent-foreground text-xs font-bold flex items-center justify-center">
                           {inCartQty}
                         </div>
                       )}
