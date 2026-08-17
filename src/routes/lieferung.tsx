@@ -321,21 +321,31 @@ function Lieferung() {
 
   const saveOrder = useMutation({
     mutationFn: async ({ pay }: { pay: "open" | "cash" | "card" }) => {
-      if (!customer) throw new Error("Bitte zuerst eine Kundenadresse erfassen");
+      const isTakeaway = mode === "takeaway";
+      if (!isTakeaway && !customer) throw new Error("Bitte zuerst eine Kundenadresse erfassen");
+      if (isTakeaway && taPhone.trim().length < 6) throw new Error("Bitte Telefonnummer erfassen");
       if (cart.length === 0) throw new Error("Keine Produkte gewählt");
 
-      const address = customerAddress(customer);
+      const guestName = isTakeaway ? taName.trim() || "Takeaway" : customerName(customer!);
+      const guestPhone = isTakeaway ? taPhone.trim() : customer!.phone;
+      const address = isTakeaway ? "Abholung im Lokal" : customerAddress(customer!);
+      const eta = estimateMinutes(itemCount);
+
       const { data: order, error } = await supabase
         .from("orders")
         .insert({
           status: "open",
-          order_type: "delivery",
-          customer_id: customer.id,
-          delivery_address: `${customerName(customer)} · ${address}${customer.phone ? ` · ${customer.phone}` : ""}`,
+          order_type: isTakeaway ? "takeaway" : "delivery",
+          customer_id: isTakeaway ? null : customer!.id,
+          contact_phone: isTakeaway ? guestPhone : null,
+          contact_name: isTakeaway ? guestName : null,
+          delivery_address: isTakeaway
+            ? `TAKEAWAY · ${guestName}${guestPhone ? ` · ${guestPhone}` : ""}`
+            : `${guestName} · ${address}${guestPhone ? ` · ${guestPhone}` : ""}`,
           delivery_note: deliveryNote.trim() || null,
           total: 0,
           opened_by_name: operator?.name ?? null,
-        })
+        } as any)
         .select("id")
         .single();
       if (error) throw error;
@@ -346,7 +356,7 @@ function Lieferung() {
           product_id: l.item.id,
           product_name: l.item.name,
           category: l.category,
-          unit_price: l.item.price,
+          unit_price: priceOf(l.item, l.category),
           qty: l.qty,
           modifiers: [],
           note: l.note ?? null,
@@ -354,16 +364,15 @@ function Lieferung() {
       );
       if (itemErr) throw itemErr;
 
-      // Zahlung erfolgt erst beim Kunden durch den Kurier — Bestellung bleibt offen.
+      // Zahlung erfolgt erst beim Kunden / bei der Abholung — Bestellung bleibt offen.
       if (subtotal > 0) {
         await supabase.from("orders").update({ total: subtotal }).eq("id", order.id);
       }
 
       // Bestätigungs-SMS an den Kunden (darf die Bestellung nicht blockieren)
-      void sendOrderReceivedSms({ data: { orderId: order.id as string } }).catch(() => undefined);
-
-
-
+      void sendOrderReceivedSms({
+        data: { orderId: order.id as string, ...(isTakeaway ? { etaMinutes: eta } : {}) },
+      }).catch(() => undefined);
 
       try {
         if (isDesktopApp() && isAutoPrintEnabled()) {
@@ -374,28 +383,37 @@ function Lieferung() {
           const items: ReceiptItem[] = cart.map((l) => ({
             product_name: l.item.name,
             qty: l.qty,
-            unit_price: l.item.price,
+            unit_price: priceOf(l.item, l.category),
             modifiers: [],
           }));
           await printBill({
             printers: (printers ?? []) as any,
-            tableName: `LIEFERUNG · ${customerName(customer)} · ${address}${
-              customer.phone ? ` · ${customer.phone}` : ""
-            }${deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""}`,
+            tableName: isTakeaway
+              ? `TAKEAWAY · ${guestName}${guestPhone ? ` · ${guestPhone}` : ""}${
+                  deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""
+                }`
+              : `LIEFERUNG · ${guestName} · ${address}${guestPhone ? ` · ${guestPhone}` : ""}${
+                  deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""
+                }`,
             items,
             total: subtotal,
-            paymentMethod: pay === "cash" ? "Bar (beim Kunden)" : pay === "card" ? "Karte (beim Kunden)" : null,
+            paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
             interim: true,
-            title: "LIEFERSCHEIN",
-            footerNote:
-              pay === "cash"
+            title: isTakeaway ? "TAKEAWAY" : "LIEFERSCHEIN",
+            footerNote: isTakeaway
+              ? `Offen — bei Abholung kassieren · ca. ${eta} Min.`
+              : pay === "cash"
                 ? "Offen — bar beim Kunden kassieren"
                 : pay === "card"
                   ? "Offen — mit Karte beim Kunden kassieren"
                   : "Offen — beim Kunden kassieren",
 
-            qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
-            qrLabel: "QR scannen: Adresse, Navigation & Anruf",
+            ...(isTakeaway
+              ? {}
+              : {
+                  qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
+                  qrLabel: "QR scannen: Adresse, Navigation & Anruf",
+                }),
           });
         }
       } catch (err) {
@@ -409,15 +427,16 @@ function Lieferung() {
         pay,
         receipt: {
           orderId: order.id as string,
-          customerName: customerName(customer),
+          customerName: guestName,
           address,
-          phone: customer.phone,
+          phone: guestPhone,
           note: deliveryNote.trim(),
-          customerNote: customer.note ?? "",
-          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: l.item.price })),
+          customerNote: isTakeaway ? `Abholbereit in ca. ${eta} Min.` : customer?.note ?? "",
+          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: priceOf(l.item, l.category) })),
           total: subtotal,
           createdAt: new Date().toISOString(),
         } as DeliveryReceipt,
+
       };
     },
     onSuccess: ({ pay, receipt }) => {
