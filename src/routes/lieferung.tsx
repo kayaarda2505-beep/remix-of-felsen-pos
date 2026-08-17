@@ -1110,11 +1110,13 @@ function Lieferung() {
 
               <div className="glass-strong rounded-3xl p-5 space-y-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Liefernotiz</label>
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {mode === "takeaway" ? "Notiz" : "Liefernotiz"}
+                  </label>
                   <input
                     value={deliveryNote}
                     onChange={(e) => setDeliveryNote(e.target.value)}
-                    placeholder="z.B. 3. Stock, klingeln bei Meier"
+                    placeholder={mode === "takeaway" ? "z.B. ohne Zwiebeln" : "z.B. 3. Stock, klingeln bei Meier"}
                     className="glass rounded-xl px-3 py-3 w-full text-sm outline-none bg-transparent"
                   />
                 </div>
@@ -1126,6 +1128,20 @@ function Lieferung() {
                   </span>
                 </div>
 
+                {mode === "takeaway" ? (
+                  <button
+                    onClick={() => saveOrder.mutate({ pay: "open" })}
+                    disabled={taPhone.trim().length < 6 || cart.length === 0 || saveOrder.isPending}
+                    className="w-full rounded-2xl py-5 bg-primary text-primary-foreground flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-40"
+                  >
+                    {saveOrder.isPending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <ShoppingBag className="w-5 h-5" />
+                    )}
+                    Takeaway-Bestellung senden
+                  </button>
+                ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => saveOrder.mutate({ pay: "card" })}
@@ -1152,6 +1168,8 @@ function Lieferung() {
                     Zahlt mit Bar
                   </button>
                 </div>
+                )}
+
 
               </div>
             </div>
