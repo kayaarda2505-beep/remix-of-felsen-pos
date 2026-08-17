@@ -597,19 +597,27 @@ function Lieferung() {
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Lieferung</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            {mode === "takeaway" ? "Takeaway" : "Lieferung"}
+          </div>
           <h1 className="text-xl font-semibold truncate">
-            {stepIndex + 1}. {STEPS[stepIndex].label}
-            {customer && step !== "customer" && (
+            {stepIndex + 1}. {steps[stepIndex].label}
+            {mode === "delivery" && customer && step !== "customer" && (
               <span className="text-sm font-normal text-muted-foreground">
                 {" "}
                 · {customerName(customer)}, {customerAddress(customer)}
               </span>
             )}
+            {mode === "takeaway" && taPhone && step !== "customer" && (
+              <span className="text-sm font-normal text-muted-foreground">
+                {" "}
+                · {taName || "Takeaway"} · {taPhone}
+              </span>
+            )}
           </h1>
         </div>
         <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-          {STEPS.map((s, i) => (
+          {steps.map((s, i) => (
             <div
               key={s.key}
               className={`h-1.5 rounded-full transition-all ${
@@ -621,8 +629,58 @@ function Lieferung() {
       </header>
 
       <AnimatePresence mode="wait">
+        {/* ── SCHRITT 1 (TAKEAWAY): TELEFONNUMMER ──── */}
+        {step === "customer" && mode === "takeaway" && (
+          <motion.div
+            key="takeaway-contact"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="flex-1 min-h-0 overflow-y-auto"
+          >
+            <div className="max-w-xl mx-auto space-y-4">
+              <div className="glass-strong rounded-3xl p-5 space-y-3">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-accent" /> Takeaway — Kontakt
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Nummer erfassen, mit der der Kunde angerufen hat. Er erhält automatisch eine SMS mit der
+                  voraussichtlichen Abholzeit.
+                </p>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Telefon *</label>
+                  <input
+                    autoFocus
+                    inputMode="tel"
+                    value={taPhone}
+                    onChange={(e) => setTaPhone(e.target.value)}
+                    placeholder="z.B. 076 442 21 60"
+                    className="glass rounded-xl px-3 py-3 w-full text-base outline-none bg-transparent"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Name</label>
+                  <input
+                    value={taName}
+                    onChange={(e) => setTaName(e.target.value)}
+                    placeholder="Name des Kunden"
+                    className="glass rounded-xl px-3 py-3 w-full text-base outline-none bg-transparent"
+                  />
+                </div>
+                <button
+                  onClick={() => setStep("order")}
+                  disabled={taPhone.trim().length < 6}
+                  className="w-full rounded-xl py-3 bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2"
+                >
+                  Weiter zur Bestellung <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* ── SCHRITT 1: KUNDENADRESSE ─────────────── */}
-        {step === "customer" && (
+        {step === "customer" && mode === "delivery" && (
           <motion.div
             key="customer"
             initial={{ opacity: 0, x: 20 }}
@@ -630,6 +688,7 @@ function Lieferung() {
             exit={{ opacity: 0, x: -20 }}
             className="flex-1 min-h-0 overflow-y-auto"
           >
+
             <div className="max-w-3xl mx-auto space-y-4">
               <div className="glass-strong rounded-3xl p-5">
                 <div className="flex items-center justify-between mb-3">
