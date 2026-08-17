@@ -83,6 +83,8 @@ function POS() {
   const [pendingByOrder, setPendingByOrder] = useState<Record<string, LocalLine[]>>({});
   const [payMode, setPayMode] = useState<null | "cash" | "card">(null);
   const [splitOpen, setSplitOpen] = useState(false);
+  const [takeaway, setTakeaway] = useState(false);
+
 
 
   const { data: openOrders = [] } = useQuery<OpenOrder[]>({
