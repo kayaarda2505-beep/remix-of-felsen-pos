@@ -51,7 +51,7 @@ export function useProducts() {
 
   useEffect(() => {
     const channel = supabase
-      .channel("products-changes")
+      .channel(`products-changes-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "products" },
@@ -64,6 +64,7 @@ export function useProducts() {
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
+
 
   const products = useMemo(() => (q.data ?? []).filter((p) => p.active), [q.data]);
   const allProducts = q.data ?? [];
