@@ -968,7 +968,10 @@ function Lieferung() {
                           </div>
                         )}
                       </div>
-                      <div className="text-base font-semibold tabular-nums mt-2">CHF {item.price.toFixed(2)}</div>
+                      <div className="text-base font-semibold tabular-nums mt-2">
+                        CHF {priceOf(item, item.category).toFixed(2)}
+                      </div>
+
                     </motion.button>
                   );
                 })}
