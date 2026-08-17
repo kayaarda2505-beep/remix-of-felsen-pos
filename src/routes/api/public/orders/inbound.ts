@@ -157,9 +157,9 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
           .from("products")
           .select("id, name, category")
           .eq("active", true);
-        const byName = new Map(
-          (prodRows ?? []).map((p) => [p.name.trim().toLowerCase(), p]),
-        );
+        const prodList = (prodRows ?? []) as Array<{ id: string; name: string; category: string | null }>;
+        const byName = new Map(prodList.map((p) => [p.name.trim().toLowerCase(), p]));
+
         const slug = (s: string) =>
           s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "artikel";
 
