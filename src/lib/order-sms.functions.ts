@@ -95,8 +95,8 @@ async function notify(
     if (type === "takeaway") {
       message =
         stage === "received"
-          ? `Piratino: ${hi}! Deine Bestellung CHF ${Number(order.total ?? 0).toFixed(2)} ist bei uns eingegangen. Wir machen sie frisch & sie ist in ca. ${eta} Min. abholbereit. Danke fur deinen Besuch!`
-          : `Piratino: ${hi}! Deine Bestellung ist frisch abholbereit. Wir freuen uns auf dich - Badenerstrasse 696, 8048 Zurich.`;
+          ? `Piratino: ${hi}! Deine Bestellung CHF ${Number(order.total ?? 0).toFixed(2)} ist bei uns eingegangen. Wir machen sie frisch & sie ist in ca. ${eta} Min. abholbereit. Danke für deinen Besuch!`
+          : `Piratino: ${hi}! Deine Bestellung ist frisch abholbereit. Wir freuen uns auf dich - Badenerstrasse 696, 8048 Zürich.`;
     } else {
       message =
         stage === "received"
