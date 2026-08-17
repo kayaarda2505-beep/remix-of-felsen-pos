@@ -753,10 +753,97 @@ function Lieferung() {
                           [
                             ["last_name", "Name"],
                             ["first_name", "Vorname"],
-                            ["street", "Strasse"],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <div key={key} className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              {label}
+                            </label>
+                            <input
+                              value={(form as any)[key]}
+                              onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                              className="glass rounded-xl px-3 py-2.5 w-full text-sm outline-none bg-transparent"
+                            />
+                          </div>
+                        ))}
+
+                        {/* PLZ zuerst — daraus werden Ort und Strassenliste geladen */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">PLZ *</label>
+                          <input
+                            inputMode="numeric"
+                            value={form.zip}
+                            onChange={(e) => {
+                              const zip = e.target.value.replace(/\D/g, "").slice(0, 4);
+                              setForm((f) => ({ ...f, zip, street: "", house_no: "" }));
+                              setStreetQuery("");
+                            }}
+                            placeholder="8048"
+                            className="glass rounded-xl px-3 py-2.5 w-full text-sm outline-none bg-transparent"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Ort</label>
+                          <input
+                            value={form.city}
+                            onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                            placeholder={streetsQuery.isFetching ? "wird geladen…" : "Ort"}
+                            className="glass rounded-xl px-3 py-2.5 w-full text-sm outline-none bg-transparent"
+                          />
+                        </div>
+
+                        {/* Strasse mit Vorschlägen aus der PLZ */}
+                        <div className="space-y-1 col-span-2 relative">
+                          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Strasse * {form.zip.length === 4 ? `(PLZ ${form.zip})` : "— zuerst PLZ eingeben"}
+                          </label>
+                          <input
+                            disabled={form.zip.length !== 4}
+                            value={form.street}
+                            onFocus={() => setStreetOpen(true)}
+                            onChange={(e) => {
+                              setForm((f) => ({ ...f, street: e.target.value }));
+                              setStreetQuery(e.target.value);
+                              setStreetOpen(true);
+                            }}
+                            placeholder={
+                              form.zip.length !== 4
+                                ? "Zuerst PLZ erfassen"
+                                : streetsQuery.isFetching
+                                  ? "Strassen werden geladen…"
+                                  : "Strasse suchen / wählen"
+                            }
+                            className="glass rounded-xl px-3 py-2.5 w-full text-sm outline-none bg-transparent disabled:opacity-40"
+                          />
+                          {streetOpen && form.zip.length === 4 && (
+                            <div className="absolute z-30 left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto glass-strong rounded-xl p-1">
+                              {streetsQuery.isFetching && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground">Strassen werden geladen…</div>
+                              )}
+                              {!streetsQuery.isFetching && streetOptions.length === 0 && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground">
+                                  Keine Strasse gefunden — frei eintippen möglich
+                                </div>
+                              )}
+                              {streetOptions.map((s) => (
+                                <button
+                                  key={s}
+                                  onClick={() => {
+                                    setForm((f) => ({ ...f, street: s }));
+                                    setStreetOpen(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-white/10"
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {(
+                          [
                             ["house_no", "Nr."],
-                            ["zip", "PLZ"],
-                            ["city", "Ort"],
                             ["phone", "Telefon"],
                             ["note", "Notiz"],
                           ] as const
@@ -773,6 +860,7 @@ function Lieferung() {
                           </div>
                         ))}
                       </div>
+
                       <button
                         onClick={() => createCustomer.mutate()}
                         disabled={createCustomer.isPending}
