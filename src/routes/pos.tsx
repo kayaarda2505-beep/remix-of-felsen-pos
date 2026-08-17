@@ -203,7 +203,8 @@ function POS() {
     () =>
       products
         .filter((p) => /beilag/i.test(p.category))
-        .map((p) => ({ id: p.id, name: p.name, price: p.price })),
+        .map((p) => ({ id: p.id, name: p.name, price: p.price }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [products],
   );
 
