@@ -71,6 +71,8 @@ interface CartLine {
   category: string;
   qty: number;
   note?: string;
+  /** Aufpreis für zusätzliche Beilagen (pro Stück) */
+  extra?: number;
 }
 
 interface DeliveryReceipt {
@@ -314,11 +316,21 @@ function Lieferung() {
     return (cat?.items ?? []).map((i) => ({ ...i, category: cat!.category }));
   }, [activeCategory, productSearch]);
 
-  const addItem = (item: DeliveryMenuItem & { category: string }, note?: string) =>
+  const addItem = (
+    item: DeliveryMenuItem & { category: string },
+    note?: string,
+    extra = 0,
+    qty = 1,
+  ) =>
     setCart((prev) => {
-      const found = prev.find((l) => l.item.id === item.id && (l.note ?? "") === (note ?? ""));
-      if (found) return prev.map((l) => (l.key === found.key ? { ...l, qty: l.qty + 1 } : l));
-      return [...prev, { key: `${item.id}-${Date.now()}`, item, category: item.category, qty: 1, note }];
+      const found = prev.find(
+        (l) => l.item.id === item.id && (l.note ?? "") === (note ?? "") && (l.extra ?? 0) === extra,
+      );
+      if (found) return prev.map((l) => (l.key === found.key ? { ...l, qty: l.qty + qty } : l));
+      return [
+        ...prev,
+        { key: `${item.id}-${Date.now()}`, item, category: item.category, qty, note, extra },
+      ];
     });
 
   const changeQty = (key: string, delta: number) =>
@@ -330,7 +342,12 @@ function Lieferung() {
     [mode],
   );
 
-  const subtotal = cart.reduce((s, l) => s + priceOf(l.item, l.category) * l.qty, 0);
+  const lineUnit = useCallback(
+    (l: CartLine) => priceOf(l.item, l.category) + (l.extra ?? 0),
+    [priceOf],
+  );
+
+  const subtotal = cart.reduce((s, l) => s + lineUnit(l) * l.qty, 0);
   const itemCount = cart.reduce((s, l) => s + l.qty, 0);
 
   const resetAll = () => {
@@ -382,9 +399,9 @@ function Lieferung() {
           product_id: l.item.id,
           product_name: l.item.name,
           category: l.category,
-          unit_price: priceOf(l.item, l.category),
+          unit_price: lineUnit(l),
           qty: l.qty,
-          modifiers: [],
+          modifiers: l.note ? l.note.split(" · ") : [],
           note: l.note ?? null,
         })),
       );
@@ -409,8 +426,8 @@ function Lieferung() {
           const items: ReceiptItem[] = cart.map((l) => ({
             product_name: l.item.name,
             qty: l.qty,
-            unit_price: priceOf(l.item, l.category),
-            modifiers: [],
+            unit_price: lineUnit(l),
+            modifiers: l.note ? l.note.split(" · ") : [],
           }));
           await printBill({
             printers: (printers ?? []) as any,
@@ -458,7 +475,7 @@ function Lieferung() {
           phone: guestPhone,
           note: deliveryNote.trim(),
           customerNote: isTakeaway ? `Abholbereit in ca. ${eta} Min.` : customer?.note ?? "",
-          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: priceOf(l.item, l.category) })),
+          items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: lineUnit(l) })),
           total: subtotal,
           createdAt: new Date().toISOString(),
         } as DeliveryReceipt,
@@ -1066,7 +1083,7 @@ function Lieferung() {
                     <motion.button
                       key={item.id}
                       whileTap={{ scale: 0.96 }}
-                      onClick={() => (item.modifierGroups?.length ? setConfigItem(item) : addItem(item))}
+                      onClick={() => setConfigItem(item)}
                       className="glass rounded-2xl p-4 text-left min-h-28 flex flex-col justify-between hover:border-accent/40 transition-colors relative"
                     >
                       {inCart > 0 && (
@@ -1120,9 +1137,10 @@ function Lieferung() {
             {configItem && (
               <MenuConfigDialog
                 item={configItem}
+                basePrice={priceOf(configItem, configItem.category)}
                 onClose={() => setConfigItem(null)}
-                onConfirm={(note) => {
-                  addItem(configItem, note);
+                onConfirm={({ note, extra, qty }) => {
+                  addItem(configItem, note, extra, qty);
                   setConfigItem(null);
                 }}
               />
@@ -1186,8 +1204,11 @@ function Lieferung() {
                     <div key={l.key} className="flex items-start gap-3 p-2.5 rounded-xl bg-white/[0.03]">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{l.item.name}</div>
+                        {l.note && (
+                          <div className="text-[11px] text-accent mt-0.5 leading-snug">{l.note}</div>
+                        )}
                         <div className="text-xs text-muted-foreground tabular-nums">
-                          CHF {priceOf(l.item, l.category).toFixed(2)}
+                          CHF {lineUnit(l).toFixed(2)}
                         </div>
 
                       </div>
@@ -1207,7 +1228,7 @@ function Lieferung() {
                         </button>
                       </div>
                       <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
-                        {(priceOf(l.item, l.category) * l.qty).toFixed(2)}
+                        {(lineUnit(l) * l.qty).toFixed(2)}
                       </div>
 
                     </div>
@@ -1637,18 +1658,57 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
   );
 }
 
+const SIDE_OPTIONS = (
+  DELIVERY_MENU.find((c) => /beilag/i.test(c.category))?.items ?? []
+).map((i) => ({ id: i.id, name: i.name, price: i.price }));
+
 function MenuConfigDialog({
   item,
+  basePrice,
   onClose,
   onConfirm,
 }: {
   item: DeliveryMenuItem & { category: string };
+  basePrice: number;
   onClose: () => void;
-  onConfirm: (note: string) => void;
+  onConfirm: (r: { note: string; extra: number; qty: number }) => void;
 }) {
   const groups = item.modifierGroups ?? [];
   const [choices, setChoices] = useState<Record<string, string>>({});
+  const [removed, setRemoved] = useState<string[]>([]);
+  const [extras, setExtras] = useState<Record<string, number>>({});
+  const [note, setNote] = useState("");
+  const [qty, setQty] = useState(1);
   const complete = groups.every((g) => choices[g.label]);
+
+  const ingredients = (item.description ?? "")
+    .split(/,|·/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 1 && s.length < 30);
+
+  const extraDelta = SIDE_OPTIONS.reduce((s, o) => s + (extras[o.id] ?? 0) * o.price, 0);
+  const unit = basePrice + extraDelta;
+
+  const bump = (id: string, d: number) =>
+    setExtras((prev) => {
+      const next = Math.max(0, (prev[id] ?? 0) + d);
+      const out = { ...prev };
+      if (next === 0) delete out[id];
+      else out[id] = next;
+      return out;
+    });
+
+  const submit = () => {
+    const parts = [
+      ...groups.map((g) => `${g.label.replace(" wählen", "")}: ${choices[g.label]}`),
+      ...removed.map((r) => `ohne ${r}`),
+      ...SIDE_OPTIONS.filter((o) => (extras[o.id] ?? 0) > 0).map(
+        (o) => `+ ${o.name}${(extras[o.id] ?? 0) > 1 ? ` x${extras[o.id]}` : ""}`,
+      ),
+      ...(note.trim() ? [note.trim()] : []),
+    ];
+    onConfirm({ note: parts.join(" · "), extra: +extraDelta.toFixed(2), qty });
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
@@ -1658,7 +1718,7 @@ function MenuConfigDialog({
             <h3 className="text-lg font-semibold">{item.name}</h3>
             {item.description && <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>}
           </div>
-          <span className="text-base font-semibold tabular-nums shrink-0">CHF {item.price.toFixed(2)}</span>
+          <span className="text-base font-semibold tabular-nums shrink-0">CHF {basePrice.toFixed(2)}</span>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-5 pr-1">
@@ -1685,23 +1745,123 @@ function MenuConfigDialog({
               </div>
             </div>
           ))}
+
+          {ingredients.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                Zutaten / Beilagen entfernen
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {ingredients.map((ing) => {
+                  const active = removed.includes(ing);
+                  return (
+                    <button
+                      key={ing}
+                      onClick={() =>
+                        setRemoved((prev) =>
+                          prev.includes(ing) ? prev.filter((x) => x !== ing) : [...prev, ing],
+                        )
+                      }
+                      className={`px-3 py-2 rounded-full text-xs font-medium border transition-colors ${
+                        active
+                          ? "bg-destructive/20 text-destructive border-destructive/50"
+                          : "glass border-border/40 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      ohne {ing}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {SIDE_OPTIONS.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                Beilagen hinzufügen
+              </div>
+              <div className="space-y-1.5">
+                {SIDE_OPTIONS.map((o) => {
+                  const n = extras[o.id] ?? 0;
+                  return (
+                    <div
+                      key={o.id}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2 border ${
+                        n > 0 ? "bg-accent/10 border-accent/40" : "glass border-border/40"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm truncate">{o.name}</div>
+                        <div className="text-[11px] text-muted-foreground tabular-nums">
+                          +CHF {o.price.toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 glass rounded-lg p-0.5 shrink-0">
+                        <button
+                          onClick={() => bump(o.id, -1)}
+                          className="w-8 h-8 rounded-md flex items-center justify-center active:bg-white/10"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="w-6 text-center text-sm tabular-nums">{n}</span>
+                        <button
+                          onClick={() => bump(o.id, 1)}
+                          className="w-8 h-8 rounded-md flex items-center justify-center active:bg-white/10"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+              Notiz an die Küche
+            </div>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              placeholder="z.B. gut durchgebacken, Allergie…"
+              className="w-full glass rounded-xl p-3 text-sm bg-transparent outline-none resize-none placeholder:text-muted-foreground"
+            />
+          </div>
         </div>
 
-        <div className="flex gap-2 pt-4">
+        <div className="flex gap-2 pt-4 items-center">
+          <div className="flex items-center gap-1 glass rounded-2xl p-1 shrink-0">
+            <button
+              onClick={() => setQty((q) => Math.max(1, q - 1))}
+              className="w-9 h-9 rounded-lg flex items-center justify-center active:bg-white/10"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="w-7 text-center text-sm font-semibold tabular-nums">{qty}</span>
+            <button
+              onClick={() => setQty((q) => q + 1)}
+              className="w-9 h-9 rounded-lg flex items-center justify-center active:bg-white/10"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
           <button onClick={onClose} className="glass rounded-2xl px-4 py-3 text-sm flex-1">
             Abbrechen
           </button>
           <button
             disabled={!complete}
-            onClick={() =>
-              onConfirm(groups.map((g) => `${g.label.replace(" wählen", "")}: ${choices[g.label]}`).join(" · "))
-            }
+            onClick={submit}
             className="rounded-2xl px-4 py-3 text-sm font-semibold flex-[2] bg-gradient-to-br from-accent to-neutral-300 text-accent-foreground disabled:opacity-40"
           >
-            Hinzufügen
+            Hinzufügen · CHF {(unit * qty).toFixed(2)}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
