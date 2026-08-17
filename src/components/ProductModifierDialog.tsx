@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
-import { X, Minus, Plus, Check } from "lucide-react";
+import { X, Minus, Plus, Check, Search } from "lucide-react";
 import { useProducts, type ModifierGroup, type Product } from "@/hooks/use-products";
 import { PIZZA_TOPPINGS, isPizzaItem, toppingPrice } from "@/lib/pizza-toppings";
 
@@ -51,6 +51,7 @@ export function ProductModifierDialog({
   const [note, setNote] = useState("");
   const [removedSides, setRemovedSides] = useState<string[]>([]);
   const [extraSides, setExtraSides] = useState<Record<string, number>>({});
+  const [groupSearch, setGroupSearch] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open) {
@@ -60,6 +61,7 @@ export function ProductModifierDialog({
       setRemovedSides([]);
       setRemovedIngredients([]);
       setExtraSides({});
+      setGroupSearch({});
     }
   }, [open, product?.id]);
 
