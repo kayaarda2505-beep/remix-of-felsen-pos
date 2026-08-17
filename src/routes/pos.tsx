@@ -61,9 +61,11 @@ interface LocalLine {
   id: string;
   product: Product;
   qty: number;
+  unitPrice: number;
   modifiers: string[];
   note?: string;
 }
+
 
 function POS() {
   const qc = useQueryClient();
