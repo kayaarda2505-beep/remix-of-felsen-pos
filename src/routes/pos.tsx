@@ -279,7 +279,7 @@ function POS() {
         product_id: l.product.id,
         product_name: l.product.name,
         category: l.product.category,
-        unit_price: l.product.price,
+        unit_price: l.unitPrice,
         qty: l.qty,
         modifiers: l.modifiers,
         note: l.note ?? null,
@@ -402,7 +402,7 @@ function POS() {
         product_id: l.product.id,
         product_name: l.product.name,
         category: l.product.category,
-        unit_price: l.product.price,
+        unit_price: l.unitPrice,
         qty: l.qty,
         modifiers: l.modifiers,
         note: l.note ?? null,
@@ -410,7 +410,7 @@ function POS() {
       const { error: iErr } = await supabase.from("order_items").insert(rows);
       if (iErr) throw iErr;
       const effectiveTip = +(tip + extraTip).toFixed(2);
-      const itemsSubtotal = walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
+      const itemsSubtotal = walkInCart.reduce((s, l) => s + l.unitPrice * l.qty, 0);
       const totalAmt = +(itemsSubtotal + effectiveTip).toFixed(2);
       const { error: payErr } = await supabase.from("payment_requests").insert({
         order_id: order.id,
@@ -432,7 +432,7 @@ function POS() {
         const items: ReceiptItem[] = walkInCart.map((l) => ({
           product_name: l.product.name,
           qty: l.qty,
-          unit_price: l.product.price,
+          unit_price: l.unitPrice,
           category: l.product.category,
           modifiers: l.modifiers,
           note: l.note ?? null,
@@ -467,10 +467,10 @@ function POS() {
 
 
   const isTab = !!activeOrderId;
-  const pendingSubtotal = pendingCart.reduce((s, l) => s + l.product.price * l.qty, 0);
+  const pendingSubtotal = pendingCart.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const subtotal = isTab
     ? tabItems.reduce((s, l) => s + l.unit_price * l.qty, 0) + pendingSubtotal
-    : walkInCart.reduce((s, l) => s + l.product.price * l.qty, 0);
+    : walkInCart.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const total = subtotal + tip;
   const outstanding = Math.max(0, +total.toFixed(2));
   const hasPending = pendingCart.length > 0;
@@ -509,7 +509,7 @@ function POS() {
       : walkInCart.map((l) => ({
           product_name: l.product.name,
           qty: l.qty,
-          unit_price: l.product.price,
+          unit_price: l.unitPrice,
           modifiers: l.modifiers,
           note: l.note ?? null,
         }));
@@ -786,7 +786,7 @@ function POS() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{l.product.name}</div>
                         <div className="text-xs text-muted-foreground tabular-nums">
-                          CHF {l.product.price.toFixed(2)}
+                          CHF {l.unitPrice.toFixed(2)}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 glass rounded-lg p-0.5 shrink-0">
@@ -799,7 +799,7 @@ function POS() {
                         </button>
                       </div>
                       <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
-                        {(l.product.price * l.qty).toFixed(2)}
+                        {(l.unitPrice * l.qty).toFixed(2)}
                       </div>
                     </motion.div>
                   ))}
@@ -821,7 +821,7 @@ function POS() {
                         <div className="text-sm font-medium truncate">{l.product.name}</div>
                       </div>
                       <div className="text-xs text-muted-foreground tabular-nums">
-                        CHF {l.product.price.toFixed(2)}
+                        CHF {l.unitPrice.toFixed(2)}
                       </div>
                       {(l.modifiers.length > 0 || l.note) && (
                         <div className="mt-1 flex flex-wrap gap-1">
@@ -854,7 +854,7 @@ function POS() {
                       </button>
                     </div>
                     <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
-                      {(l.product.price * l.qty).toFixed(2)}
+                      {(l.unitPrice * l.qty).toFixed(2)}
                     </div>
                   </motion.div>
                 ))}
