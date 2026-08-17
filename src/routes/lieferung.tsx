@@ -1093,8 +1093,9 @@ function Lieferung() {
                         </button>
                       </div>
                       <div className="text-sm font-semibold tabular-nums w-16 text-right shrink-0">
-                        {(l.item.price * l.qty).toFixed(2)}
+                        {(priceOf(l.item, l.category) * l.qty).toFixed(2)}
                       </div>
+
                     </div>
                   ))}
                 </div>
