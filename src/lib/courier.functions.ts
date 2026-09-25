@@ -113,7 +113,7 @@ async function sendTrackingSms(orderId: string, force = false): Promise<{ sent: 
       token = crypto.randomUUID().replace(/-/g, "");
       await (supabaseAdmin as any).from("orders").update({ tracking_token: token }).eq("id", orderId);
     }
-    const base = process.env["PUBLIC_SITE_URL"] ?? "https://felsens-pos-glow.lovable.app";
+    const base = process.env["PUBLIC_SITE_URL"] ?? "https://app.piratino-pizzeria.ch";
     await sendSms(
       recipient,
       `Piratino: Deine Bestellung ist unterwegs! Verfolge den Kurier live & sieh die voraussichtliche Ankunftszeit: ${base}/track/${token}`,

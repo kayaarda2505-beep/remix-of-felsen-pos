@@ -14,9 +14,9 @@ type T = { id: string; name: string; qr_token: string | null; seats: number };
 function deriveDefaultBase() {
   if (typeof window === "undefined") return "";
   const origin = window.location.origin;
-  // On the in-app preview the origin requires Lovable login — fall back to the published site.
+  // On the in-app preview the origin requires Lovable login — fall back to the custom domain.
   if (/\.lovable\.dev$|id-preview--|--.*\.lovable\.app$/.test(window.location.host)) {
-    return "https://glass-flow-pos.lovable.app";
+    return "https://app.piratino-pizzeria.ch";
   }
   return origin;
 }
