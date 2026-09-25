@@ -19,7 +19,7 @@ const API_BASE =
   (import.meta.env.VITE_ELECTRON_API_BASE as string | undefined)?.replace(
     /\/+$/,
     "",
-  ) || "https://project--ed8af55d-d935-4e82-b767-d8edd9659f9f.lovable.app";
+  ) || "https://app.piratino-pizzeria.ch";
 
 // Pfad-Präfixe, die zum gehosteten Server umgeleitet werden müssen.
 const REMOTE_PREFIXES = ["/_serverFn", "/_server", "/api/"];
