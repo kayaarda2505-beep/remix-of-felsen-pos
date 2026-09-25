@@ -25,7 +25,12 @@ function QrPage() {
   const [tables, setTables] = useState<T[]>([]);
   const [baseUrl, setBaseUrl] = useState<string>(() => {
     if (typeof window === "undefined") return "";
-    return localStorage.getItem("saints.qr.baseUrl") || deriveDefaultBase();
+    const stored = localStorage.getItem("saints.qr.baseUrl") || "";
+    // Ignore stale saved URLs that point at old Lovable domains.
+    if (!stored || /lovable\.app$|lovable\.dev$/.test(stored.replace(/\/$/, ""))) {
+      return deriveDefaultBase();
+    }
+    return stored;
   });
 
   const saveBase = (v: string) => {
