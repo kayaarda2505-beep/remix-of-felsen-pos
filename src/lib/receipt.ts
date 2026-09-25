@@ -17,7 +17,7 @@ export type ReceiptItem = {
 
 const BAR_CATS = new Set([
   "Signatures", "Spritz", "Cocktails", "Bier", "Wein",
-  "Shots", "Spirituosen", "Softdrinks", "Mocktails", "Homemades",
+  "Shots", "Spirituosen", "Softdrinks", "Mocktails", "Homemades", "Café",
   "Salate",
 ]);
 
