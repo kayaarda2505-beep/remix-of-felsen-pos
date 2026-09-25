@@ -13,7 +13,7 @@ async function dispatchDueReviews() {
     .limit(25);
   if (error) throw new Error(error.message);
 
-  const base = process.env["PUBLIC_SITE_URL"] ?? "https://felsens-pos-glow.lovable.app";
+  const base = process.env["PUBLIC_SITE_URL"] ?? "https://app.piratino-pizzeria.ch";
   let sent = 0;
   let failed = 0;
 

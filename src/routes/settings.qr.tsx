@@ -14,9 +14,9 @@ type T = { id: string; name: string; qr_token: string | null; seats: number };
 function deriveDefaultBase() {
   if (typeof window === "undefined") return "";
   const origin = window.location.origin;
-  // On the in-app preview the origin requires Lovable login — fall back to the published site.
+  // On the in-app preview the origin requires Lovable login — fall back to the custom domain.
   if (/\.lovable\.dev$|id-preview--|--.*\.lovable\.app$/.test(window.location.host)) {
-    return "https://glass-flow-pos.lovable.app";
+    return "https://app.piratino-pizzeria.ch";
   }
   return origin;
 }
@@ -25,7 +25,12 @@ function QrPage() {
   const [tables, setTables] = useState<T[]>([]);
   const [baseUrl, setBaseUrl] = useState<string>(() => {
     if (typeof window === "undefined") return "";
-    return localStorage.getItem("saints.qr.baseUrl") || deriveDefaultBase();
+    const stored = localStorage.getItem("saints.qr.baseUrl") || "";
+    // Ignore stale saved URLs that point at old Lovable domains.
+    if (!stored || /lovable\.app$|lovable\.dev$/.test(stored.replace(/\/$/, ""))) {
+      return deriveDefaultBase();
+    }
+    return stored;
   });
 
   const saveBase = (v: string) => {
