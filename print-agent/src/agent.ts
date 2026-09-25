@@ -398,7 +398,7 @@ async function main() {
           { text: name },
           { separator: true },
           { text: "QR-Code Test", align: "center", bold: true },
-          { qr: "https://felsens-pos-glow.lovable.app/kurier/test", size: 7 },
+          { qr: "https://app.piratino-pizzeria.ch/kurier/test", size: 7 },
           { separator: true },
           { text: "Wenn du das lesen kannst,", align: "center" },
           { text: "ist alles bereit.", align: "center" },
