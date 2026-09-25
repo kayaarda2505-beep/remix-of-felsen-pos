@@ -4,7 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* FELSEN POS — Apple-inspired dark luxury design system */
+/* PIRATINO POS — Apple-inspired dark luxury design system */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

@@ -1,4 +1,4 @@
-// FELSEN POS — Piratino Barkarte
+// PIRATINO POS — Piratino Barkarte
 
 export type Category =
   | "Signatures"

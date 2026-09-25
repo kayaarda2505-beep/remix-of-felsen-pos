@@ -72,7 +72,7 @@ const AREAS: { value: Area; label: string; icon: typeof Sofa }[] = [
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Service — FELSEN POS" },
+      { title: "Service — PIRATINO POS" },
       { name: "description", content: "Tablet-Service: Tisch wählen, Bestellung aufnehmen, an Bar & Küche senden." },
     ],
   }),
