@@ -1,5 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+function isLunchTime() {
+  const h = Number(
+    new Intl.DateTimeFormat("de-CH", { hour: "numeric", hour12: false, timeZone: "Europe/Zurich" }).format(new Date()),
+  );
+  return h >= 11 && h < 14;
+}
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ModifierItem {
@@ -66,7 +73,19 @@ export function useProducts() {
   }, [queryClient]);
 
 
-  const products = useMemo(() => (q.data ?? []).filter((p) => p.active), [q.data]);
+  // Mittagsmenü nur zwischen 11:00 und 14:00 (Zürich) anzeigen
+  const [lunchTime, setLunchTime] = useState(isLunchTime);
+  useEffect(() => {
+    const t = setInterval(() => setLunchTime(isLunchTime()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const products = useMemo(
+    () =>
+      (q.data ?? []).filter(
+        (p) => p.active && (lunchTime || !/mittagsmen/i.test(p.category)),
+      ),
+    [q.data, lunchTime],
+  );
   const allProducts = q.data ?? [];
   const categories = useMemo(() => {
     const seen = new Set<string>();
