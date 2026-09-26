@@ -45,6 +45,7 @@ type DiscoverResult = { ip_address: string; port: number };
 export type AgentPrinter = { name: string; isDefault: boolean; status?: string };
 
 const STORAGE_KEY = "print_agent_url";
+export const PRINT_AGENT_SETTINGS_EVENT = "piratino:print-agent-settings";
 
 export function getPrintAgentUrl(): string | null {
   if (typeof window === "undefined") return null;
@@ -81,11 +82,11 @@ export function setPrintAgentUrl(url: string | null) {
   try {
     if (!url) window.localStorage.removeItem(STORAGE_KEY);
     else window.localStorage.setItem(STORAGE_KEY, normalizeAgentUrl(url));
+    window.dispatchEvent(new Event(PRINT_AGENT_SETTINGS_EVENT));
   } catch {
     /* ignore */
   }
 }
-
 
 /**
  * True, sobald eine Print-Agent-URL hinterlegt ist.
@@ -118,6 +119,7 @@ export function setAutoPrintEnabled(enabled: boolean) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(AUTO_PRINT_KEY, enabled ? "1" : "0");
+    window.dispatchEvent(new Event(PRINT_AGENT_SETTINGS_EVENT));
   } catch {
     /* ignore */
   }
