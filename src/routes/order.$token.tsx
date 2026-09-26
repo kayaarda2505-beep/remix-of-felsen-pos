@@ -304,6 +304,29 @@ function OrderPage() {
             const totalQty = lines.reduce((s, l) => s + l.qty, 0);
             const photo = qrProductImage(p.name, p.category);
             const pizza = /pizza|calzone/i.test(p.category) || /pizza|calzone/i.test(p.name);
+            const lunch = /mittagsmen/i.test(p.category);
+            if (lunch) return (
+              <motion.div key={p.id} layout className="glass rounded-md overflow-hidden border border-border/40">
+                <div className="aspect-[16/10] bg-muted/40 overflow-hidden">
+                  {photo ? <img src={photo} alt={p.name} loading="lazy" className="w-full h-full object-cover" /> : <Utensils className="w-8 h-8 text-accent m-auto" />}
+                </div>
+                <div className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="font-semibold text-lg leading-tight">{p.name}</h2>
+                      {p.description && <p className="text-sm text-muted-foreground mt-1 leading-snug">{p.description}</p>}
+                    </div>
+                    {totalQty > 0 && <span className="w-6 h-6 shrink-0 rounded-full bg-accent/20 text-accent text-xs font-semibold flex items-center justify-center tabular-nums">{totalQty}</span>}
+                  </div>
+                  <div className="flex items-center justify-between gap-3 pt-1">
+                    <span className="font-semibold tabular-nums">CHF {p.price.toFixed(2)}</span>
+                    <Button type="button" onClick={() => setModProduct(p)} aria-label={`${p.name} auswählen`}>
+                      Auswählen <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            );
             return (
               <motion.div
                 key={p.id}

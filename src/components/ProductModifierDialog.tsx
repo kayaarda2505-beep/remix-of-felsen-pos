@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { X, Minus, Plus, Check, Search } from "lucide-react";
 import { useProducts, type ModifierGroup, type Product } from "@/hooks/use-products";
 import { PIZZA_TOPPINGS, isPizzaItem, toppingPrice } from "@/lib/pizza-toppings";
+import { qrProductImage } from "@/lib/qr-product-images";
+import { Button } from "@/components/ui/button";
 
 const DEFAULT_MODIFIER_GROUPS: ModifierGroup[] = [
   {
@@ -83,6 +85,7 @@ export function ProductModifierDialog({
   // Wenn im Extrawunsch eine konkrete Pizza gewählt wurde (z.B. Mittagsmenü
   // „Pizza wählen"), sollen deren Zutaten zum Entfernen erscheinen.
   const { products: allProducts } = useProducts();
+  const isLunchMenu = /mittagsmen/i.test(product?.category ?? "");
   const chosenProduct = (() => {
     for (const m of mods) {
       const clean = m.replace(/\s*\(\+CHF[^)]*\)\s*$/i, "").trim();
@@ -202,7 +205,7 @@ export function ProductModifierDialog({
                           />
                         </div>
                       )}
-                      <div className="flex flex-wrap gap-2">
+                       <div className={isLunchMenu ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
                         {items.length === 0 && (
                           <div className="text-xs text-muted-foreground">Nichts gefunden.</div>
                         )}
@@ -212,6 +215,27 @@ export function ProductModifierDialog({
                               ? `${item.label} (+CHF ${item.price_delta.toFixed(2)})`
                               : item.label;
                           const active = mods.includes(label);
+                           const isMainChoice = isLunchMenu && /pizza|pasta/i.test(group.label);
+                           const optionPhoto = isLunchMenu ? qrProductImage(item.label, isMainChoice && /pizza/i.test(group.label) ? "Pizza" : "") : undefined;
+                           const relatedProduct = isMainChoice ? allProducts.find((p) => p.name.toLowerCase() === item.label.toLowerCase()) : undefined;
+                           if (isLunchMenu) return (
+                             <Button
+                               type="button"
+                               variant="outline"
+                               key={item.label}
+                               onClick={() => toggle(label)}
+                               aria-pressed={active}
+                               className={`h-auto min-w-0 whitespace-normal flex-col items-stretch overflow-hidden p-0 text-left border ${active ? "border-accent bg-accent/15 text-foreground" : "border-border/40 bg-card text-card-foreground"}`}
+                             >
+                               <div className="aspect-[4/3] w-full bg-muted/40 overflow-hidden flex items-center justify-center">
+                                 {optionPhoto ? <img src={optionPhoto} alt="" loading="lazy" className="w-full h-full object-cover" /> : <span className="text-muted-foreground text-xl">{isMainChoice ? "🍽" : /sosse/i.test(group.label) ? "🥗" : "🥤"}</span>}
+                               </div>
+                               <div className="w-full p-2.5 text-xs leading-snug">
+                                 <span className="font-semibold inline-flex items-start gap-1">{active && <Check className="w-3.5 h-3.5 shrink-0" />}{item.label}</span>
+                                 {relatedProduct?.description && <span className="block text-muted-foreground font-normal mt-1">{relatedProduct.description}</span>}
+                               </div>
+                             </Button>
+                           );
                           return (
                             <button
                               key={item.label}

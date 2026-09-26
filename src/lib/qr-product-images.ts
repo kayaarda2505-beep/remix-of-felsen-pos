@@ -39,6 +39,28 @@ const pizzaPhotos: Record<string, string> = {
   "peter-pan": "hawaii",
 };
 
+const menuOptionPhotos: Record<string, string> = {
+  "french-dressing": "french-sauce",
+  "italienisch-dressing": "italian-sauce",
+  "eistea-0-5l": "fusetea-peach",
+  "coca-cola-0-5l": "coca-cola",
+  "coca-cola-zero-0-5l": "coca-cola-zero",
+  "fanta-orange-0-5l": "fanta",
+  "sprite-0-5l": "sprite",
+  "red-bull-0-25l": "redbull",
+  "mineralwasser-mit-kohlensaure-0-5l": "mineralwasser-mit",
+  "mineralwasser-ohne-kohlensaure-0-5l": "mineralwasser-ohne",
+  "pasta-ai-funghi-porcini": "ai-funghi-porcini",
+  "pasta-all-arrabbiata": "all-arrabiata",
+  "pasta-al-forno": "al-forno",
+  "pasta-bolognese": "bolognese",
+  "pasta-carbonara": "carbonara",
+  "pasta-napoli": "napoli",
+  "pasta-boscaiola": "boscaiola",
+  "pasta-tiziana": "tiziana",
+  "pasta-piratino": "piratino-2",
+};
+
 function slug(value: string) {
   return value.toLowerCase()
     .replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u")
@@ -51,16 +73,21 @@ export function qrProductImage(name: string, category: string): string | undefin
     return byFilename[/pasta/i.test(name) ? "pastamenu" : "pizzamenu"];
   }
 
+  const optionKey = slug(name);
+  if (menuOptionPhotos[optionKey]) return byFilename[menuOptionPhotos[optionKey]];
+
   if (/pizza|calzone/i.test(category) || /pizza|calzone/i.test(name)) {
     // Kinder-Piratino has different toppings from the regular Piratino.
     if (/kinder/i.test(category) && /piratino/i.test(name)) return undefined;
     const key = slug(name
       .replace(/\s*-\s*(?:32|45|50)\s*cm\b/gi, "")
+      .replace(/\s*\((?:scharf|zugedeckt)\)/gi, "")
       .replace(/\s*-\s*kids\b/gi, "")
       .replace(/^pizza\s+/i, ""));
     return byFilename[pizzaPhotos[key] ?? key];
   }
 
   const key = slug(name.replace(/\s*-\s*(?:klein|grosse|gross)\b/gi, ""));
-  return byFilename[key] ?? byFilename[key.replace(/^pasta-/, "")];
+  return byFilename[key] ?? byFilename[key.replace(/^pasta-/, "")]
+    ?? byFilename[key.replace(/^penne-/, "")];
 }
