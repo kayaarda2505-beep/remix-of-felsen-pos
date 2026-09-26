@@ -32,6 +32,7 @@ export function routeForCategory(cat?: string | null): "bar" | "kueche" {
 export function routeForItem(cat?: string | null, name?: string | null): "bar" | "kueche" | "pizza" {
   const c = (cat ?? "").toLowerCase();
   const n = (name ?? "").toLowerCase();
+  if (c.includes("mittagsmen") && n.includes("pasta")) return "kueche";
   if (c.includes("pizza") || n.includes("pizza") || n.includes("calzone")) return "pizza";
   if (routeForCategory(cat) === "bar") return "bar";
   return "kueche";
@@ -43,6 +44,16 @@ export function splitByStation(items: ReceiptItem[]) {
   const kueche: ReceiptItem[] = [];
   const pizza: ReceiptItem[] = [];
   for (const it of items) {
+    if (/mittagsmen/i.test(it.category ?? "") || /mittagsmen/i.test(it.product_name)) {
+      const mods = it.modifiers ?? [];
+      const drink = mods.find((m) => /(cola|fanta|sprite|rivella|eistee|ice tea|mineral|wasser|bier|apfelschorle|orangensaft|saft|red bull|schweppes|getränk)/i.test(m));
+      const dressing = mods.find((m) => /(french|italien|balsamico|dressing|sosse|soße)/i.test(m));
+      const mainMods = mods.filter((m) => m !== drink && m !== dressing);
+      const station = routeForItem(it.category, it.product_name);
+      (station === "pizza" ? pizza : kueche).push({ ...it, modifiers: mainMods });
+      bar.push({ ...it, product_name: drink ? `Menüsalat + ${drink}` : "Menüsalat", category: "Salate", description: null, modifiers: dressing ? [dressing] : [] });
+      continue;
+    }
     const station = routeForItem(it.category, it.product_name);
     (station === "bar" ? bar : station === "pizza" ? pizza : kueche).push(it);
   }
