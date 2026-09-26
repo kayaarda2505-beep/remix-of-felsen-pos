@@ -44,59 +44,69 @@ export function StationPrintHub() {
       }
       if (!claimed?.length) return;
       const claimedIds = claimed.map((it) => it.id);
-      const { data: order } = await supabase
-        .from("orders")
-        .select("order_type, contact_name, delivery_address, opened_by_name, table_id")
-        .eq("id", orderId)
-        .maybeSingle();
-      let tableName = "?";
-      let orderType: string | undefined;
-      if (order?.table_id) {
-        const { data: t } = await supabase
-          .from("dining_tables")
-          .select("name")
-          .eq("id", order.table_id)
+      try {
+        const { data: order, error: orderError } = await supabase
+          .from("orders")
+          .select("order_type, contact_name, delivery_address, opened_by_name, table_id")
+          .eq("id", orderId)
           .maybeSingle();
-        tableName = t?.name ?? "?";
-      } else if (order?.order_type === "takeaway") {
-        tableName = `Abholung · ${order.contact_name ?? ""}`;
-        orderType = "Takeaway";
-      } else if (order) {
-        tableName = `${order.contact_name ?? ""} · ${order.delivery_address ?? ""}`;
-        orderType = order.order_type === "delivery" ? "Lieferung" : order.order_type;
-      }
-      const items: ReceiptItem[] = claimed.map((it) => ({
-        product_name: it.product_name,
-        qty: Number(it.qty),
-        unit_price: Number(it.unit_price),
-        category: it.category,
-        modifiers: Array.isArray(it.modifiers)
-          ? it.modifiers.filter((modifier): modifier is string => typeof modifier === "string")
-          : [],
-        note: it.note ?? null,
-      }));
-      const { data: printers } = await supabase
-        .from("printers")
-        .select("id, name, type, ip_address, port")
-        .eq("active", true);
-      const errs = await printOrderToStations({
-        printers: printers ?? [],
-        tableName,
-        items,
-        orderType,
-        operatorName: order?.opened_by_name ?? null,
-      });
-      if (errs.length) {
+        if (orderError) throw orderError;
+        let tableName = "?";
+        let orderType: string | undefined;
+        if (order?.table_id) {
+          const { data: table, error: tableError } = await supabase
+            .from("dining_tables")
+            .select("name")
+            .eq("id", order.table_id)
+            .maybeSingle();
+          if (tableError) throw tableError;
+          tableName = table?.name ?? "?";
+        } else if (order?.order_type === "takeaway") {
+          tableName = `Abholung · ${order.contact_name ?? ""}`;
+          orderType = "Takeaway";
+        } else if (order) {
+          tableName = `${order.contact_name ?? ""} · ${order.delivery_address ?? ""}`;
+          orderType = order.order_type === "delivery" ? "Lieferung" : order.order_type;
+        }
+        const items: ReceiptItem[] = claimed.map((it) => ({
+          product_name: it.product_name,
+          qty: Number(it.qty),
+          unit_price: Number(it.unit_price),
+          category: it.category,
+          modifiers: Array.isArray(it.modifiers)
+            ? it.modifiers.filter((modifier): modifier is string => typeof modifier === "string")
+            : [],
+          note: it.note ?? null,
+        }));
+        const { data: printers, error: printerError } = await supabase
+          .from("printers")
+          .select("id, name, type, ip_address, port")
+          .eq("active", true);
+        if (printerError) throw printerError;
+        const errors = await printOrderToStations({
+          printers: printers ?? [],
+          tableName,
+          items,
+          orderType,
+          operatorName: order?.opened_by_name ?? null,
+        });
+        if (!errors.length) return;
+
         // Erst nach einem erfolgreichen Ausdruck gilt eine Position als gedruckt.
         // Bei einem Agent-/Druckerfehler wieder freigeben, damit der nächste Lauf
         // den Auftrag erneut versucht statt ihn lautlos zu verlieren.
-        if (claimedIds.length) {
-          await supabase
-            .from("order_items")
-            .update({ station_printed: false })
-            .in("id", claimedIds);
-        }
-        errs.forEach((e) => toast.error(`Bon nicht gedruckt – ${e}`, { duration: 12000 }));
+        errors.forEach((message) =>
+          toast.error(`Bon nicht gedruckt – ${message}`, { duration: 12000 }),
+        );
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unbekannter Druckfehler";
+        toast.error("Bon nicht gedruckt", { description: message, duration: 12000 });
+      }
+      if (claimedIds.length) {
+        await supabase
+          .from("order_items")
+          .update({ station_printed: false })
+          .in("id", claimedIds);
       }
     };
 
