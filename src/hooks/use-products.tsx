@@ -2,9 +2,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
 function isLunchTime() {
-  const h = Number(
-    new Intl.DateTimeFormat("de-CH", { hour: "numeric", hour12: false, timeZone: "Europe/Zurich" }).format(new Date()),
-  );
+  const hourPart = new Intl.DateTimeFormat("de-CH", { hour: "numeric", hour12: false, timeZone: "Europe/Zurich" })
+    .formatToParts(new Date()).find((part) => part.type === "hour");
+  const h = Number(hourPart?.value);
   return h >= 11 && h < 14;
 }
 import { supabase } from "@/integrations/supabase/client";
