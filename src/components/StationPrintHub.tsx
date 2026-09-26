@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
+import { isAutoPrintEnabled, isDesktopApp, pingPrintAgent, PRINT_AGENT_SETTINGS_EVENT } from "@/lib/printer-bridge";
 import { printOrderToStations, type ReceiptItem } from "@/lib/receipt";
 
 /**
@@ -12,13 +12,29 @@ import { printOrderToStations, type ReceiptItem } from "@/lib/receipt";
  */
 export function StationPrintHub() {
   useEffect(() => {
-    if (!isDesktopApp() || !isAutoPrintEnabled()) return;
     const timers = new Map<string, ReturnType<typeof setTimeout>>();
+    let processing = false;
+    let lastConnectionWarning = 0;
 
     const processOrder = async (orderId: string) => {
       timers.delete(orderId);
+      if (!isDesktopApp() || !isAutoPrintEnabled()) return;
+      if (!(await pingPrintAgent())) {
+        if (Date.now() - lastConnectionWarning > 60_000) {
+          toast.error("Automatischer Bondruck ist offline", {
+            description: "Der Print-Agent ist auf diesem PC nicht erreichbar.",
+          });
+          lastConnectionWarning = Date.now();
+        }
+        return;
+      }
       const { data: claimed, error } = await supabase.rpc("claim_station_print", { _order_id: orderId });
-      if (error || !claimed?.length) return;
+      if (error) {
+        toast.error("Bestellung konnte nicht zum Drucken übernommen werden", { description: error.message });
+        return;
+      }
+      if (!claimed?.length) return;
+      const claimedIds = claimed.map((it: any) => it.id).filter(Boolean);
       const { data: order } = await supabase
         .from("orders")
         .select("order_type, contact_name, delivery_address, opened_by_name, table_id")
@@ -55,7 +71,15 @@ export function StationPrintHub() {
         orderType,
         operatorName: order?.opened_by_name ?? null,
       });
-      errs.forEach((e) => toast.error(`Bon nicht gedruckt – ${e}`));
+      if (errs.length) {
+        // Erst nach einem erfolgreichen Ausdruck gilt eine Position als gedruckt.
+        // Bei einem Agent-/Druckerfehler wieder freigeben, damit der nächste Lauf
+        // den Auftrag erneut versucht statt ihn lautlos zu verlieren.
+        if (claimedIds.length) {
+          await supabase.from("order_items").update({ station_printed: false }).in("id", claimedIds);
+        }
+        errs.forEach((e) => toast.error(`Bon nicht gedruckt – ${e}`, { duration: 12000 }));
+      }
     };
 
     const schedule = (orderId: string) => {
@@ -65,16 +89,28 @@ export function StationPrintHub() {
       timers.set(orderId, setTimeout(() => void processOrder(orderId), 1500));
     };
 
-    // Nachholen: in den letzten 2 Stunden nicht gedruckte Positionen
-    void (async () => {
+    // Nachholen und als Fallback pollen, falls die Live-Verbindung unterbrochen ist.
+    const pollPending = async () => {
+      if (processing || !isDesktopApp() || !isAutoPrintEnabled()) return;
+      processing = true;
       const since = new Date(Date.now() - 2 * 3600_000).toISOString();
-      const { data } = await supabase
-        .from("order_items")
-        .select("order_id")
-        .eq("station_printed", false)
-        .gte("sent_at", since);
-      new Set((data ?? []).map((r: any) => r.order_id)).forEach((id) => schedule(id as string));
-    })();
+      try {
+        const { data, error } = await supabase
+          .from("order_items")
+          .select("order_id")
+          .eq("station_printed", false)
+          .gte("sent_at", since);
+        if (error) throw error;
+        new Set((data ?? []).map((r: any) => r.order_id)).forEach((id) => schedule(id as string));
+      } catch (e: any) {
+        console.warn("Offene Druckaufträge konnten nicht geladen werden", e);
+      } finally {
+        processing = false;
+      }
+    };
+    void pollPending();
+    const pollInterval = window.setInterval(() => void pollPending(), 10_000);
+    window.addEventListener(PRINT_AGENT_SETTINGS_EVENT, pollPending);
 
     const ch = supabase
       .channel(`station_print_hub_${Math.random().toString(36).slice(2)}`)
@@ -85,6 +121,8 @@ export function StationPrintHub() {
 
     return () => {
       timers.forEach((t) => clearTimeout(t));
+      window.clearInterval(pollInterval);
+      window.removeEventListener(PRINT_AGENT_SETTINGS_EVENT, pollPending);
       supabase.removeChannel(ch);
     };
   }, []);
