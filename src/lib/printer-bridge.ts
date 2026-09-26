@@ -222,7 +222,12 @@ async function callAgent<T>(
       signal: ctrl.signal,
     });
     if (!res.ok) {
-      throw new Error(`Agent antwortete mit ${res.status}`);
+      let detail = "";
+      try {
+        const j = await res.json();
+        detail = j?.error ? `: ${j.error}` : "";
+      } catch {}
+      throw new Error(`Agent antwortete mit ${res.status}${detail}`);
     }
     return (await res.json()) as T;
   } finally {
