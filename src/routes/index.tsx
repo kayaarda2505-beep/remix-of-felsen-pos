@@ -333,29 +333,7 @@ function ServiceTablet() {
       qc.invalidateQueries({ queryKey: ["dining_tables"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order_items"] });
-      // Auto-Druck an Bar / Küche
-      if (isDesktopApp() && selectedTable) {
-        const items: ReceiptItem[] = cart.map((l) => ({
-          product_name: l.product.name,
-          qty: l.qty,
-          unit_price: l.product.price,
-          category: l.product.category,
-          description: l.product.description,
-          modifiers: l.modifiers,
-          note: l.note ?? null,
-        }));
-        const errs = await printOrderToStations({
-          printers,
-          tableName: selectedTable.name,
-          items,
-          operatorName: operator?.name ?? null,
-        });
-        errs.forEach((e) => toast.error(e));
-      } else if (selectedTable && printers.length > 0) {
-        toast.warning(
-          "Kein Bon gedruckt: Auf diesem Gerät ist kein Print-Agent eingetragen (Einstellungen → Drucker).",
-        );
-      }
+      // Stationsbons druckt die Druckzentrale (StationPrintHub) am Drucker-PC.
       toast.success(
         `Bestellung gesendet · Tisch ${selectedTable?.name ?? ""} · ${cart.reduce((n, l) => n + l.qty, 0)} Artikel`,
       );

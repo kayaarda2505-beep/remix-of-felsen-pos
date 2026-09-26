@@ -484,14 +484,7 @@ function Lieferung() {
              description: l.item.description,
             modifiers: l.note ? l.note.split(" · ") : [],
           }));
-           const stationErrors = await printOrderToStations({
-             printers: (printers ?? []) as any,
-             tableName: isTakeaway ? `Abholung · ${guestName}` : `${guestName} · ${address}`,
-             orderType: isTakeaway ? "Takeaway" : "Lieferung",
-             items,
-             operatorName: operator?.name,
-           });
-           stationErrors.forEach((message) => toast.error(message));
+           // Stationsbons druckt die Druckzentrale (StationPrintHub).
            const billError = await printBill({
             printers: (printers ?? []) as any,
             tableName: isTakeaway
