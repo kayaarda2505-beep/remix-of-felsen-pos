@@ -1,2 +1,3 @@
 QR guest-menu photos are mapped by product names in `src/lib/qr-product-images.ts` using uploaded CDN asset pointers; this keeps images out of product records and prevents ambiguous sauce/pizza name collisions.
 Station printing routes each new order to pizza, kitchen, or bar by item category/name in `src/lib/receipt.ts`; this keeps preparation tickets separate from customer receipts and selects printers by their configured type.
+The authenticated printer PC owns central station printing, polls pending items as a realtime fallback, and releases failed claims for retry; this prevents customer devices from needing printer access and avoids silently lost tickets.

@@ -1,7 +1,12 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { isAutoPrintEnabled, isDesktopApp, pingPrintAgent, PRINT_AGENT_SETTINGS_EVENT } from "@/lib/printer-bridge";
+import {
+  isAutoPrintEnabled,
+  isDesktopApp,
+  pingPrintAgent,
+  PRINT_AGENT_SETTINGS_EVENT,
+} from "@/lib/printer-bridge";
 import { printOrderToStations, type ReceiptItem } from "@/lib/receipt";
 
 /**
@@ -28,13 +33,17 @@ export function StationPrintHub() {
         }
         return;
       }
-      const { data: claimed, error } = await supabase.rpc("claim_station_print", { _order_id: orderId });
+      const { data: claimed, error } = await supabase.rpc("claim_station_print", {
+        _order_id: orderId,
+      });
       if (error) {
-        toast.error("Bestellung konnte nicht zum Drucken übernommen werden", { description: error.message });
+        toast.error("Bestellung konnte nicht zum Drucken übernommen werden", {
+          description: error.message,
+        });
         return;
       }
       if (!claimed?.length) return;
-      const claimedIds = claimed.map((it: any) => it.id).filter(Boolean);
+      const claimedIds = claimed.map((it) => it.id);
       const { data: order } = await supabase
         .from("orders")
         .select("order_type, contact_name, delivery_address, opened_by_name, table_id")
@@ -43,7 +52,11 @@ export function StationPrintHub() {
       let tableName = "?";
       let orderType: string | undefined;
       if (order?.table_id) {
-        const { data: t } = await supabase.from("dining_tables").select("name").eq("id", order.table_id).maybeSingle();
+        const { data: t } = await supabase
+          .from("dining_tables")
+          .select("name")
+          .eq("id", order.table_id)
+          .maybeSingle();
         tableName = t?.name ?? "?";
       } else if (order?.order_type === "takeaway") {
         tableName = `Abholung · ${order.contact_name ?? ""}`;
@@ -52,7 +65,7 @@ export function StationPrintHub() {
         tableName = `${order.contact_name ?? ""} · ${order.delivery_address ?? ""}`;
         orderType = order.order_type === "delivery" ? "Lieferung" : order.order_type;
       }
-      const items: ReceiptItem[] = claimed.map((it: any) => ({
+      const items: ReceiptItem[] = claimed.map((it) => ({
         product_name: it.product_name,
         qty: Number(it.qty),
         unit_price: Number(it.unit_price),
@@ -65,7 +78,7 @@ export function StationPrintHub() {
         .select("id, name, type, ip_address, port")
         .eq("active", true);
       const errs = await printOrderToStations({
-        printers: (printers ?? []) as any,
+        printers: printers ?? [],
         tableName,
         items,
         orderType,
@@ -76,7 +89,10 @@ export function StationPrintHub() {
         // Bei einem Agent-/Druckerfehler wieder freigeben, damit der nächste Lauf
         // den Auftrag erneut versucht statt ihn lautlos zu verlieren.
         if (claimedIds.length) {
-          await supabase.from("order_items").update({ station_printed: false }).in("id", claimedIds);
+          await supabase
+            .from("order_items")
+            .update({ station_printed: false })
+            .in("id", claimedIds);
         }
         errs.forEach((e) => toast.error(`Bon nicht gedruckt – ${e}`, { duration: 12000 }));
       }
@@ -86,7 +102,10 @@ export function StationPrintHub() {
       const prev = timers.get(orderId);
       if (prev) clearTimeout(prev);
       // kurz warten, bis alle Positionen einer Bestellung angekommen sind
-      timers.set(orderId, setTimeout(() => void processOrder(orderId), 1500));
+      timers.set(
+        orderId,
+        setTimeout(() => void processOrder(orderId), 1500),
+      );
     };
 
     // Nachholen und als Fallback pollen, falls die Live-Verbindung unterbrochen ist.
@@ -101,8 +120,8 @@ export function StationPrintHub() {
           .eq("station_printed", false)
           .gte("sent_at", since);
         if (error) throw error;
-        new Set((data ?? []).map((r: any) => r.order_id)).forEach((id) => schedule(id as string));
-      } catch (e: any) {
+        new Set((data ?? []).map((row) => row.order_id)).forEach((id) => schedule(id));
+      } catch (e: unknown) {
         console.warn("Offene Druckaufträge konnten nicht geladen werden", e);
       } finally {
         processing = false;
@@ -114,9 +133,14 @@ export function StationPrintHub() {
 
     const ch = supabase
       .channel(`station_print_hub_${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "order_items" }, (p: any) => {
-        if (p.new?.order_id && !p.new.station_printed) schedule(p.new.order_id);
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "order_items" },
+        (payload) => {
+          const orderId = typeof payload.new.order_id === "string" ? payload.new.order_id : null;
+          if (orderId && !payload.new.station_printed) schedule(orderId);
+        },
+      )
       .subscribe();
 
     return () => {

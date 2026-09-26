@@ -88,7 +88,6 @@ export function setPrintAgentUrl(url: string | null) {
   }
 }
 
-
 /**
  * True, sobald eine Print-Agent-URL hinterlegt ist.
  * Name bleibt aus Kompatibilitätsgründen erhalten – wird projektweit benutzt,
