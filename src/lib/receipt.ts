@@ -190,29 +190,28 @@ export function buildStationTicket(opts: {
 }): ReceiptPayload {
   const lines: ReceiptPayload["lines"] = [];
 
-  lines.push({ text: opts.station === "bar" ? "*** BAR ***" : opts.station === "pizza" ? "*** PIZZA ***" : "*** KÜCHE ***", align: "center", bold: true });
-  lines.push({ text: "", align: "center" });
-  if (opts.orderType) lines.push({ text: opts.orderType.toUpperCase(), align: "center", bold: true });
-  lines.push({ text: opts.orderType ? opts.tableName : `Tisch ${opts.tableName}`, align: "center", bold: true, size: "large" });
-  lines.push({ text: nowStr(), align: "center" });
-  if (opts.operatorName) lines.push({ text: `Bedienung: ${opts.operatorName}`, align: "center" });
-  if (opts.orderNo) lines.push({ text: `Bon-Nr. ${opts.orderNo}`, align: "center" });
-  lines.push({ separator: true });
+  const title = opts.station === "bar" ? "*** Barbon ***" : opts.station === "pizza" ? "*** Pizzabon ***" : "*** Küchenbon ***";
+  lines.push({ text: title, align: "center", size: "double-h" });
+  lines.push({ text: "" });
+  lines.push({ text: `Tisch:  ${opts.tableName}`, size: "large" });
+  if (opts.orderType) lines.push({ text: ` ${opts.orderType}`, size: "large" });
+  lines.push({ text: "" });
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  lines.push({ text: `Datum/Zeit: ${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} / ${p(d.getHours())}:${p(d.getMinutes())}` });
+  if (opts.operatorName) lines.push({ text: `Benutzer:   ${opts.operatorName}` });
+  lines.push({ text: "-".repeat(42) });
+  lines.push({ text: "" });
 
-  opts.items.forEach((it, idx) => {
-    lines.push({ text: `${it.qty}x  ${it.product_name}`, bold: true, size: "double-h" });
+  opts.items.forEach((it) => {
+    lines.push({ text: `${it.qty}  ${it.product_name}`, size: "double-h" });
     for (const detail of pizzaDetailLines(it)) lines.push({ text: `   ${detail}` });
     if (it.modifiers?.length) {
       for (const m of it.modifiers) lines.push({ text: `   ${/^[+\-]/.test(m) ? "" : /^ohne\s/i.test(m) ? "- " : "+ "}${m}` });
     }
     if (it.note) lines.push({ text: `   ! ${it.note}`, bold: true });
-    if (idx < opts.items.length - 1) lines.push({ text: "" });
-  });
-
-  lines.push({ separator: true });
-  lines.push({
-    text: `${opts.items.reduce((s, i) => s + i.qty, 0)} Positionen`,
-    align: "center",
+    lines.push({ text: (it.unit_price * it.qty).toFixed(2), align: "right" });
+    lines.push({ text: "" });
   });
 
   return {
