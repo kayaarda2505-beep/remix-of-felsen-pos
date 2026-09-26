@@ -29,7 +29,7 @@ import { geocodeCustomers } from "@/lib/geo.functions";
 import { DELIVERY_MENU, type DeliveryMenuItem } from "@/lib/delivery-menu";
 import { takeawayPrice } from "@/lib/takeaway-pricing";
 import { PIZZA_TOPPINGS, isPizzaItem, toppingPrice } from "@/lib/pizza-toppings";
-import { printBill, type ReceiptItem } from "@/lib/receipt";
+import { printBill, printOrderToStations, type ReceiptItem } from "@/lib/receipt";
 import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
 import { sendOrderReceivedSms } from "@/lib/order-sms.functions";
 import { searchStreets } from "@/lib/addresses.functions";
@@ -480,9 +480,19 @@ function Lieferung() {
             product_name: l.item.name,
             qty: l.qty,
             unit_price: lineUnit(l),
+             category: l.category,
+             description: l.item.description,
             modifiers: l.note ? l.note.split(" · ") : [],
           }));
-          await printBill({
+           const stationErrors = await printOrderToStations({
+             printers: (printers ?? []) as any,
+             tableName: isTakeaway ? `Abholung · ${guestName}` : `${guestName} · ${address}`,
+             orderType: isTakeaway ? "Takeaway" : "Lieferung",
+             items,
+             operatorName: operator?.name,
+           });
+           stationErrors.forEach((message) => toast.error(message));
+           const billError = await printBill({
             printers: (printers ?? []) as any,
             tableName: isTakeaway
               ? `TAKEAWAY · ${guestName}${guestPhone ? ` · ${guestPhone}` : ""}${
@@ -511,6 +521,7 @@ function Lieferung() {
                   qrLabel: "QR scannen: Adresse, Navigation & Anruf",
                 }),
           });
+           if (billError) toast.error(`Lieferschein: ${billError}`);
         }
       } catch (err) {
         // Druckfehler darf die Bestellung nicht abbrechen
