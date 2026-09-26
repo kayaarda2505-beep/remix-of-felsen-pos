@@ -351,6 +351,10 @@ function ServiceTablet() {
           operatorName: operator?.name ?? null,
         });
         errs.forEach((e) => toast.error(e));
+      } else if (selectedTable && printers.length > 0) {
+        toast.warning(
+          "Kein Bon gedruckt: Auf diesem Gerät ist kein Print-Agent eingetragen (Einstellungen → Drucker).",
+        );
       }
       toast.success(
         `Bestellung gesendet · Tisch ${selectedTable?.name ?? ""} · ${cart.reduce((n, l) => n + l.qty, 0)} Artikel`,
