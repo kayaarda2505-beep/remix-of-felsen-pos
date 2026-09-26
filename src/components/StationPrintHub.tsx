@@ -70,7 +70,9 @@ export function StationPrintHub() {
         qty: Number(it.qty),
         unit_price: Number(it.unit_price),
         category: it.category,
-        modifiers: Array.isArray(it.modifiers) ? it.modifiers : [],
+        modifiers: Array.isArray(it.modifiers)
+          ? it.modifiers.filter((modifier): modifier is string => typeof modifier === "string")
+          : [],
         note: it.note ?? null,
       }));
       const { data: printers } = await supabase
