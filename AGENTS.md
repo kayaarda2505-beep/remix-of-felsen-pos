@@ -1,0 +1,1 @@
+QR guest-menu photos are mapped by product names in `src/lib/qr-product-images.ts` using uploaded CDN asset pointers; this keeps images out of product records and prevents ambiguous sauce/pizza name collisions.
