@@ -103,10 +103,7 @@ export function StationPrintHub() {
         toast.error("Bon nicht gedruckt", { description: message, duration: 12000 });
       }
       if (claimedIds.length) {
-        await supabase
-          .from("order_items")
-          .update({ station_printed: false })
-          .in("id", claimedIds);
+        await supabase.from("order_items").update({ station_printed: false }).in("id", claimedIds);
       }
     };
 
