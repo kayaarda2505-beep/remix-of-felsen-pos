@@ -336,6 +336,7 @@ function ServiceTablet() {
           qty: l.qty,
           unit_price: l.product.price,
           category: l.product.category,
+          description: l.product.description,
           modifiers: l.modifiers,
           note: l.note ?? null,
         }));

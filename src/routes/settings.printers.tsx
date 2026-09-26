@@ -22,6 +22,14 @@ import {
 } from "@/lib/printer-bridge";
 
 export const Route = createFileRoute("/settings/printers")({
+  head: () => ({ meta: [
+    { title: "Drucker — Piratino POS" },
+    { name: "description", content: "Bon-, Küchen- und Pizzadrucker verwalten." },
+    { property: "og:title", content: "Drucker — Piratino POS" },
+    { property: "og:description", content: "Bon-, Küchen- und Pizzadrucker verwalten." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: PrintersPage,
 });
 
@@ -34,7 +42,7 @@ type P = {
   active: boolean;
 };
 
-const TYPES = ["bon", "kueche", "bar", "rechnung"] as const;
+const TYPES = ["bon", "kueche", "pizza", "bar", "rechnung"] as const;
 
 function PrintersPage() {
   const [items, setItems] = useState<P[]>([]);
@@ -208,6 +216,12 @@ function PrintersPage() {
     load();
   };
 
+  const changeType = async (p: P, type: string) => {
+    const { error } = await supabase.from("printers").update({ type }).eq("id", p.id);
+    if (error) toast.error(error.message);
+    else { toast.success(`${p.name}: ${type}`); load(); }
+  };
+
   const remove = async (id: string) => {
     if (!confirm("Löschen?")) return;
     await supabase.from("printers").delete().eq("id", id);
@@ -215,7 +229,7 @@ function PrintersPage() {
   };
 
   return (
-    <SettingsPage title="Drucker" subtitle="Bon-, Küchen- und Bar-Drucker konfigurieren">
+    <SettingsPage title="Drucker" subtitle="Küche und Pizza getrennt zuweisen">
       <div
         className={`glass rounded-2xl px-4 py-3 mb-4 flex items-center gap-3 text-sm border ${
           online
@@ -468,8 +482,11 @@ function PrintersPage() {
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{p.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {p.type} · {p.ip_address ? `${p.ip_address}:${p.port}` : "Windows/USB über Print-Agent"}
+                  {p.ip_address ? `${p.ip_address}:${p.port}` : "Windows/USB über Print-Agent"}
                 </div>
+                <select aria-label={`Station für ${p.name}`} value={p.type} onChange={(e) => changeType(p, e.target.value)} className="mt-1 text-xs rounded-md bg-background border border-border px-2 py-1">
+                  {TYPES.map((type) => <option key={type} value={type}>{type === "kueche" ? "Küche" : type === "pizza" ? "Pizzastation" : type === "bon" ? "Bon" : type === "rechnung" ? "Rechnung" : "Bar"}</option>)}
+                </select>
               </div>
               <button
                 onClick={() => testPrint(p)}
