@@ -9,8 +9,18 @@ import { PiratinoLogo } from "@/components/PiratinoLogo";
 import { getQrTable } from "@/lib/public-order.functions";
 import { ProductModifierDialog, type ProductCustomization } from "@/components/ProductModifierDialog";
 import { StripeTableCheckout } from "@/components/StripeTableCheckout";
+import { qrProductImage } from "@/lib/qr-product-images";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/order/$token")({
+  head: () => ({ meta: [
+    { title: "QR-Speisekarte — Piratino Pizzeria" },
+    { name: "description", content: "Piratino Speisekarte mit Pizzen, Zutaten und Bildern direkt am Tisch bestellen." },
+    { property: "og:title", content: "QR-Speisekarte — Piratino Pizzeria" },
+    { property: "og:description", content: "Piratino Speisekarte mit Pizzen, Zutaten und Bildern direkt am Tisch bestellen." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   loader: async ({ params }) => {
     const { table } = await getQrTable({ data: { token: params.token } });
     if (!table) throw notFound();
@@ -292,34 +302,43 @@ function OrderPage() {
           {visible.map((p) => {
             const lines = cart.filter((c) => c.product.id === p.id);
             const totalQty = lines.reduce((s, l) => s + l.qty, 0);
+            const photo = qrProductImage(p.name, p.category);
+            const pizza = /pizza|calzone/i.test(p.category) || /pizza|calzone/i.test(p.name);
             return (
               <motion.div
                 key={p.id}
                 layout
-                className="glass rounded-2xl p-4 flex items-center gap-3"
+                className="glass rounded-md p-3 flex items-center gap-3 min-h-28"
               >
-                <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                  <Utensils className="w-4 h-4 text-accent" />
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-md bg-muted/40 flex items-center justify-center shrink-0 overflow-hidden">
+                  {photo ? (
+                    <img src={photo} alt={p.name} loading="lazy" className="w-full h-full object-contain" />
+                  ) : (
+                    <Utensils className="w-5 h-5 text-accent" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{p.name}</div>
+                  <div className="font-medium leading-snug">{p.name}</div>
                   {p.description && (
-                    <div className="text-[11px] text-muted-foreground truncate">{p.description}</div>
+                    <div className={`text-xs text-muted-foreground leading-snug mt-1 ${pizza ? "whitespace-normal" : "line-clamp-2"}`}>{p.description}</div>
                   )}
-                  <div className="text-xs tabular-nums mt-0.5">CHF {p.price.toFixed(2)}</div>
+                  <div className="text-sm font-semibold tabular-nums mt-2">CHF {p.price.toFixed(2)}</div>
                 </div>
                 {totalQty > 0 && (
                   <span className="w-6 h-6 rounded-full bg-accent/20 text-accent text-xs font-semibold flex items-center justify-center tabular-nums">
                     {totalQty}
                   </span>
                 )}
-                <button
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
                   onClick={() => setModProduct(p)}
-                  className="w-9 h-9 rounded-xl bg-accent/20 hover:bg-accent/30 flex items-center justify-center"
-                  aria-label="Hinzufügen"
+                  className="shrink-0"
+                  aria-label={`${p.name} hinzufügen`}
                 >
                   <Plus className="w-4 h-4" />
-                </button>
+                </Button>
               </motion.div>
             );
           })}
