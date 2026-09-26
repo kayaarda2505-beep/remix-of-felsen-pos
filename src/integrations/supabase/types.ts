@@ -684,6 +684,7 @@ export type Database = {
           product_name: string
           qty: number
           sent_at: string
+          station_printed: boolean
           unit_price: number
         }
         Insert: {
@@ -696,6 +697,7 @@ export type Database = {
           product_name: string
           qty?: number
           sent_at?: string
+          station_printed?: boolean
           unit_price: number
         }
         Update: {
@@ -708,6 +710,7 @@ export type Database = {
           product_name?: string
           qty?: number
           sent_at?: string
+          station_printed?: boolean
           unit_price?: number
         }
         Relationships: [
@@ -1593,6 +1596,28 @@ export type Database = {
       }
     }
     Functions: {
+      claim_station_print: {
+        Args: { _order_id: string }
+        Returns: {
+          category: string | null
+          id: string
+          modifiers: Json
+          note: string | null
+          order_id: string
+          product_id: string
+          product_name: string
+          qty: number
+          sent_at: string
+          station_printed: boolean
+          unit_price: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "order_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_team_member:
         | {
             Args: {
