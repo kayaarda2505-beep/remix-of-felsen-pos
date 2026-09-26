@@ -424,8 +424,8 @@ export async function printCardReceipt(opts: {
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => p.type === "rechnung") ??
-    opts.printers.find((p) => p.type === "bon") ??
-    opts.printers[0];
+    opts.printers.find((p) => p.type === "bon");
+  if (!billPrinter && opts.printers.length) return "Kein Rechnungsdrucker konfiguriert";
 
   if (!billPrinter) {
     const r = await getAgentPrinters();
