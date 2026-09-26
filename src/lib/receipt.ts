@@ -1,12 +1,14 @@
 import type { ReceiptPayload, PrinterConfig } from "./printer-bridge";
 import { printReceipt, getAgentPrinters } from "./printer-bridge";
 import { supabase } from "@/integrations/supabase/client";
+import { DELIVERY_ITEMS } from "./delivery-menu";
 
 export type ReceiptItem = {
   product_name: string;
   qty: number;
   unit_price: number;
   category?: string | null;
+  description?: string | null;
   modifiers?: string[];
   note?: string | null;
 };
@@ -30,7 +32,8 @@ export function routeForCategory(cat?: string | null): "bar" | "kueche" {
 export function routeForItem(cat?: string | null, name?: string | null): "bar" | "kueche" | "pizza" {
   const c = (cat ?? "").toLowerCase();
   const n = (name ?? "").toLowerCase();
-  if (c.includes("pizza") || n.includes("pizza")) return "pizza";
+  if (c.includes("mittagsmen") && n.includes("pasta")) return "kueche";
+  if (c.includes("pizza") || n.includes("pizza") || n.includes("calzone")) return "pizza";
   if (routeForCategory(cat) === "bar") return "bar";
   return "kueche";
 }
@@ -39,8 +42,62 @@ export function routeForItem(cat?: string | null, name?: string | null): "bar" |
 export function splitByStation(items: ReceiptItem[]) {
   const bar: ReceiptItem[] = [];
   const kueche: ReceiptItem[] = [];
-  for (const it of items) (routeForCategory(it.category) === "bar" ? bar : kueche).push(it);
-  return { bar, kueche };
+  const pizza: ReceiptItem[] = [];
+  for (const it of items) {
+    if (/mittagsmen/i.test(it.category ?? "") || /mittagsmen/i.test(it.product_name)) {
+      const mods = it.modifiers ?? [];
+      const drink = mods.find((m) => /(cola|fanta|sprite|rivella|eistee|ice tea|mineral|wasser|bier|apfelschorle|orangensaft|saft|red bull|schweppes|getränk)/i.test(m));
+      const dressing = mods.find((m) => /(french|italien|balsamico|dressing|sosse|soße)/i.test(m));
+      const mainMods = mods.filter((m) => m !== drink && m !== dressing);
+      const station = routeForItem(it.category, it.product_name);
+      (station === "pizza" ? pizza : kueche).push({ ...it, modifiers: mainMods });
+      bar.push({ ...it, product_name: drink ? `Menüsalat + ${drink}` : "Menüsalat", category: "Salate", description: null, modifiers: dressing ? [dressing] : [] });
+      continue;
+    }
+    const station = routeForItem(it.category, it.product_name);
+    (station === "bar" ? bar : station === "pizza" ? pizza : kueche).push(it);
+  }
+  return { bar, kueche, pizza };
+}
+
+const pizzaName = (item: ReceiptItem) => {
+  if (/mittagsmen/i.test(item.category ?? "") || /mittagsmen/i.test(item.product_name)) {
+    const chosen = item.modifiers?.find((m) => /pizza|calzone/i.test(m));
+    return chosen?.replace(/\s*\(\+CHF[^)]*\)\s*$/i, "").trim() ?? item.product_name;
+  }
+  return item.product_name;
+};
+
+function isPizza(item: ReceiptItem) {
+  return routeForItem(item.category, item.product_name) === "pizza";
+}
+
+function normalizePizzaName(name: string) {
+  return name.toLocaleLowerCase("de-CH").replace(/^pizza\s+/, "").replace(/\s*-\s*\d+\s*cm\s*$/, "").trim();
+}
+
+/** Use the menu's ingredients, not recipe stock entries; retain the ordered changes separately. */
+async function withPizzaIngredients(items: ReceiptItem[]): Promise<ReceiptItem[]> {
+  if (!items.some(isPizza)) return items;
+  const { data } = await supabase.from("products").select("name, description, category").eq("active", true);
+  const descriptions = [...(data ?? []), ...DELIVERY_ITEMS].filter((p) => p.description);
+  return items.map((item) => {
+    if (!isPizza(item)) return item;
+    const name = pizzaName(item);
+    const match = descriptions.find((p) => p.name.toLocaleLowerCase("de-CH") === name.toLocaleLowerCase("de-CH"))
+      ?? descriptions.find((p) => normalizePizzaName(p.name) === normalizePizzaName(name));
+    return { ...item, description: match?.description ?? item.description };
+  });
+}
+
+function pizzaDetailLines(item: ReceiptItem): string[] {
+  if (!isPizza(item)) return [];
+  const removed = (item.modifiers ?? [])
+    .filter((m) => /^ohne\s+/i.test(m))
+    .map((m) => m.replace(/^ohne\s+/i, "").trim().toLocaleLowerCase("de-CH"));
+  const ingredients = (item.description ?? "").split(/,|·|\s+und\s+/i).map((s) => s.trim()).filter(Boolean)
+    .filter((s) => !removed.includes(s.toLocaleLowerCase("de-CH")));
+  return ingredients.length ? [`Zutaten: ${ingredients.join(", ")}`] : [];
 }
 
 // ---------------------------------------------------------------------------
@@ -120,21 +177,23 @@ export function clearReceiptSettingsCache() {
 }
 
 // ---------------------------------------------------------------------------
-// Stations-Bon (Bar / Küche)
+// Stations-Bon (Bar / Küche / Pizza)
 // ---------------------------------------------------------------------------
 
 export function buildStationTicket(opts: {
-  station: "bar" | "kueche";
+  station: "bar" | "kueche" | "pizza";
   tableName: string;
   items: ReceiptItem[];
+  orderType?: string;
   operatorName?: string | null;
   orderNo?: string;
 }): ReceiptPayload {
   const lines: ReceiptPayload["lines"] = [];
 
-  lines.push({ text: opts.station === "bar" ? "*** BAR ***" : "*** KÜCHE ***", align: "center", bold: true });
+  lines.push({ text: opts.station === "bar" ? "*** BAR ***" : opts.station === "pizza" ? "*** PIZZA ***" : "*** KÜCHE ***", align: "center", bold: true });
   lines.push({ text: "", align: "center" });
-  lines.push({ text: `Tisch ${opts.tableName}`, align: "center", bold: true, size: "large" });
+  if (opts.orderType) lines.push({ text: opts.orderType.toUpperCase(), align: "center", bold: true });
+  lines.push({ text: opts.orderType ? opts.tableName : `Tisch ${opts.tableName}`, align: "center", bold: true, size: "large" });
   lines.push({ text: nowStr(), align: "center" });
   if (opts.operatorName) lines.push({ text: `Bedienung: ${opts.operatorName}`, align: "center" });
   if (opts.orderNo) lines.push({ text: `Bon-Nr. ${opts.orderNo}`, align: "center" });
@@ -142,8 +201,9 @@ export function buildStationTicket(opts: {
 
   opts.items.forEach((it, idx) => {
     lines.push({ text: `${it.qty}x  ${it.product_name}`, bold: true, size: "double-h" });
+    for (const detail of pizzaDetailLines(it)) lines.push({ text: `   ${detail}` });
     if (it.modifiers?.length) {
-      for (const m of it.modifiers) lines.push({ text: `   + ${m}` });
+      for (const m of it.modifiers) lines.push({ text: `   ${/^[+\-]/.test(m) ? "" : /^ohne\s/i.test(m) ? "- " : "+ "}${m}` });
     }
     if (it.note) lines.push({ text: `   ! ${it.note}`, bold: true });
     if (idx < opts.items.length - 1) lines.push({ text: "" });
@@ -228,6 +288,7 @@ export function buildBill(opts: {
     if (it.modifiers?.length) {
       lines.push({ text: `   + ${it.modifiers.join(", ")}` });
     }
+    for (const detail of pizzaDetailLines(it)) lines.push({ text: `   ${detail}` });
   }
 
   lines.push({ separator: true });
@@ -363,8 +424,8 @@ export async function printCardReceipt(opts: {
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => p.type === "rechnung") ??
-    opts.printers.find((p) => p.type === "bon") ??
-    opts.printers[0];
+    opts.printers.find((p) => p.type === "bon");
+  if (!billPrinter && opts.printers.length) return "Kein Rechnungsdrucker konfiguriert";
 
   if (!billPrinter) {
     const r = await getAgentPrinters();
@@ -383,32 +444,32 @@ export async function printOrderToStations(opts: {
   tableName: string;
   items: ReceiptItem[];
   operatorName?: string | null;
+  orderType?: string;
 }): Promise<string[]> {
   const errors: string[] = [];
-  const { bar, kueche } = splitByStation(opts.items);
+  const { bar, kueche, pizza } = splitByStation(await withPizzaIngredients(opts.items));
 
   const barPrinter = opts.printers.find((p) => p.type === "bar");
   const kuechePrinter = opts.printers.find((p) => p.type === "kueche");
+  const pizzaPrinter = opts.printers.find((p) => p.type === "pizza");
   const orderNo = shortId();
 
-  if (bar.length && barPrinter) {
-    const r = await printReceipt(barPrinter, buildStationTicket({
-      station: "bar", tableName: opts.tableName, items: bar,
-      operatorName: opts.operatorName, orderNo,
+  for (const [station, items, printer] of [
+    ["pizza", pizza, pizzaPrinter],
+    ["kueche", kueche, kuechePrinter],
+    ["bar", bar, barPrinter ?? kuechePrinter],
+  ] as const) {
+    if (!items.length) continue;
+    const label = station === "pizza" ? "Pizza" : station === "kueche" ? "Küche" : "Bar";
+    if (!printer) {
+      errors.push(`${label}: Kein ${station === "bar" ? "Bar- oder Küchen-" : `${label}-`}Drucker konfiguriert`);
+      continue;
+    }
+    const r = await printReceipt(printer, buildStationTicket({
+      station, tableName: opts.tableName, items,
+      orderType: opts.orderType, operatorName: opts.operatorName, orderNo,
     }));
-    if (!r.ok && r.error) errors.push(`Bar: ${r.error}`);
-  } else if (bar.length && !barPrinter) {
-    errors.push("Bar: Kein Bar-Drucker konfiguriert");
-  }
-
-  if (kueche.length && kuechePrinter) {
-    const r = await printReceipt(kuechePrinter, buildStationTicket({
-      station: "kueche", tableName: opts.tableName, items: kueche,
-      operatorName: opts.operatorName, orderNo,
-    }));
-    if (!r.ok && r.error) errors.push(`Küche: ${r.error}`);
-  } else if (kueche.length && !kuechePrinter) {
-    errors.push("Küche: Kein Küchen-Drucker konfiguriert");
+    if (!r.ok) errors.push(`${label}: ${r.error ?? "Druck fehlgeschlagen"}`);
   }
 
   return errors;
@@ -430,8 +491,8 @@ export async function printBill(opts: {
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => p.type === "rechnung") ??
-    opts.printers.find((p) => p.type === "bon") ??
-    opts.printers[0];
+    opts.printers.find((p) => p.type === "bon");
+  if (!billPrinter && opts.printers.length) return "Kein Rechnungsdrucker konfiguriert";
 
   // Fallback: kein Drucker in der DB konfiguriert → Standard-Windows-Drucker
   // vom Print-Agent verwenden, damit der Bon trotzdem rauskommt.
@@ -445,7 +506,8 @@ export async function printBill(opts: {
   }
 
   const settings = await loadReceiptSettings();
-  const r = await printReceipt(billPrinter, buildBill({ ...opts, settings }));
+  const items = await withPizzaIngredients(opts.items);
+  const r = await printReceipt(billPrinter, buildBill({ ...opts, items, settings }));
   return r.ok ? null : r.error ?? "Druckfehler";
 }
 

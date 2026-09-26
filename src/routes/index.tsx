@@ -74,6 +74,10 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "Service — PIRATINO POS" },
       { name: "description", content: "Tablet-Service: Tisch wählen, Bestellung aufnehmen, an Bar & Küche senden." },
+       { property: "og:title", content: "Service — PIRATINO POS" },
+       { property: "og:description", content: "Tisch wählen, Bestellung aufnehmen und an die Stationen senden." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ServiceTablet,
@@ -336,6 +340,7 @@ function ServiceTablet() {
           qty: l.qty,
           unit_price: l.product.price,
           category: l.product.category,
+          description: l.product.description,
           modifiers: l.modifiers,
           note: l.note ?? null,
         }));
