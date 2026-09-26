@@ -23,7 +23,6 @@ const pizzaPhotos: Record<string, string> = {
   "toscana-scharf": "toscana",
   "calzone-zugedeckt": "calzone",
   "calzone-special-zugedeckt": "calzone-special",
-  "calzone-puzzone-zugedeckt": "calzone",
   "contandino": "contadino",
   "vegeteriana": "vegetariana",
   "o-sole-mio": "o-sole-mio",
@@ -53,6 +52,8 @@ export function qrProductImage(name: string, category: string): string | undefin
   }
 
   if (/pizza|calzone/i.test(category) || /pizza|calzone/i.test(name)) {
+    // Kinder-Piratino has different toppings from the regular Piratino.
+    if (/kinder/i.test(category) && /piratino/i.test(name)) return undefined;
     const key = slug(name
       .replace(/\s*-\s*(?:32|45|50)\s*cm\b/gi, "")
       .replace(/\s*-\s*kids\b/gi, "")
