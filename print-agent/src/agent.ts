@@ -169,11 +169,11 @@ function buildPayload(payload: ReceiptPayload): Buffer {
 
   for (const line of payload.lines) {
     if ("separator" in line && line.separator) {
-      enc.align("left").size("normal").bold(false).line("-".repeat(COLS));
+      enc.align("left").size("normal").width(1).height(1).bold(false).line("-".repeat(COLS));
       continue;
     }
     if ("qr" in line && line.qr) {
-      enc.align("center").size("normal").bold(false);
+      enc.align("center").size("normal").width(1).height(1).bold(false);
       try {
         printNativeQr(enc, line.qr, line.size ?? 7);
         enc.align("center").size("normal").bold(false).line("Kurier-Link:");
