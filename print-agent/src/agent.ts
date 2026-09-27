@@ -28,7 +28,7 @@ const EscPosEncoder = require("esc-pos-encoder");
 import { LOGO_B64, LOGO_WIDTH, LOGO_HEIGHT } from "./logo";
 import qrcode from "qrcode-generator";
 
-const VERSION = "1.0.1";
+const VERSION = "1.0.2";
 const PORT = Number(process.env.PORT ?? 9110);
 const HOST = "0.0.0.0";
 
@@ -72,6 +72,29 @@ function padCols(left: string, right: string, width = COLS): string {
     return l.slice(0, Math.max(0, width - r.length - 1)) + " " + r;
   }
   return l + " ".repeat(width - l.length - r.length) + r;
+}
+
+// The encoder's size() selects Font A/B; actual enlargement uses width()/height().
+function wrapForPaper(text: string, columns: number): string[] {
+  const result: string[] = [];
+  for (const paragraph of text.split("\n")) {
+    let row = "";
+    for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+      if (row && row.length + 1 + word.length > columns) {
+        result.push(row);
+        row = "";
+      }
+      if (word.length > columns) {
+        if (row) result.push(row);
+        for (let i = 0; i < word.length - columns; i += columns) result.push(word.slice(i, i + columns));
+        row = word.slice(Math.floor((word.length - 1) / columns) * columns);
+      } else {
+        row = row ? `${row} ${word}` : word;
+      }
+    }
+    result.push(row);
+  }
+  return result;
 }
 
 function printRaster(enc: any, width: number, height: number, bytes: Buffer) {
@@ -146,11 +169,11 @@ function buildPayload(payload: ReceiptPayload): Buffer {
 
   for (const line of payload.lines) {
     if ("separator" in line && line.separator) {
-      enc.align("left").size("normal").bold(false).line("-".repeat(COLS));
+      enc.align("left").size("normal").width(1).height(1).bold(false).line("-".repeat(COLS));
       continue;
     }
     if ("qr" in line && line.qr) {
-      enc.align("center").size("normal").bold(false);
+      enc.align("center").size("normal").width(1).height(1).bold(false);
       try {
         printNativeQr(enc, line.qr, line.size ?? 7);
         enc.align("center").size("normal").bold(false).line("Kurier-Link:");
@@ -175,21 +198,20 @@ function buildPayload(payload: ReceiptPayload): Buffer {
     const l = line as Exclude<ReceiptLine, { separator: true } | { qr: string; size?: number } | { logo: true }>;
     enc.align(l.align ?? "left");
     enc.bold(!!l.bold);
-    // esc-pos-encoder size: 'normal' default, otherwise width/height multiplier
-    if (l.size === "large") enc.size(2 as any);
-    else if (l.size === "double-h") enc.size(1 as any, 2 as any);
-    else if (l.size === "double-w") enc.size(2 as any, 1 as any);
-    else enc.size("normal");
+    // Font A throughout; width/height are the real ESC/POS magnification commands.
+    const width = l.size === "large" || l.size === "double-w" ? 2 : 1;
+    const height = l.size === "large" || l.size === "double-h" ? 2 : 1;
+    enc.size("normal").width(width).height(height);
 
     if (l.cols) {
-      enc.line(padCols(l.cols[0] ?? "", l.cols[1] ?? ""));
+      enc.line(padCols(l.cols[0] ?? "", l.cols[1] ?? "", Math.floor(COLS / width)));
     } else {
-      enc.line(l.text ?? "");
+      for (const row of wrapForPaper(l.text ?? "", Math.floor(COLS / width))) enc.line(row);
     }
   }
 
-  enc.bold(false).align("left").size("normal");
-  enc.newline().newline().newline();
+  enc.bold(false).align("left").size("normal").width(1).height(1);
+  enc.newline().newline();
 
   if (payload.cut !== false) enc.cut("partial");
 
