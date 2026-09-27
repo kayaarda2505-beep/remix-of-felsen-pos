@@ -191,23 +191,23 @@ export function buildStationTicket(opts: {
   const lines: ReceiptPayload["lines"] = [];
 
   const title = opts.station === "bar" ? "*** Barbon ***" : opts.station === "pizza" ? "*** Pizzabon ***" : "*** Küchenbon ***";
-  lines.push({ text: title, align: "center", bold: true, size: "double-h" });
-  lines.push({ text: `Tisch:  ${opts.tableName}`, bold: true, size: "double-h" });
-  if (opts.orderType) lines.push({ text: opts.orderType, bold: true });
+  lines.push({ text: title, align: "center", bold: true, size: "large" });
+  lines.push({ text: `Tisch:  ${opts.tableName}`, bold: true, size: "large" });
+  if (opts.orderType) lines.push({ text: opts.orderType, bold: true, size: "double-h" });
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
-  lines.push({ text: `Datum/Zeit: ${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} / ${p(d.getHours())}:${p(d.getMinutes())}` });
-  if (opts.operatorName) lines.push({ text: `Benutzer:   ${opts.operatorName}` });
+  lines.push({ text: `Datum/Zeit: ${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} / ${p(d.getHours())}:${p(d.getMinutes())}`, size: "double-h" });
+  if (opts.operatorName) lines.push({ text: `Benutzer:   ${opts.operatorName}`, size: "double-h" });
   lines.push({ separator: true });
 
   opts.items.forEach((it) => {
-    lines.push({ text: `${it.qty}  ${it.product_name}`, bold: true, size: "double-h" });
-    for (const detail of pizzaDetailLines(it)) lines.push({ text: `   ${detail}` });
+    lines.push({ text: `${it.qty}  ${it.product_name}`, bold: true, size: "large" });
+    for (const detail of pizzaDetailLines(it)) lines.push({ text: `   ${detail}`, size: "double-h" });
     if (it.modifiers?.length) {
-      for (const m of it.modifiers) lines.push({ text: `   ${/^[+\-]/.test(m) ? "" : /^ohne\s/i.test(m) ? "- " : "+ "}${m}` });
+      for (const m of it.modifiers) lines.push({ text: `   ${/^[+\-]/.test(m) ? "" : /^ohne\s/i.test(m) ? "- " : "+ "}${m}`, bold: true, size: "double-h" });
     }
-    if (it.note) lines.push({ text: `   ! ${it.note}`, bold: true });
-    lines.push({ text: (it.unit_price * it.qty).toFixed(2), align: "right" });
+    if (it.note) lines.push({ text: `   ! ${it.note}`, bold: true, size: "double-h" });
+    lines.push({ text: (it.unit_price * it.qty).toFixed(2), align: "right", bold: true, size: "double-h" });
     if (it !== opts.items[opts.items.length - 1]) lines.push({ text: "" });
   });
 

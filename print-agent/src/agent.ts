@@ -28,7 +28,7 @@ const EscPosEncoder = require("esc-pos-encoder");
 import { LOGO_B64, LOGO_WIDTH, LOGO_HEIGHT } from "./logo";
 import qrcode from "qrcode-generator";
 
-const VERSION = "1.0.2";
+const VERSION = "1.0.3";
 const PORT = Number(process.env.PORT ?? 9110);
 const HOST = "0.0.0.0";
 
