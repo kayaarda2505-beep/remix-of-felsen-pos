@@ -1,10 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import { useMemo, useState, useRef, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { sumupSendToReader, sumupGetTransactionStatus } from "@/lib/sumup.functions";
 
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -30,12 +28,11 @@ import {
   Shapes,
   Move,
   Banknote,
-  Smartphone,
 } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/use-products";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductModifierDialog, type ProductCustomization } from "@/components/ProductModifierDialog";
-import { printOrderToStations, printBill, printCardReceipt, type ReceiptItem } from "@/lib/receipt";
+import { printOrderToStations, printBill, type ReceiptItem } from "@/lib/receipt";
 import { isDesktopApp } from "@/lib/printer-bridge";
 
 type Area = "indoor" | "outdoor" | "bar";
