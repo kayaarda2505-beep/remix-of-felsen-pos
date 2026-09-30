@@ -183,13 +183,13 @@ function ServiceTablet() {
   } | null>(null);
 
   const payTab = useMutation({
-    mutationFn: async ({ method, tip = 0, paidAmount }: { method: "cash" | "card_terminal"; tip?: number; paidAmount?: number }) => {
+    mutationFn: async ({ method, label, tip = 0, paidAmount }: { method: "cash" | "card_terminal" | "twint"; label?: string; tip?: number; paidAmount?: number }) => {
       if (!activeTableOrder || !selectedTable) throw new Error("Keine offene Rechnung");
       const baseTotal = Number(activeTableOrder.total);
       const effectiveTip = Math.max(0, +Number(tip || 0).toFixed(2));
       const finalTotal = +(baseTotal + effectiveTip).toFixed(2);
       const paymentAmount = +(paidAmount ?? finalTotal).toFixed(2);
-      const paymentMethod = method === "cash" ? "Bar" : "Karte";
+      const paymentMethod = method === "cash" ? "Bar" : (label ?? "Karte");
       const snapshot = {
         tableName: selectedTable.name,
         items: tabItems.map((it) => ({
@@ -1026,10 +1026,28 @@ function ServiceTablet() {
   );
 }
 
+const SERVICE_CARD_METHODS = [
+  "TWINT",
+  "Mastercard",
+  "Maestro",
+  "Visa",
+  "V Pay",
+  "Lunch-Check",
+  "PostFinance",
+  "Diners Club",
+  "Amex",
+] as const;
+
+type ServicePayment = {
+  method: "cash" | "card_terminal" | "twint";
+  label?: string;
+  tip?: number;
+  paidAmount?: number;
+};
+
 function PayChoiceDialog({
   total,
   tableName,
-  printers,
   onClose,
   onPaid,
 }: {
@@ -1037,77 +1055,12 @@ function PayChoiceDialog({
   tableName: string;
   printers: any[];
   onClose: () => void;
-  onPaid: (payment: { method: "cash" | "card_terminal"; tip?: number; paidAmount?: number }) => void;
+  onPaid: (payment: ServicePayment) => void;
 }) {
   const [mode, setMode] = useState<"choose" | "card" | "cash">("choose");
-  const [phase, setPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
-  const [msg, setMsg] = useState("");
   const [givenStr, setGivenStr] = useState("");
   const [tipStr, setTipStr] = useState("0");
-  const sendToReader = useServerFn(sumupSendToReader);
-  const getTxStatus = useServerFn(sumupGetTransactionStatus);
-
-  const runSumUp = async () => {
-    setPhase("sending");
-    setMsg("Sende an Terminal …");
-    try {
-      const { clientTransactionId } = await sendToReader({
-        data: { amount: total, description: `Tisch ${tableName}` },
-      });
-      setPhase("waiting");
-      setMsg("Am Terminal bezahlen …");
-      if (!clientTransactionId) return;
-      const started = Date.now();
-      while (Date.now() - started < 120_000) {
-        await new Promise((r) => setTimeout(r, 2500));
-        try {
-          const s = await getTxStatus({ data: { clientTransactionId } });
-          if (s.status === "SUCCESSFUL") {
-            setPhase("ok");
-            const reportedTip = typeof s.tip === "number" && Number.isFinite(s.tip) && s.tip > 0 ? +Number(s.tip).toFixed(2) : undefined;
-            const terminalAmount = typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
-              ? +Number(s.amount).toFixed(2)
-              : +(total + (reportedTip ?? 0)).toFixed(2);
-            const terminalTip = reportedTip ?? Math.max(0, +(terminalAmount - total).toFixed(2));
-            setMsg(terminalTip > 0 ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}` : "Bezahlung erfolgreich");
-            if (isDesktopApp()) {
-              const err = await printCardReceipt({
-                printers,
-                info: {
-                  transactionId: s.transactionId,
-                  transactionCode: s.transactionCode,
-                  cardType: s.cardType,
-                  cardLast4: s.cardLast4,
-                  authCode: s.authCode,
-                  entryMode: s.entryMode,
-                  amount: terminalAmount,
-                  baseAmount: total,
-                  tip: terminalTip,
-                  currency: s.currency,
-                  timestamp: s.timestamp,
-                  merchantCode: s.merchantCode,
-                  tableName,
-                },
-              });
-              if (err) toast.error(`Karten-Beleg: ${err}`);
-            }
-            setTimeout(() => onPaid({ method: "card_terminal", tip: terminalTip, paidAmount: terminalAmount }), 500);
-            return;
-          }
-          if (s.status === "FAILED" || s.status === "CANCELLED") {
-            setPhase("fail");
-            setMsg(s.status === "CANCELLED" ? "Am Terminal abgebrochen" : "Zahlung fehlgeschlagen");
-            return;
-          }
-        } catch {}
-      }
-      setPhase("fail");
-      setMsg("Zeitüberschreitung. Bitte am Terminal prüfen.");
-    } catch (e: any) {
-      setPhase("fail");
-      setMsg(e?.message ?? "Fehler beim Senden");
-    }
-  };
+  const [cardMethod, setCardMethod] = useState<string>(SERVICE_CARD_METHODS[0]);
 
   return (
     <motion.div
@@ -1151,8 +1104,8 @@ function PayChoiceDialog({
             </button>
             <button
               onClick={() => {
+                setTipStr("0");
                 setMode("card");
-                runSumUp();
               }}
               className="glass rounded-2xl py-6 flex flex-col items-center gap-2 hover:border-accent/40 transition-colors"
             >
@@ -1258,51 +1211,66 @@ function PayChoiceDialog({
         })()}
 
 
-        {mode === "card" && (
-          <div className="space-y-3">
-            <button
-              onClick={runSumUp}
-              disabled={phase === "sending" || phase === "waiting"}
-              className="w-full rounded-xl py-3 bg-accent/15 hover:bg-accent/25 border border-accent/40 text-accent font-medium flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {phase === "sending" || phase === "waiting" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Smartphone className="w-4 h-4" />
-              )}
-              {phase === "idle" && `An SumUp-Terminal senden · CHF ${total.toFixed(2)}`}
-              {phase === "sending" && "Sende …"}
-              {phase === "waiting" && "Warte auf Terminal …"}
-              {phase === "ok" && "Bezahlt ✓"}
-              {phase === "fail" && "Erneut senden"}
-            </button>
-            {msg && (
-              <div
-                className={`text-xs text-center ${
-                  phase === "fail"
-                    ? "text-destructive"
-                    : phase === "ok"
-                      ? "text-success"
-                      : "text-muted-foreground"
-                }`}
-              >
-                {msg}
+        {mode === "card" && (() => {
+          const tip = Math.max(0, Number(tipStr.replace(",", ".")) || 0);
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-2">
+                {SERVICE_CARD_METHODS.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setCardMethod(m)}
+                    className={`rounded-xl py-2.5 text-sm font-medium border transition-colors ${
+                      cardMethod === m
+                        ? "bg-accent/20 border-accent text-accent"
+                        : "bg-white/5 border-transparent hover:bg-white/10"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
               </div>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setMode("choose");
-                setPhase("idle");
-                setMsg("");
-              }}
-              disabled={phase === "sending" || phase === "waiting"}
-              className="w-full text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
-            >
-              ← Zurück
-            </button>
-          </div>
-        )}
+              <div>
+                <label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Trinkgeld (CHF)
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.05"
+                  min={0}
+                  value={tipStr}
+                  onChange={(e) => setTipStr(e.target.value)}
+                  className="w-full mt-1 bg-white/5 rounded-xl px-3 py-2 text-lg tabular-nums outline-none focus:ring-2 ring-accent/40"
+                />
+              </div>
+              <div className="text-xs text-center text-muted-foreground">
+                Betrag CHF {(total + tip).toFixed(2)} am Terminal manuell eingeben und hier bestätigen.
+              </div>
+              <button
+                onClick={() =>
+                  onPaid({
+                    method: cardMethod.toLowerCase().includes("twint") ? "twint" : "card_terminal",
+                    label: cardMethod,
+                    tip,
+                    paidAmount: +(total + tip).toFixed(2),
+                  })
+                }
+                className="w-full py-3 rounded-xl bg-success/20 text-success font-semibold hover:bg-success/30"
+              >
+                Bezahlt mit {cardMethod} bestätigen
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("choose")}
+                className="w-full py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                ← Zurück
+              </button>
+            </div>
+          );
+        })()}
       </motion.div>
     </motion.div>
   );
