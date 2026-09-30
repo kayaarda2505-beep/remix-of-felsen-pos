@@ -192,7 +192,7 @@ export function ProductModifierDialog({
                   const pastaShape: ModifierGroup[] = isLunchMenu && /pasta/i.test(product.name) && pastaChoice && !hasPastaShapeGroup && !/lasagne|cannelloni|tortellini|al forno/i.test(chosenPasta)
                     ? [{ label: "Nudelsorte wählen", items: [{ label: "Spaghetti" }, { label: "Penne" }] }]
                     : [];
-                  const menuGroups = groups.map((group) => /salatsosse/i.test(group.label) && isLunchMenu
+                  const menuGroups: ModifierGroup[] = groups.map((group): ModifierGroup => /salatsosse/i.test(group.label) && isLunchMenu
                     ? { ...group, items: [
                         ...group.items,
                         ...[{ label: "Keine Sosse" }, { label: "Eigene Sosse" }].filter((item) => !group.items.some((existing) => existing.label === item.label)),
