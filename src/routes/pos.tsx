@@ -1061,7 +1061,7 @@ function POS() {
                 table_name: activeOrder.dining_tables?.name ?? "Tisch",
                 amount,
                 tip: paidTip,
-                method: method.toLowerCase() === "bar" ? "cash" : "card_terminal",
+                method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
                 status: "paid",
                 handled_at: new Date().toISOString(),
                 note: `Teilzahlung · ${method}`,
