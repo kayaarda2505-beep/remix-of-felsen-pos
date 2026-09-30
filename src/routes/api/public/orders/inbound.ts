@@ -196,3 +196,41 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
     },
   },
 });
+
+// Akzeptiert unterschiedliche Feldnamen der Website (note/notes/comment…, payment/paymentMethod…)
+function pickStr(obj: any, keys: string[]): string | null {
+  if (!obj || typeof obj !== "object") return null;
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "string" && v.trim()) return v.trim().slice(0, 500);
+  }
+  return null;
+}
+
+const NOTE_KEYS = ["note", "notes", "comment", "comments", "remark", "remarks", "message", "delivery_note", "deliveryNote", "order_note", "orderNote", "bemerkung", "notiz", "hinweis", "instructions"];
+const PAY_KEYS = ["payment_method", "paymentMethod", "payment", "payment_type", "paymentType", "pay_with", "payWith", "zahlungsart", "zahlung"];
+
+function mapPayment(v: unknown): "cash" | "card" | "twint" | null {
+  const raw = typeof v === "object" && v ? (v as any).method ?? (v as any).type ?? "" : v;
+  const s = String(raw ?? "").toLowerCase();
+  if (!s) return null;
+  if (s.includes("twint")) return "twint";
+  if (/(cash|bar)/.test(s)) return "cash";
+  if (/(card|karte|kredit|debit|visa|master|sumup)/.test(s)) return "card";
+  return null;
+}
+
+function normalizePayload(body: any) {
+  if (!body || typeof body !== "object") return body;
+  const out: any = { ...body };
+  const c = body.customer ?? {};
+  out.note = pickStr(body, NOTE_KEYS) ?? pickStr(c, NOTE_KEYS);
+  let pay: unknown = null;
+  for (const k of PAY_KEYS) if (body[k] != null) { pay = body[k]; break; }
+  out.payment_method = mapPayment(pay);
+  if (Array.isArray(body.items)) {
+    out.items = body.items.map((i: any) => ({ ...i, note: pickStr(i, NOTE_KEYS) }));
+  }
+  console.log("[inbound] keys", Object.keys(body), "note?", !!out.note, "pay", out.payment_method);
+  return out;
+}
