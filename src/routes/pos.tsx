@@ -1171,30 +1171,6 @@ function PaymentDialog({
   const [cardMethod, setCardMethod] = useState<string>(CARD_METHODS[0]);
   const [receivedStr, setReceivedStr] = useState<string>(total.toFixed(2));
   const [diffType, setDiffType] = useState<"tip" | "change">(mode === "card" ? "tip" : "change");
-  const [sumupPhase, setSumupPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
-  const [sumupMsg, setSumupMsg] = useState<string>("");
-  const sendToReader = useServerFn(sumupSendToReader);
-  const getTxStatus = useServerFn(sumupGetTransactionStatus);
-  const listReaders = useServerFn(sumupListReaders);
-
-  const diagnose = async () => {
-    setSumupMsg("Lade Reader …");
-    try {
-      const r = await listReaders({ data: undefined as any });
-      if (!r.readers.length) {
-        setSumupMsg(
-          `Merchant ${r.merchantCode}: keine Reader über API gefunden. ` +
-            `Der Reader muss im selben SumUp-Konto hängen wie der API-Key; die Seriennummer ist nicht die rdr_… Reader-ID.`,
-        );
-      } else {
-        const list = r.readers.map((x) => `${x.name ?? "?"} → ${x.id} [${x.status ?? "?"}]`).join("  |  ");
-        setSumupMsg(`Verfügbare Reader: ${list}`);
-      }
-    } catch (e: any) {
-      setSumupMsg(e?.message ?? "Diagnose fehlgeschlagen");
-    }
-  };
-
   const received = Number(receivedStr.replace(",", ".")) || 0;
   const diff = +(received - total).toFixed(2);
   const valid = received >= total;
@@ -1262,13 +1238,6 @@ function PaymentDialog({
             <div className="text-xs text-muted-foreground text-center mt-3">
               Betrag am Terminal manuell eingeben und hier bestätigen.
             </div>
-            <button
-              type="button"
-              onClick={diagnose}
-              className="mt-1 w-full text-[11px] text-muted-foreground hover:text-accent underline"
-            >
-              Reader-ID suchen
-            </button>
           </div>
         )}
 
@@ -1376,10 +1345,6 @@ function SplitPaymentDialog({
 }) {
   const [selQty, setSelQty] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
-  const [sumupPhase, setSumupPhase] = useState<"idle" | "sending" | "waiting" | "ok" | "fail">("idle");
-  const [sumupMsg, setSumupMsg] = useState<string>("");
-  const sendToReader = useServerFn(sumupSendToReader);
-  const getTxStatus = useServerFn(sumupGetTransactionStatus);
 
   const selections = items
     .map((i) => ({ itemId: i.id, qty: Math.min(i.qty, Math.max(0, selQty[i.id] ?? 0)) }))
