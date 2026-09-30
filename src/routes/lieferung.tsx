@@ -227,7 +227,7 @@ function Lieferung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, opened_at, delivery_address, delivery_note, courier_started_at, courier_id, courier_name")
+        .select("id, total, opened_at, delivery_address, delivery_note, courier_started_at, courier_id, courier_name, order_number")
         .eq("order_type", "delivery")
         .eq("status", "open")
         .is("courier_started_at", null)
@@ -246,7 +246,7 @@ function Lieferung() {
       start.setHours(0, 0, 0, 0);
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status, opened_at, delivery_address, delivery_note, customer_id, courier_started_at, courier_name")
+        .select("id, total, status, opened_at, delivery_address, delivery_note, customer_id, courier_started_at, courier_name, order_number")
         .eq("order_type", "delivery")
         .gte("opened_at", start.toISOString())
         .order("opened_at", { ascending: false });
@@ -286,7 +286,7 @@ function Lieferung() {
       start.setHours(0, 0, 0, 0);
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status, opened_at, closed_at, delivery_address, delivery_note, contact_name, contact_phone")
+        .select("id, total, status, opened_at, closed_at, delivery_address, delivery_note, contact_name, contact_phone, order_number")
         .eq("order_type", "takeaway")
         .gte("opened_at", start.toISOString())
         .order("opened_at", { ascending: false });
