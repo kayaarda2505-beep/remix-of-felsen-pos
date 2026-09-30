@@ -327,6 +327,35 @@ function Lieferung() {
         .update({ status: "paid", closed_at: new Date().toISOString() })
         .eq("id", order.id);
       if (error) throw error;
+      if (isDesktopApp()) {
+        try {
+          const [{ data: printers }, { data: its }] = await Promise.all([
+            supabase.from("printers").select("*").eq("active", true),
+            supabase.from("order_items").select("product_name, qty, unit_price, category, modifiers, note").eq("order_id", order.id),
+          ]);
+          const items: ReceiptItem[] = (its ?? []).map((it: any) => ({
+            product_name: it.product_name,
+            qty: it.qty,
+            unit_price: Number(it.unit_price),
+            category: it.category,
+            modifiers: Array.isArray(it.modifiers) ? it.modifiers : [],
+            note: it.note ?? null,
+          }));
+          const err = await printBill({
+            printers: (printers ?? []) as any,
+            tableName: `Takeaway · ${label}`,
+            items,
+            total: amount,
+            tip: 0,
+            paymentMethod: method === "cash" ? "Bar" : "Karte",
+            note: order.delivery_note ?? null,
+            orderNo: order.order_number != null ? String(order.order_number) : undefined,
+          });
+          if (err) toast.error(`Druck: ${err}`);
+        } catch (e) {
+          toast.error(`Druck: ${e instanceof Error ? e.message : "Fehler"}`);
+        }
+      }
     },
     onSuccess: () => {
       setPayingTakeaway(null);

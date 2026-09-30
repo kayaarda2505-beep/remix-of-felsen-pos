@@ -250,7 +250,21 @@ function ServiceTablet() {
       qc.invalidateQueries({ queryKey: ["orders_from_payments"] });
       qc.invalidateQueries({ queryKey: ["cash_cum_v4"] });
       reset();
-      if (isDesktopApp()) setPendingReceipt(snapshot);
+      if (isDesktopApp()) {
+        void printBill({
+          printers,
+          tableName: snapshot.tableName,
+          items: snapshot.items,
+          subtotal: snapshot.subtotal,
+          total: snapshot.total,
+          tip: snapshot.tip,
+          paymentMethod: snapshot.paymentMethod,
+          orderNo: snapshot.orderNo,
+        }).then((err) => {
+          if (err) toast.error(`Druck: ${err}`);
+          else toast.success("Quittung gedruckt");
+        });
+      }
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
