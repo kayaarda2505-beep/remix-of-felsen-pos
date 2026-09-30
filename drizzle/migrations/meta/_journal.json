@@ -8,6 +8,13 @@
       "when": 1790460640502,
       "tag": "0000_central_station_printing",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790772100032,
+      "tag": "0001_web_order_accept",
+      "breakpoints": true
     }
   ]
 }
