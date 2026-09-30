@@ -1688,6 +1688,13 @@ for (const category of DELIVERY_MENU) {
         items: [{ label: "Spaghetti" }, { label: "Penne" }],
       }];
     }
+    // Gerichte "Mit 1 Beilage" lassen die Beilage wählen.
+    if (/mit\s*1\s*beilage/i.test(item.description ?? "") && !item.modifierGroups?.some((group) => /beilage wählen/i.test(group.label))) {
+      item.modifierGroups = [...(item.modifierGroups ?? []), {
+        label: "Beilage wählen",
+        items: [{ label: "Reis" }, { label: "Salat" }, { label: "Gemüse" }, { label: "Pommes" }],
+      }];
+    }
     if (!/mittagsmen/i.test(category.category)) continue;
     for (const group of item.modifierGroups ?? []) {
       if (/pizza/i.test(group.label)) group.items.sort((a, b) => a.label.localeCompare(b.label, "de-CH"));
