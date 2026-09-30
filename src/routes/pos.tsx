@@ -1381,78 +1381,11 @@ function SplitPaymentDialog({
   const payCard = async () => {
     if (!valid || busy) return;
     setBusy(true);
-    setSumupPhase("sending");
-    setSumupMsg("Sende an Terminal …");
     try {
-      const { clientTransactionId } = await sendToReader({
-        data: { amount, description: `Teilzahlung ${tableName}` },
-      });
-      setSumupPhase("waiting");
-      setSumupMsg("Am Terminal bezahlen …");
-      if (!clientTransactionId) return;
-      const started = Date.now();
-      while (Date.now() - started < 120_000) {
-        await new Promise((r) => setTimeout(r, 2500));
-        try {
-          const s = await getTxStatus({ data: { clientTransactionId } });
-          if (s.status === "SUCCESSFUL") {
-            const reportedTip = typeof s.tip === "number" && Number.isFinite(s.tip) && s.tip > 0 ? +Number(s.tip).toFixed(2) : undefined;
-            const terminalAmount =
-              typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
-                ? +Number(s.amount).toFixed(2)
-                : +(amount + (reportedTip ?? 0)).toFixed(2);
-            const terminalTip = reportedTip ?? Math.max(0, +(terminalAmount - amount).toFixed(2));
-            setSumupPhase("ok");
-            setSumupMsg(
-              terminalTip > 0
-                ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}`
-                : "Bezahlung erfolgreich",
-            );
-            if (isDesktopApp()) {
-              await printCardReceipt({
-                printers,
-                info: {
-                  transactionId: s.transactionId,
-                  transactionCode: s.transactionCode,
-                  cardType: s.cardType,
-                  cardLast4: s.cardLast4,
-                  authCode: s.authCode,
-                  entryMode: s.entryMode,
-                  amount: terminalAmount,
-                  baseAmount: amount,
-                  tip: terminalTip,
-                  currency: s.currency,
-                  timestamp: s.timestamp,
-                  merchantCode: s.merchantCode,
-                  tableName,
-                },
-              });
-            }
-            await onPaid({ amount: terminalAmount, method: "SumUp Terminal", tip: terminalTip, selections });
-            return;
-          }
-          if (s.status === "FAILED" || s.status === "CANCELLED") {
-            setSumupPhase("fail");
-            setSumupMsg(s.status === "CANCELLED" ? "Am Terminal abgebrochen" : "Zahlung fehlgeschlagen");
-            return;
-          }
-        } catch {
-          /* weiter pollen */
-        }
-      }
-      setSumupPhase("fail");
-      setSumupMsg("Zeitüberschreitung.");
-    } catch (e: any) {
-      setSumupPhase("fail");
-      setSumupMsg(e?.message ?? "Fehler");
+      await onPaid({ amount, method: "Karte", selections });
     } finally {
       setBusy(false);
     }
-  };
-
-  const confirmCardManual = async () => {
-    if (!valid) return;
-    await onPaid({ amount, method: "Karte manuell", selections });
   };
 
   void orderId; void tableId;
@@ -1555,38 +1488,16 @@ function SplitPaymentDialog({
           </button>
           <button
             onClick={payCard}
-            disabled={!valid || busy || sumupPhase === "sending" || sumupPhase === "waiting"}
+            disabled={!valid || busy}
             className="glass rounded-xl py-3 flex flex-col items-center gap-1 text-sm hover:border-accent/40 disabled:opacity-40"
           >
-            {sumupPhase === "sending" || sumupPhase === "waiting" ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <CreditCard className="w-5 h-5" />
-            )}
-            Karte (SumUp)
+            <CreditCard className="w-5 h-5" />
+            Karte
           </button>
         </div>
-        {sumupMsg && (
-          <div
-            className={`text-xs mt-2 text-center ${
-              sumupPhase === "fail"
-                ? "text-destructive"
-                : sumupPhase === "ok"
-                  ? "text-success"
-                  : "text-muted-foreground"
-            }`}
-          >
-            {sumupMsg}
-          </div>
-        )}
-        {sumupPhase === "fail" && (
-          <button
-            onClick={confirmCardManual}
-            className="w-full mt-2 rounded-xl py-2 text-xs bg-white/5 hover:bg-white/10"
-          >
-            Trotzdem als Karten-Zahlung markieren
-          </button>
-        )}
+        <div className="text-xs text-muted-foreground text-center mt-2">
+          Betrag am Terminal manuell eingeben und hier bestätigen.
+        </div>
       </motion.div>
     </motion.div>
   );
