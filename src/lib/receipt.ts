@@ -303,7 +303,7 @@ export function buildBill(opts: {
       lines.push({ text: `   à ${cur} ${fmt(it.unit_price)}` });
     }
     if (it.modifiers?.length) {
-      lines.push({ text: `   + ${it.modifiers.join(", ")}` });
+      lines.push({ text: `   ${it.modifiers.map((m) => /^[+\-]/.test(m) ? m : `+ ${m}`).join(", ")}` });
     }
     for (const detail of pizzaDetailLines(it)) lines.push({ text: `   ${detail}` });
     if (it.note) lines.push({ text: `   Notiz: ${it.note}`, bold: true });
