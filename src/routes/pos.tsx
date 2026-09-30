@@ -98,7 +98,7 @@ function POS() {
         .eq("status", "open")
         .order("opened_at");
       if (error) throw error;
-      return (data ?? []).filter((order) => !(order.order_type === "delivery" && order.opened_by_name === "Website")) as unknown as OpenOrder[];
+      return (data ?? []).filter((order) => order.opened_by_name !== "Website") as unknown as OpenOrder[];
     },
     refetchInterval: 5000,
   });
