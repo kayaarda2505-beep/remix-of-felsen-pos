@@ -195,6 +195,7 @@ function Lieferung() {
         .from("team_members")
         .select("id, name, role")
         .eq("active", true)
+        .ilike("name", "Kurier%")
         .order("name");
       if (error) throw error;
       return data ?? [];
