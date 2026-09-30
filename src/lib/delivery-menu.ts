@@ -1681,6 +1681,13 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
 for (const category of DELIVERY_MENU) {
   if (/pizza/i.test(category.category)) category.items.sort((a, b) => a.name.localeCompare(b.name, "de-CH"));
   for (const item of category.items) {
+    // Pastas mit "Nudelsorte nach Wahl" fragen immer Spaghetti oder Penne.
+    if (/nudelsorte nach wahl/i.test(item.description ?? "") && !item.modifierGroups?.some((group) => /nudelsorte/i.test(group.label))) {
+      item.modifierGroups = [...(item.modifierGroups ?? []), {
+        label: "Nudelsorte wählen",
+        items: [{ label: "Spaghetti" }, { label: "Penne" }],
+      }];
+    }
     if (!/mittagsmen/i.test(category.category)) continue;
     for (const group of item.modifierGroups ?? []) {
       if (/pizza/i.test(group.label)) group.items.sort((a, b) => a.label.localeCompare(b.label, "de-CH"));
