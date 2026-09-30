@@ -484,9 +484,26 @@ function PrintersPage() {
                 <div className="text-xs text-muted-foreground">
                   {p.ip_address ? `${p.ip_address}:${p.port}` : "Windows/USB über Print-Agent"}
                 </div>
-                <select aria-label={`Station für ${p.name}`} value={p.type} onChange={(e) => changeType(p, e.target.value)} className="mt-1 text-xs rounded-md bg-background border border-border px-2 py-1">
-                  {TYPES.map((type) => <option key={type} value={type}>{type === "kueche" ? "Küche" : type === "pizza" ? "Pizzastation" : type === "bon" ? "Bon" : type === "rechnung" ? "Rechnung" : "Bar"}</option>)}
-                </select>
+                <div className="mt-1 flex flex-wrap gap-1" aria-label={`Bon-Typen für ${p.name}`}>
+                  {TYPES.map((type) => {
+                    const on = (p.type ?? "").split(",").map((t) => t.trim()).includes(type);
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => {
+                          const cur = (p.type ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+                          const next = on ? cur.filter((t) => t !== type) : [...cur, type];
+                          if (!next.length) { toast.error("Mindestens ein Typ nötig"); return; }
+                          void changeType(p, next.join(","));
+                        }}
+                        className={`text-xs rounded-md border px-2 py-1 ${on ? "bg-accent text-accent-foreground border-accent" : "bg-background border-border text-muted-foreground"}`}
+                      >
+                        {type === "kueche" ? "Küche" : type === "pizza" ? "Pizzastation" : type === "bon" ? "Bon" : type === "rechnung" ? "Rechnung" : "Bar"}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <button
                 onClick={() => testPrint(p)}
