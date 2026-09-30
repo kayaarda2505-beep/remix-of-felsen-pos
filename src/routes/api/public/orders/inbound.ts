@@ -69,9 +69,31 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
           return Response.json({ error: "Unauthorized" }, { status: 401, headers: cors });
         }
 
+        let body: any;
+        try {
+          body = await request.json();
+        } catch {
+          return Response.json({ error: "Ungültiges JSON" }, { status: 400, headers: cors });
+        }
+
+        const reqKind = detectRequestKind(body);
+        if (reqKind) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const row = buildReservationRow(body, reqKind);
+          if (row.external_id) {
+            const { data: dup } = await (supabaseAdmin as any)
+              .from("reservation_requests").select("id").eq("external_id", row.external_id).maybeSingle();
+            if (dup) return Response.json({ ok: true, request_id: dup.id, duplicate: true }, { headers: cors });
+          }
+          const { data, error } = await (supabaseAdmin as any)
+            .from("reservation_requests").insert(row).select("id").single();
+          if (error) return Response.json({ error: error.message }, { status: 500, headers: cors });
+          return Response.json({ ok: true, request_id: data.id }, { headers: cors });
+        }
+
         let payload: Payload;
         try {
-          payload = Schema.parse(normalizePayload(await request.json()));
+          payload = Schema.parse(normalizePayload(body));
         } catch (e: any) {
           return Response.json({ error: `Ungültige Daten: ${e?.message ?? ""}` }, { status: 400, headers: cors });
         }
@@ -233,4 +255,50 @@ function normalizePayload(body: any) {
   }
   console.log("[inbound] keys", Object.keys(body), "note?", !!out.note, "pay", out.payment_method);
   return out;
+}
+
+// ---- Reservations- und Catering-Anfragen ----
+function detectRequestKind(body: any): "reservation" | "catering" | null {
+  if (!body || typeof body !== "object") return null;
+  const t = String(body.type ?? body.kind ?? body.request_type ?? body.requestType ?? body.category ?? "").toLowerCase();
+  if (t.includes("cater")) return "catering";
+  if (t.includes("reserv") || t.includes("tisch") || t.includes("booking")) return "reservation";
+  if (body.catering) return "catering";
+  if (body.reservation) return "reservation";
+  if (!Array.isArray(body.items) && (body.guests ?? body.persons ?? body.people ?? body.party_size) != null) return "reservation";
+  return null;
+}
+
+function buildReservationRow(body: any, kind: "reservation" | "catering") {
+  const nested = body.reservation ?? body.catering ?? {};
+  const src = { ...body, ...(typeof nested === "object" ? nested : {}) };
+  const c = src.customer ?? src.contact ?? {};
+  const pick = (keys: string[]) => pickStr(src, keys) ?? pickStr(c, keys);
+  const name = pick(["name", "full_name", "fullName", "contact_name"]) ??
+    ([pick(["first_name", "firstName", "vorname"]), pick(["last_name", "lastName", "nachname"])].filter(Boolean).join(" ") || null);
+  const g = src.guests ?? src.persons ?? src.people ?? src.party_size ?? src.partySize ?? src.personen ?? src.anzahl;
+  const guests = Number.parseInt(String(g ?? ""), 10);
+  let date = pick(["date", "event_date", "eventDate", "reservation_date", "datum"]);
+  let time = pick(["time", "event_time", "eventTime", "reservation_time", "uhrzeit", "zeit"]);
+  const dt = pick(["datetime", "date_time", "dateTime", "start", "starts_at"]);
+  if (dt && (!date || !time)) {
+    const d = new Date(dt);
+    if (!Number.isNaN(d.getTime())) {
+      const z = new Intl.DateTimeFormat("de-CH", { timeZone: "Europe/Zurich", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(d);
+      const [dd, tt] = z.split(", ");
+      date ??= dd; time ??= tt;
+    }
+  }
+  return {
+    kind,
+    name: name?.slice(0, 160) ?? null,
+    phone: pick(["phone", "tel", "telephone", "mobile", "telefon"])?.slice(0, 40) ?? null,
+    email: pick(["email", "mail", "e_mail"])?.slice(0, 200) ?? null,
+    event_date: date?.slice(0, 40) ?? null,
+    event_time: time?.slice(0, 40) ?? null,
+    guests: Number.isFinite(guests) && guests > 0 && guests < 10000 ? guests : null,
+    message: pickStr(src, NOTE_KEYS) ?? null,
+    external_id: pickStr(src, ["external_id", "externalId", "id"])?.slice(0, 120) ?? null,
+    raw: body,
+  };
 }
