@@ -1061,7 +1061,7 @@ function POS() {
                 table_name: activeOrder.dining_tables?.name ?? "Tisch",
                 amount,
                 tip: paidTip,
-                method: method.toLowerCase() === "bar" ? "cash" : "card_terminal",
+                method: method.toLowerCase().includes("twint") ? "twint" : method.toLowerCase() === "bar" ? "cash" : "card_terminal",
                 status: "paid",
                 handled_at: new Date().toISOString(),
                 note: `Teilzahlung · ${method}`,
@@ -1141,7 +1141,17 @@ function POS() {
   );
 }
 
-const CARD_METHODS = ["Visa", "Mastercard", "Maestro", "Amex", "TWINT", "Postcard", "Lunch-Check"] as const;
+const CARD_METHODS = [
+  "TWINT",
+  "Mastercard",
+  "Maestro",
+  "Visa",
+  "V Pay",
+  "Lunch-Check",
+  "PostFinance",
+  "Diners Club",
+  "Amex",
+] as const;
 
 function PaymentDialog({
   mode,
@@ -1299,6 +1309,24 @@ function PaymentDialog({
 
         {mode === "card" && (
           <div className="space-y-1.5 mb-4">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Zahlungsmittel</label>
+            <div className="grid grid-cols-3 gap-2">
+              {CARD_METHODS.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setCardMethod(m)}
+                  className={`rounded-xl py-2.5 px-2 text-xs font-medium border-2 transition-all ${
+                    cardMethod === m
+                      ? "border-accent bg-accent/15 text-accent"
+                      : "border-transparent glass text-muted-foreground hover:border-accent/30"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+
 
 
             <button
