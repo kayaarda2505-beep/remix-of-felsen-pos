@@ -2,3 +2,4 @@
 - [x] Lieferadresse und Notizen auf Lieferbelegen lesbar platzieren.
 - [x] QR-Beschriftung und Klartext-Link vom Bon entfernen; aktualisierten Windows-Agent bereitstellen.
 - [x] Website-Bon mit Produkt- und Kassennotizen, Zahlungswunsch, kompakterem Abstand und Titel „Website“ ausgeben.
+- [x] Liefer-/Website-Bons zweimal drucken und Kurier-QR-Adresse aus der jeweiligen Bestellung statt veränderlichen Kundenstammdaten anzeigen.

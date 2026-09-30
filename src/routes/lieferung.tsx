@@ -500,6 +500,7 @@ function Lieferung() {
             note: isTakeaway ? deliveryNote.trim() : undefined,
             items,
             total: subtotal,
+             copies: 2,
             paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
             interim: true,
             title: isTakeaway ? "TAKEAWAY" : "LIEFERSCHEIN",
