@@ -69,9 +69,31 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
           return Response.json({ error: "Unauthorized" }, { status: 401, headers: cors });
         }
 
+        let body: any;
+        try {
+          body = await request.json();
+        } catch {
+          return Response.json({ error: "Ungültiges JSON" }, { status: 400, headers: cors });
+        }
+
+        const reqKind = detectRequestKind(body);
+        if (reqKind) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const row = buildReservationRow(body, reqKind);
+          if (row.external_id) {
+            const { data: dup } = await (supabaseAdmin as any)
+              .from("reservation_requests").select("id").eq("external_id", row.external_id).maybeSingle();
+            if (dup) return Response.json({ ok: true, request_id: dup.id, duplicate: true }, { headers: cors });
+          }
+          const { data, error } = await (supabaseAdmin as any)
+            .from("reservation_requests").insert(row).select("id").single();
+          if (error) return Response.json({ error: error.message }, { status: 500, headers: cors });
+          return Response.json({ ok: true, request_id: data.id }, { headers: cors });
+        }
+
         let payload: Payload;
         try {
-          payload = Schema.parse(normalizePayload(await request.json()));
+          payload = Schema.parse(normalizePayload(body));
         } catch (e: any) {
           return Response.json({ error: `Ungültige Daten: ${e?.message ?? ""}` }, { status: 400, headers: cors });
         }
