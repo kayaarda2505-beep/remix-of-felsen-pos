@@ -97,6 +97,7 @@ function POS() {
         .from("orders")
         .select("id, table_id, guests, total, opened_at, dining_tables(name, area)")
         .eq("status", "open")
+        .or("opened_by_name.is.null,opened_by_name.neq.Website")
         .order("opened_at");
       if (error) throw error;
       return (data ?? []) as unknown as OpenOrder[];
