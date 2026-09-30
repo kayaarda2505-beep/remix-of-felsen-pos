@@ -36,6 +36,13 @@
       "when": 1790779680827,
       "tag": "0004_day_closings",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790781128963,
+      "tag": "0005_daily_order_number",
+      "breakpoints": true
     }
   ]
 }
