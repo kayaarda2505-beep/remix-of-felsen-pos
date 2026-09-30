@@ -29,6 +29,13 @@
       "when": 1790775087166,
       "tag": "0003_reservation_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790779680827,
+      "tag": "0004_day_closings",
+      "breakpoints": true
     }
   ]
 }

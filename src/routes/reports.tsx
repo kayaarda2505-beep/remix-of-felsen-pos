@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { printDailyReport, printBill } from "@/lib/receipt";
 import { isDesktopApp, type PrinterConfig } from "@/lib/printer-bridge";
+import { ReportDocuments } from "@/components/ReportDocuments";
 
 
 
@@ -38,7 +39,7 @@ function startOfYear(d: Date) { return new Date(d.getFullYear(), 0, 1); }
 
 type RangePreset = "today" | "week" | "month" | "year" | "custom";
 
-function Reports() {
+function Auswertung() {
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
   const [preset, setPreset] = useState<RangePreset>("today");
   const [from, setFrom] = useState<Date>(today);
@@ -1381,3 +1382,18 @@ function CashTillPanel({
   );
 }
 
+
+function Reports() {
+  const [tab, setTab] = useState<"z" | "user" | "analysis">("z");
+  return (
+    <div>
+      <div className="flex gap-2 px-6 pt-6">
+        {([["z", "Z-Bericht"], ["user", "Benutzerabrechnung"], ["analysis", "Auswertung"]] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium ${tab === k ? "bg-accent text-accent-foreground" : "glass"}`}>{l}</button>
+        ))}
+      </div>
+      {tab === "analysis" ? <Auswertung /> : <ReportDocuments doc={tab} />}
+    </div>
+  );
+}

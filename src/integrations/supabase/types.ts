@@ -199,6 +199,36 @@ export type Database = {
         }
         Relationships: []
       }
+      day_closings: {
+        Row: {
+          closed_by: string | null
+          created_at: string
+          id: string
+          period_end: string
+          period_start: string
+          totals: Json
+          z_number: number
+        }
+        Insert: {
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start: string
+          totals?: Json
+          z_number?: number
+        }
+        Update: {
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          totals?: Json
+          z_number?: number
+        }
+        Relationships: []
+      }
       dining_tables: {
         Row: {
           area: Database["public"]["Enums"]["table_area"]
