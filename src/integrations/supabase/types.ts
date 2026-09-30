@@ -1112,6 +1112,54 @@ export type Database = {
         }
         Relationships: []
       }
+      reservation_requests: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string | null
+          event_date: string | null
+          event_time: string | null
+          external_id: string | null
+          guests: number | null
+          id: string
+          kind: string
+          message: string | null
+          name: string | null
+          phone: string | null
+          raw: Json | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string | null
+          event_date?: string | null
+          event_time?: string | null
+          external_id?: string | null
+          guests?: number | null
+          id?: string
+          kind?: string
+          message?: string | null
+          name?: string | null
+          phone?: string | null
+          raw?: Json | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string | null
+          event_date?: string | null
+          event_time?: string | null
+          external_id?: string | null
+          guests?: number | null
+          id?: string
+          kind?: string
+          message?: string | null
+          name?: string | null
+          phone?: string | null
+          raw?: Json | null
+        }
+        Relationships: []
+      }
       review_requests: {
         Row: {
           comment: string | null
