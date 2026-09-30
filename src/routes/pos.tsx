@@ -1309,6 +1309,24 @@ function PaymentDialog({
 
         {mode === "card" && (
           <div className="space-y-1.5 mb-4">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Zahlungsmittel</label>
+            <div className="grid grid-cols-3 gap-2">
+              {CARD_METHODS.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setCardMethod(m)}
+                  className={`rounded-xl py-2.5 px-2 text-xs font-medium border-2 transition-all ${
+                    cardMethod === m
+                      ? "border-accent bg-accent/15 text-accent"
+                      : "border-transparent glass text-muted-foreground hover:border-accent/30"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+
 
 
             <button
