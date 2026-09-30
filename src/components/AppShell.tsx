@@ -32,6 +32,7 @@ import { printBill, routeForCategory, routeForItem } from "@/lib/receipt";
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 import { UrgentAlertOverlay, pushUrgentAlert, playUrgentRing } from "@/components/UrgentAlert";
 import { StationPrintHub } from "@/components/StationPrintHub";
+import { WebOrderAlert } from "@/components/WebOrderAlert";
 import { installAudioUnlock, getAudioContext } from "@/lib/audio-unlock";
 
 async function autoPrintServiceCall(r: any) {
@@ -554,6 +555,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <SpotifyBarSpeakerProvider>
     <UrgentAlertOverlay />
     <StationPrintHub />
+    {!operatorStationKey && <WebOrderAlert />}
     <div className="h-[100dvh] flex w-full overflow-hidden">
       <aside className="hidden md:flex w-20 lg:w-60 flex-col p-3 lg:p-4 gap-1 border-r border-border/40 bg-sidebar/60 backdrop-blur-2xl overflow-y-auto">
 

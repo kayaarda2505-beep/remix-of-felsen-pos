@@ -749,6 +749,7 @@ export type Database = {
           total: number
           tracking_sms_sent_at: string | null
           tracking_token: string | null
+          web_accepted_at: string | null
         }
         Insert: {
           closed_at?: string | null
@@ -775,6 +776,7 @@ export type Database = {
           total?: number
           tracking_sms_sent_at?: string | null
           tracking_token?: string | null
+          web_accepted_at?: string | null
         }
         Update: {
           closed_at?: string | null
@@ -801,6 +803,7 @@ export type Database = {
           total?: number
           tracking_sms_sent_at?: string | null
           tracking_token?: string | null
+          web_accepted_at?: string | null
         }
         Relationships: [
           {
