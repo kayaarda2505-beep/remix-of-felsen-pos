@@ -44,8 +44,8 @@ async function autoPrintServiceCall(r: any) {
       .eq("active", true);
 
     let printer: PrinterConfig | undefined =
-      printers?.find((p: any) => p.type === "bon") ??
-      printers?.find((p: any) => p.type === "bar") ??
+      printers?.find((p: any) => hasPrinterType(p, "bon")) ??
+      printers?.find((p: any) => hasPrinterType(p, "bar")) ??
       printers?.[0];
 
     if (!printer) {
