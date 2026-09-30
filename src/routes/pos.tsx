@@ -214,7 +214,7 @@ function POS() {
         (p) =>
           p.category === activeCat &&
           (search === "" || p.name.toLowerCase().includes(search.toLowerCase())),
-      ),
+      ).sort((a, b) => /pizza/i.test(a.category) && /pizza/i.test(b.category) ? a.name.localeCompare(b.name, "de-CH") : 0),
     [activeCat, search],
   );
 

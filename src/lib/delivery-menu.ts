@@ -1677,6 +1677,24 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
   }
 ];
 
+// Gleiche Auswahl für Mittagsmenüs wie in der Service-Karte.
+for (const category of DELIVERY_MENU) {
+  if (/pizza/i.test(category.category)) category.items.sort((a, b) => a.name.localeCompare(b.name, "de-CH"));
+  for (const item of category.items) {
+    if (!/mittagsmen/i.test(category.category)) continue;
+    for (const group of item.modifierGroups ?? []) {
+      if (/pizza/i.test(group.label)) group.items.sort((a, b) => a.label.localeCompare(b.label, "de-CH"));
+      if (/salatsosse/i.test(group.label)) group.items.push(
+        ...[{ label: "Keine Sosse" }, { label: "Eigene Sosse" }].filter((option) => !group.items.some((item) => item.label === option.label)),
+      );
+    }
+    if (/pasta/i.test(item.name) && !item.modifierGroups?.some((group) => /nudelsorte/i.test(group.label))) item.modifierGroups?.splice(1, 0, {
+      label: "Nudelsorte wählen",
+      items: [{ label: "Spaghetti" }, { label: "Penne" }],
+    });
+  }
+}
+
 export const DELIVERY_CATEGORIES = DELIVERY_MENU.map((c) => c.category);
 
 export const DELIVERY_ITEMS: Array<DeliveryMenuItem & { category: string }> = DELIVERY_MENU.flatMap((c) =>

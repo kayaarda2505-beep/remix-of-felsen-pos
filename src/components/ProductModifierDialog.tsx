@@ -67,8 +67,12 @@ export function ProductModifierDialog({
     }
   }, [open, product?.id]);
 
-  const toggle = (m: string) =>
-    setMods((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
+  const toggle = (m: string, group?: ModifierGroup) =>
+    setMods((prev) => {
+      if (!isLunchMenu || !group) return prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m];
+      const otherChoices = group.items.map((item) => item.price_delta ? `${item.label} (+CHF ${item.price_delta.toFixed(2)})` : item.label);
+      return [...prev.filter((choice) => !otherChoices.includes(choice)), ...(prev.includes(m) ? [] : [m])];
+    });
 
   const toggleRemoved = (name: string) =>
     setRemovedSides((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
@@ -89,9 +93,9 @@ export function ProductModifierDialog({
   const chosenProduct = (() => {
     for (const m of mods) {
       const clean = m.replace(/\s*\(\+CHF[^)]*\)\s*$/i, "").trim();
-      const base = clean.replace(/\s*-\s*\d{2}\s*cm\s*$/i, "").trim();
+      const base = clean.replace(/\s*-\s*\d{2}\s*cm\s*$/i, "").replace(/^pizza\s+/i, "").trim();
       const hit = allProducts.find(
-        (p) => p.name.toLowerCase() === clean.toLowerCase() || p.name.toLowerCase() === base.toLowerCase(),
+        (p) => p.name.toLowerCase() === clean.toLowerCase() || p.name.replace(/\s*-\s*\d{2}\s*cm\s*$/i, "").replace(/^pizza\s+/i, "").toLowerCase() === base.toLowerCase(),
       );
       if (hit && hit.description) return hit;
     }
@@ -99,7 +103,7 @@ export function ProductModifierDialog({
   })();
 
   const ingredientSource = chosenProduct ?? product;
-  const ingredients = ((ingredientSource?.description ?? "") as string)
+  const ingredients = ((isLunchMenu && !chosenProduct ? "" : ingredientSource?.description ?? "") as string)
     .split(/,|·/)
     .map((x) => x.trim())
     .filter((x) => x.length > 1 && x.length < 30 && !/nach wahl/i.test(x));
@@ -108,6 +112,7 @@ export function ProductModifierDialog({
 
   const toppingBase = chosenProduct ?? product;
   const toppingOptions = toppingBase && isPizzaItem(toppingBase.name, toppingBase.category)
+    && (!isLunchMenu || !!chosenProduct)
     ? PIZZA_TOPPINGS.map((t) => ({
         ...t,
         price: toppingPrice(t, toppingBase.name, toppingBase.category),
@@ -181,14 +186,27 @@ export function ProductModifierDialog({
                     product.modifier_groups && product.modifier_groups.length > 0
                       ? product.modifier_groups
                       : DEFAULT_MODIFIER_GROUPS;
-                  return groups.filter((group) =>
+                  const pastaChoice = mods.some((m) => /^(pasta |penne |spaghetti )/i.test(m));
+                  const chosenPasta = mods.find((m) => /^(pasta |penne |spaghetti )/i.test(m)) ?? "";
+                  const hasPastaShapeGroup = groups.some((group) => /nudelsorte/i.test(group.label));
+                  const pastaShape: ModifierGroup[] = isLunchMenu && /pasta/i.test(product.name) && pastaChoice && !hasPastaShapeGroup && !/lasagne|cannelloni|tortellini|al forno/i.test(chosenPasta)
+                    ? [{ label: "Nudelsorte wählen", items: [{ label: "Spaghetti" }, { label: "Penne" }] }]
+                    : [];
+                  const menuGroups: ModifierGroup[] = groups.map((group): ModifierGroup => /salatsosse/i.test(group.label) && isLunchMenu
+                    ? { ...group, items: [
+                        ...group.items,
+                        ...[{ label: "Keine Sosse" }, { label: "Eigene Sosse" }].filter((item) => !group.items.some((existing) => existing.label === item.label)),
+                      ] }
+                    : group);
+                  return [...menuGroups, ...pastaShape].filter((group) =>
                     !isPizzaItem(product.name, product.category) || !/^(eis|zitrone)$/i.test(group.label.trim()),
                   ).map((group) => {
                     const searchable = group.items.length > 8;
                     const term = (groupSearch[group.label] ?? "").toLowerCase().trim();
+                    const available = /pizza/i.test(group.label) ? [...group.items].sort((a, b) => a.label.localeCompare(b.label, "de-CH")) : group.items;
                     const items = term
-                      ? group.items.filter((i) => i.label.toLowerCase().includes(term))
-                      : group.items;
+                      ? available.filter((i) => i.label.toLowerCase().includes(term))
+                      : available;
                     return (
                     <div key={group.label}>
                       <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70 mb-1.5">
@@ -219,13 +237,13 @@ export function ProductModifierDialog({
                           const active = mods.includes(label);
                            const isMainChoice = isLunchMenu && /pizza|pasta/i.test(group.label);
                            const optionPhoto = isLunchMenu ? qrProductImage(item.label, isMainChoice && /pizza/i.test(group.label) ? "Pizza" : "") : undefined;
-                           const relatedProduct = isMainChoice ? allProducts.find((p) => p.name.toLowerCase() === item.label.toLowerCase()) : undefined;
+                            const relatedProduct = isMainChoice ? allProducts.find((p) => p.name.toLowerCase() === item.label.toLowerCase() || p.name.toLowerCase() === `pizza ${item.label.toLowerCase()}`) : undefined;
                            if (isLunchMenu) return (
                              <Button
                                type="button"
                                variant="outline"
                                key={item.label}
-                               onClick={() => toggle(label)}
+                                onClick={() => toggle(label, group)}
                                aria-pressed={active}
                                className={`h-auto min-w-0 whitespace-normal flex-col items-stretch overflow-hidden p-0 text-left border ${active ? "border-accent bg-accent/15 text-foreground" : "border-border/40 bg-card text-card-foreground"}`}
                              >
