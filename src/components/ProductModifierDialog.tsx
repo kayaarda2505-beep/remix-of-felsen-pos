@@ -181,7 +181,9 @@ export function ProductModifierDialog({
                     product.modifier_groups && product.modifier_groups.length > 0
                       ? product.modifier_groups
                       : DEFAULT_MODIFIER_GROUPS;
-                  return groups.map((group) => {
+                  return groups.filter((group) =>
+                    !isPizzaItem(product.name, product.category) || !/^(eis|zitrone)$/i.test(group.label.trim()),
+                  ).map((group) => {
                     const searchable = group.items.length > 8;
                     const term = (groupSearch[group.label] ?? "").toLowerCase().trim();
                     const items = term
