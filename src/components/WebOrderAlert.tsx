@@ -12,17 +12,21 @@ type WebOrder = {
   contact_phone: string | null;
   delivery_address: string | null;
   delivery_note: string | null;
+  payment_preference: string | null;
   total: number | null;
   opened_at?: string | null;
 };
 
 const COLS =
-  "id, order_type, contact_name, contact_phone, delivery_address, delivery_note, total, opened_at";
+  "id, order_type, contact_name, contact_phone, delivery_address, delivery_note, payment_preference, total, opened_at";
+
+const paymentLabels: Record<string, string> = { cash: "Bar", card: "Karte", twint: "TWINT" };
 
 /** Website-Bestellungen: Alarmton + Popup auf jedem Bildschirm, bis jemand annimmt. */
 export function WebOrderAlert() {
   const [queue, setQueue] = useState<WebOrder[]>([]);
   const [busy, setBusy] = useState(false);
+  const [chosenPayment, setChosenPayment] = useState<Record<string, string>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const add = useCallback((o: WebOrder) => {
@@ -85,11 +89,16 @@ export function WebOrderAlert() {
   }, [active]);
 
   const accept = async (o: WebOrder) => {
+    const payment = paymentLabels[o.payment_preference ?? ""] ? o.payment_preference : chosenPayment[o.id];
+    if (!payment || !paymentLabels[payment]) {
+      toast.error("Bitte Zahlungsart auswählen");
+      return;
+    }
     setBusy(true);
     try {
       const { error } = await (supabase as any)
         .from("orders")
-        .update({ web_accepted_at: new Date().toISOString() })
+        .update({ web_accepted_at: new Date().toISOString(), payment_preference: payment })
         .eq("id", o.id)
         .is("web_accepted_at", null);
       if (error) throw error;
@@ -123,15 +132,15 @@ export function WebOrderAlert() {
           qty: i.qty,
           unit_price: Number(i.unit_price),
           category: i.category,
-          modifiers: [
-            ...((i.modifiers ?? []) as unknown[]).filter((m): m is string => typeof m === "string"),
-            ...(i.note ? [String(i.note)] : []),
-          ],
+          modifiers: ((i.modifiers ?? []) as unknown[]).filter((m): m is string => typeof m === "string"),
+          note: i.note ? String(i.note) : null,
         })) as any,
         total: Number(o.total ?? 0),
         interim: true,
-        title: isDelivery ? "LIEFERSCHEIN · WEBSITE" : "TAKEAWAY · WEBSITE",
-        footerNote: "Offen — beim Kunden kassieren",
+        title: "WEBSITE",
+        compact: true,
+        paymentMethod: paymentLabels[payment],
+        footerNote: `Offen — ${paymentLabels[payment]} ${isDelivery ? "beim Kunden" : "bei Abholung"} kassieren`,
         ...(isDelivery
           ? {
               qrUrl: `${window.location.origin}/kurier/${o.id}`,
@@ -170,6 +179,22 @@ export function WebOrderAlert() {
             <div className="text-muted-foreground">{o.delivery_address}</div>
           )}
           {o.delivery_note && <div className="italic">„{o.delivery_note}"</div>}
+          {paymentLabels[o.payment_preference ?? ""] ? (
+            <div>Zahlung: {paymentLabels[o.payment_preference ?? ""]}</div>
+          ) : (
+            <fieldset className="pt-2">
+              <legend className="font-medium mb-1">Zahlt mit</legend>
+              <div className="flex gap-2">
+                {Object.entries(paymentLabels).map(([value, label]) => (
+                  <button key={value} type="button" aria-pressed={chosenPayment[o.id] === value}
+                    onClick={() => setChosenPayment((prev) => ({ ...prev, [o.id]: value }))}
+                    className={`px-3 py-2 rounded-lg border text-sm ${chosenPayment[o.id] === value ? "bg-accent text-accent-foreground border-accent" : "border-border"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
           <div className="pt-2 text-lg font-bold">CHF {Number(o.total ?? 0).toFixed(2)}</div>
         </div>
         <div className="p-4 pt-0">
