@@ -1141,7 +1141,17 @@ function POS() {
   );
 }
 
-const CARD_METHODS = ["Visa", "Mastercard", "Maestro", "Amex", "TWINT", "Postcard", "Lunch-Check"] as const;
+const CARD_METHODS = [
+  "TWINT",
+  "Mastercard",
+  "Maestro",
+  "Visa",
+  "V Pay",
+  "Lunch-Check",
+  "PostFinance",
+  "Diners Club",
+  "Amex",
+] as const;
 
 function PaymentDialog({
   mode,
