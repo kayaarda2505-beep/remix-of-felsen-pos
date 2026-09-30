@@ -112,7 +112,7 @@ export function DeliveryMap({
   const [ready, setReady] = useState(false);
 
   const signature = useMemo(
-    () => pins.map((p) => `${p.id}:${p.lat.toFixed(5)}:${p.lng.toFixed(5)}:${p.kind}`).join("|"),
+    () => pins.map((p) => `${p.id}:${p.lat.toFixed(5)}:${p.lng.toFixed(5)}:${p.kind}:${p.badge ?? ""}`).join("|"),
     [pins],
   );
 
@@ -164,7 +164,7 @@ export function DeliveryMap({
       const marker = new google.maps.Marker({
         position: { lat: p.lat, lng: p.lng },
         map: mapRef.current,
-        icon: svgIcon(p.kind, google),
+        icon: svgIcon(p.kind, google, p.badge),
         title: p.label,
       });
       marker.addListener("click", () => {
