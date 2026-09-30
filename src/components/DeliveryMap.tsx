@@ -9,6 +9,7 @@ export interface MapPin {
   kind: MapPinKind;
   label: string;
   sublabel?: string;
+  badge?: string;
 }
 
 const PIN_COLORS: Record<MapPinKind, string> = {
@@ -48,7 +49,7 @@ function loadMaps(): Promise<void> {
   return loadPromise;
 }
 
-function svgIcon(kind: MapPinKind, google: any) {
+function svgIcon(kind: MapPinKind, google: any, badge?: string) {
   const color = PIN_COLORS[kind];
   const glyph =
     kind === "courier"
@@ -56,10 +57,13 @@ function svgIcon(kind: MapPinKind, google: any) {
         `<path d="M13 30h30l-3.5-9.5A4 4 0 0 0 35.8 18H20.2a4 4 0 0 0-3.7 2.5L13 30z" fill="#fff"/>
          <rect x="9" y="30" width="38" height="10" rx="3" fill="#fff"/>
          <circle cx="18" cy="41" r="3.5" fill="#111"/><circle cx="38" cy="41" r="3.5" fill="#111"/>`
-      : // Box / Paket
-        `<path d="M28 13l15 7-15 7-15-7 15-7z" fill="#fff"/>
-         <path d="M13 22v13l15 7V29l-15-7z" fill="#fff" opacity="0.85"/>
-         <path d="M43 22v13l-15 7V29l15-7z" fill="#fff" opacity="0.7"/>`;
+      : badge
+        ? // Bestellnummer
+          `<text x="28" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="22" fill="#fff">${badge}</text>`
+        : // Box / Paket
+          `<path d="M28 13l15 7-15 7-15-7 15-7z" fill="#fff"/>
+           <path d="M13 22v13l15 7V29l-15-7z" fill="#fff" opacity="0.85"/>
+           <path d="M43 22v13l-15 7V29l15-7z" fill="#fff" opacity="0.7"/>`;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="70" viewBox="0 0 56 70">
     <path d="M28 68C28 68 52 42 52 26A24 24 0 1 0 4 26C4 42 28 68 28 68Z" fill="${color}" stroke="#0b0b0d" stroke-width="2.5"/>
@@ -108,7 +112,7 @@ export function DeliveryMap({
   const [ready, setReady] = useState(false);
 
   const signature = useMemo(
-    () => pins.map((p) => `${p.id}:${p.lat.toFixed(5)}:${p.lng.toFixed(5)}:${p.kind}`).join("|"),
+    () => pins.map((p) => `${p.id}:${p.lat.toFixed(5)}:${p.lng.toFixed(5)}:${p.kind}:${p.badge ?? ""}`).join("|"),
     [pins],
   );
 
@@ -160,7 +164,7 @@ export function DeliveryMap({
       const marker = new google.maps.Marker({
         position: { lat: p.lat, lng: p.lng },
         map: mapRef.current,
-        icon: svgIcon(p.kind, google),
+        icon: svgIcon(p.kind, google, p.badge),
         title: p.label,
       });
       marker.addListener("click", () => {

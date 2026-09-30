@@ -641,7 +641,8 @@ function Lieferung() {
         lat: Number(c.lat),
         lng: Number(c.lng),
         kind,
-        label: `${[c.last_name, c.first_name].filter(Boolean).join(" ")} · CHF ${Number(o.total).toFixed(2)}`,
+        badge: o.order_number != null ? String(o.order_number) : undefined,
+        label: `${o.order_number != null ? `#${o.order_number} · ` : ""}${[c.last_name, c.first_name].filter(Boolean).join(" ")} · CHF ${Number(o.total).toFixed(2)}`,
         sublabel: `${c.street} ${c.house_no}, ${c.zip} ${c.city}${
           o.courier_name ? ` — Kurier: ${o.courier_name}` : ""
         }${kind === "enroute" ? " (unterwegs)" : ""}`,
