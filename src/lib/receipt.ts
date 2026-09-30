@@ -334,7 +334,15 @@ export function buildBill(opts: {
   }
 
   // Zahlung
-  if (opts.paymentMethod) {
+  if (opts.paymentMethod && !opts.interim) {
+    lines.push({ separator: true });
+    lines.push({ text: "BEZAHLT", align: "center", bold: true });
+    lines.push({ cols: ["Zahlart", opts.paymentMethod], bold: true });
+    lines.push({ cols: ["Bezahlter Betrag", `${cur} ${fmt(opts.total)}`], bold: true });
+    lines.push({ cols: ["Warenwert", `${cur} ${fmt(subtotal)}`] });
+    lines.push({ cols: ["Trinkgeld", `${cur} ${fmt(tip)}`] });
+    lines.push({ cols: ["Bezahlt um", nowStr()] });
+  } else if (opts.paymentMethod) {
     lines.push({ separator: true });
     lines.push({ cols: ["Zahlart", opts.paymentMethod] });
   }
