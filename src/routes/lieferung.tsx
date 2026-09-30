@@ -1867,22 +1867,33 @@ function MenuConfigDialog({
   onClose: () => void;
   onConfirm: (r: { note: string; extra: number; qty: number }) => void;
 }) {
-  const groups = item.modifierGroups ?? [];
+  const isLunchMenu = /mittagsmen/i.test(item.category);
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [removed, setRemoved] = useState<string[]>([]);
   const [extras, setExtras] = useState<Record<string, number>>({});
   const [note, setNote] = useState("");
   const [qty, setQty] = useState(1);
+  const selectedMain = choices["Pizza wählen"] ?? choices["Pasta wählen"] ?? "";
+  const groups = (item.modifierGroups ?? []).filter((g) =>
+    !/nudelsorte/i.test(g.label) || (!!selectedMain && !/lasagne|cannelloni|tortellini|al forno/i.test(selectedMain)),
+  );
   const complete = groups.every((g) => choices[g.label]);
 
-  const ingredients = (item.description ?? "")
+  const selectedDish = isLunchMenu && selectedMain
+    ? DELIVERY_MENU.flatMap((c) => c.items).find((p) =>
+        p.name.replace(/^pizza\s+/i, "").replace(/\s*-\s*\d+\s*cm$/i, "").toLowerCase() ===
+        selectedMain.replace(/^pizza\s+/i, "").replace(/\s*-\s*\d+\s*cm$/i, "").toLowerCase() && !!p.description,
+      )
+    : null;
+
+  const ingredients = (selectedDish?.description ?? (isLunchMenu ? "" : item.description ?? ""))
     .split(/,|·/)
     .map((s) => s.trim())
     .filter((s) => s.length > 1 && s.length < 30);
 
-  const isPizza = isPizzaItem(item.name, item.category);
+  const isPizza = isLunchMenu ? /pizza/i.test(item.name) && !!selectedMain : isPizzaItem(item.name, item.category);
   const toppingOptions = isPizza
-    ? PIZZA_TOPPINGS.map((t) => ({ ...t, price: toppingPrice(t, item.name, item.category) }))
+    ? PIZZA_TOPPINGS.map((t) => ({ ...t, price: toppingPrice(t, selectedDish?.name ?? item.name, selectedDish ? "Pizza" : item.category) }))
     : [];
 
   const extraDelta =
