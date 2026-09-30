@@ -28,7 +28,7 @@ import { PiratinoLogo } from "./PiratinoLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { getAgentPrinters, isDesktopApp, printReceipt, type PrinterConfig } from "@/lib/printer-bridge";
-import { printBill, routeForCategory, routeForItem } from "@/lib/receipt";
+import { printBill, routeForCategory, routeForItem, hasPrinterType } from "@/lib/receipt";
 import { SpotifyBarSpeakerProvider } from "@/components/SpotifyBarSpeaker";
 import { UrgentAlertOverlay, pushUrgentAlert, playUrgentRing } from "@/components/UrgentAlert";
 import { StationPrintHub } from "@/components/StationPrintHub";
@@ -44,8 +44,8 @@ async function autoPrintServiceCall(r: any) {
       .eq("active", true);
 
     let printer: PrinterConfig | undefined =
-      printers?.find((p: any) => p.type === "bon") ??
-      printers?.find((p: any) => p.type === "bar") ??
+      printers?.find((p: any) => hasPrinterType(p, "bon")) ??
+      printers?.find((p: any) => hasPrinterType(p, "bar")) ??
       printers?.[0];
 
     if (!printer) {

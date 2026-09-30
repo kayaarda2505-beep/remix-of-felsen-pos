@@ -424,8 +424,8 @@ export async function printCardReceipt(opts: {
   info: CardReceiptInfo;
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
-    opts.printers.find((p) => p.type === "rechnung") ??
-    opts.printers.find((p) => p.type === "bon");
+    opts.printers.find((p) => hasPrinterType(p, "rechnung")) ??
+    opts.printers.find((p) => hasPrinterType(p, "bon"));
   if (!billPrinter && opts.printers.length) return "Kein Rechnungsdrucker konfiguriert";
 
   if (!billPrinter) {
@@ -450,9 +450,9 @@ export async function printOrderToStations(opts: {
   const errors: string[] = [];
   const { bar, kueche, pizza } = splitByStation(await withPizzaIngredients(opts.items));
 
-  const barPrinter = opts.printers.find((p) => p.type === "bar");
-  const kuechePrinter = opts.printers.find((p) => p.type === "kueche");
-  const pizzaPrinter = opts.printers.find((p) => p.type === "pizza");
+  const barPrinter = opts.printers.find((p) => hasPrinterType(p, "bar"));
+  const kuechePrinter = opts.printers.find((p) => hasPrinterType(p, "kueche"));
+  const pizzaPrinter = opts.printers.find((p) => hasPrinterType(p, "pizza"));
   const orderNo = shortId();
 
   for (const [station, items, printer] of [
@@ -491,8 +491,8 @@ export async function printBill(opts: {
   footerNote?: string;
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
-    opts.printers.find((p) => p.type === "rechnung") ??
-    opts.printers.find((p) => p.type === "bon");
+    opts.printers.find((p) => hasPrinterType(p, "rechnung")) ??
+    opts.printers.find((p) => hasPrinterType(p, "bon"));
   if (!billPrinter && opts.printers.length) return "Kein Rechnungsdrucker konfiguriert";
 
   // Fallback: kein Drucker in der DB konfiguriert → Standard-Windows-Drucker
@@ -611,8 +611,8 @@ export async function printDailyReport(opts: {
   data: DailyReportData;
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
-    opts.printers.find((p) => p.type === "rechnung") ??
-    opts.printers.find((p) => p.type === "bon") ??
+    opts.printers.find((p) => hasPrinterType(p, "rechnung")) ??
+    opts.printers.find((p) => hasPrinterType(p, "bon")) ??
     opts.printers[0];
 
   if (!billPrinter) {
@@ -627,3 +627,8 @@ export async function printDailyReport(opts: {
   return r.ok ? null : r.error ?? "Druckfehler";
 }
 
+
+/** Ein Drucker kann mehrere Bon-Typen haben (kommagetrennt, z.B. "kueche,rechnung,bon"). */
+export function hasPrinterType(p: { type?: string | null }, type: string): boolean {
+  return (p?.type ?? "").split(",").map((t) => t.trim()).includes(type);
+}
