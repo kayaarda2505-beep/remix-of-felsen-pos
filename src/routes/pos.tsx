@@ -1195,76 +1195,6 @@ function PaymentDialog({
     }
   };
 
-  const runSumUp = async () => {
-    setSumupPhase("sending");
-    setSumupMsg("Sende an Terminal …");
-    try {
-      const { clientTransactionId } = await sendToReader({
-        data: { amount: total, description: "Kasse" },
-      });
-      if (!clientTransactionId) {
-        // Kein Polling möglich — Mitarbeiter muss am Gerät bestätigen
-        setSumupPhase("waiting");
-        setSumupMsg("Am Terminal bezahlen …");
-        return;
-      }
-      setSumupPhase("waiting");
-      setSumupMsg("Am Terminal bezahlen …");
-      const started = Date.now();
-      while (Date.now() - started < 120_000) {
-        await new Promise((r) => setTimeout(r, 2500));
-        try {
-          const s = await getTxStatus({ data: { clientTransactionId } });
-          if (s.status === "SUCCESSFUL") {
-            setSumupPhase("ok");
-            setSumupMsg("Bezahlung erfolgreich");
-            const reportedTip = typeof s.tip === "number" && Number.isFinite(s.tip) && s.tip > 0 ? +Number(s.tip).toFixed(2) : undefined;
-            const terminalAmount = typeof s.amount === "number" && Number.isFinite(s.amount) && s.amount > 0
-              ? +Number(s.amount).toFixed(2)
-              : +(total + (reportedTip ?? 0)).toFixed(2);
-            const terminalTip = reportedTip ?? Math.max(0, +(terminalAmount - total).toFixed(2));
-            setSumupMsg(terminalTip > 0 ? `Bezahlung erfolgreich · Trinkgeld CHF ${terminalTip.toFixed(2)}` : "Bezahlung erfolgreich");
-            if (isDesktopApp()) {
-              const err = await printCardReceipt({
-                printers,
-                info: {
-                  transactionId: s.transactionId,
-                  transactionCode: s.transactionCode,
-                  cardType: s.cardType,
-                  cardLast4: s.cardLast4,
-                  authCode: s.authCode,
-                  entryMode: s.entryMode,
-                  amount: terminalAmount,
-                  baseAmount: total,
-                  tip: terminalTip,
-                  currency: s.currency,
-                  timestamp: s.timestamp,
-                  merchantCode: s.merchantCode,
-                  tableName,
-                },
-              });
-              if (err) toast.error(`Karten-Beleg: ${err}`);
-            }
-            setTimeout(() => onConfirm("SumUp Terminal", terminalAmount, terminalTip, "tip"), 500);
-            return;
-          }
-          if (s.status === "FAILED" || s.status === "CANCELLED") {
-            setSumupPhase("fail");
-            setSumupMsg(s.status === "CANCELLED" ? "Am Terminal abgebrochen" : "Zahlung fehlgeschlagen");
-            return;
-          }
-        } catch {
-          // weiter pollen
-        }
-      }
-      setSumupPhase("fail");
-      setSumupMsg("Zeitüberschreitung. Bitte am Terminal prüfen.");
-    } catch (e: any) {
-      setSumupPhase("fail");
-      setSumupMsg(e?.message ?? "Fehler beim Senden");
-    }
-  };
-
   const received = Number(receivedStr.replace(",", ".")) || 0;
   const diff = +(received - total).toFixed(2);
   const valid = received >= total;
@@ -1329,35 +1259,9 @@ function PaymentDialog({
 
 
 
-            <button
-              onClick={runSumUp}
-              disabled={sumupPhase === "sending" || sumupPhase === "waiting"}
-              className="mt-3 w-full rounded-xl py-3 bg-accent/15 hover:bg-accent/25 border border-accent/40 text-accent font-medium flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {sumupPhase === "sending" || sumupPhase === "waiting" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Smartphone className="w-4 h-4" />
-              )}
-              {sumupPhase === "idle" && `An SumUp-Terminal senden · CHF ${total.toFixed(2)}`}
-              {sumupPhase === "sending" && "Sende …"}
-              {sumupPhase === "waiting" && "Warte auf Terminal …"}
-              {sumupPhase === "ok" && "Bezahlt ✓"}
-              {sumupPhase === "fail" && "Erneut senden"}
-            </button>
-            {sumupMsg && (
-              <div
-                className={`text-xs mt-1.5 text-center ${
-                  sumupPhase === "fail"
-                    ? "text-destructive"
-                    : sumupPhase === "ok"
-                      ? "text-success"
-                      : "text-muted-foreground"
-                }`}
-              >
-                {sumupMsg}
-              </div>
-            )}
+            <div className="text-xs text-muted-foreground text-center mt-3">
+              Betrag am Terminal manuell eingeben und hier bestätigen.
+            </div>
             <button
               type="button"
               onClick={diagnose}
