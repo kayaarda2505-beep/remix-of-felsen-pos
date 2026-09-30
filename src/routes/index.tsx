@@ -347,7 +347,7 @@ function ServiceTablet() {
       products.filter(
         (p) =>
           (search ? p.name.toLowerCase().includes(search.toLowerCase()) : p.category === activeCat),
-      ),
+      ).sort((a, b) => /pizza/i.test(a.category) && /pizza/i.test(b.category) ? a.name.localeCompare(b.name, "de-CH") : 0),
     [activeCat, search],
   );
 

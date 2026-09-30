@@ -191,7 +191,10 @@ export function ProductModifierDialog({
                   const pastaShape: ModifierGroup[] = isLunchMenu && /pasta/i.test(product.name) && pastaChoice && !/lasagne|cannelloni|tortellini|al forno/i.test(chosenPasta)
                     ? [{ label: "Nudelsorte wählen", items: [{ label: "Spaghetti" }, { label: "Penne" }] }]
                     : [];
-                  return [...groups, ...pastaShape].filter((group) =>
+                  const menuGroups = groups.map((group) => /salatsosse/i.test(group.label) && isLunchMenu
+                    ? { ...group, items: [...group.items, { label: "Keine Sosse" }, { label: "Eigene Sosse" }] }
+                    : group);
+                  return [...menuGroups, ...pastaShape].filter((group) =>
                     !isPizzaItem(product.name, product.category) || !/^(eis|zitrone)$/i.test(group.label.trim()),
                   ).map((group) => {
                     const searchable = group.items.length > 8;

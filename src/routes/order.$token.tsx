@@ -163,7 +163,7 @@ function OrderPage() {
 
   const effectiveCat = activeCat || categories[0] || "";
   const visible = useMemo(
-    () => products.filter((p) => p.category === effectiveCat),
+    () => products.filter((p) => p.category === effectiveCat).sort((a, b) => /pizza/i.test(effectiveCat) ? a.name.localeCompare(b.name, "de-CH") : 0),
     [products, effectiveCat],
   );
   const total = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
