@@ -88,6 +88,7 @@ interface DeliveryReceipt {
   createdAt: string;
   paid?: boolean;
   payMethod?: "open" | "cash" | "card";
+  orderNumber?: number | null;
 }
 
 function customerName(c: Customer) {
@@ -443,7 +444,7 @@ function Lieferung() {
           total: 0,
           opened_by_name: operator?.name ?? null,
         } as any)
-        .select("id")
+        .select("id, order_number")
         .single();
       if (error) throw error;
 
@@ -502,8 +503,9 @@ function Lieferung() {
             items,
             total: subtotal,
              copies: 2,
-            paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
-            interim: true,
+             paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
+             orderNo: order.order_number != null ? String(order.order_number) : undefined,
+             interim: true,
             title: isTakeaway ? "TAKEAWAY" : "LIEFERSCHEIN",
             footerNote: isTakeaway
               ? `Offen — bei Abholung kassieren · ca. ${eta} Min.`
@@ -540,6 +542,7 @@ function Lieferung() {
           items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: lineUnit(l) })),
           total: subtotal,
           createdAt: new Date().toISOString(),
+          orderNumber: order.order_number ?? null,
         } as DeliveryReceipt,
 
       };
