@@ -15,6 +15,13 @@
       "when": 1790772100032,
       "tag": "0001_web_order_accept",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790773928392,
+      "tag": "0002_website_order_payment_preference",
+      "breakpoints": true
     }
   ]
 }

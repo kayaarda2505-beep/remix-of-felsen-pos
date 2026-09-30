@@ -24,6 +24,7 @@ const Schema = z.object({
     city: z.string().max(80).nullable().optional(),
   }),
   note: z.string().max(500).nullable().optional(),
+  payment_method: z.enum(["cash", "card", "twint"]).nullable().optional(),
   items: z.array(ItemSchema).min(1).max(60),
   external_id: z.string().max(120).nullable().optional(),
 });
@@ -144,6 +145,7 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
             contact_name: name,
             delivery_address: address,
             delivery_note: payload.note?.trim() || null,
+            payment_preference: payload.payment_method ?? null,
             total,
             opened_by_name: "Website",
             external_id: payload.external_id ?? null,

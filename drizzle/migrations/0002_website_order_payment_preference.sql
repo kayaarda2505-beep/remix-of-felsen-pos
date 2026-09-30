@@ -1,0 +1,2 @@
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS payment_preference text;
+COMMENT ON COLUMN public.orders.payment_preference IS 'Customer requested payment method for an unpaid website order: cash, card, or twint.';

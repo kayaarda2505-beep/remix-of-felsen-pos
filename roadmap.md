@@ -1,3 +1,4 @@
 - [x] Geschäftsadresse auf allen gedruckten Belegen ersetzen und fett setzen.
 - [x] Lieferadresse und Notizen auf Lieferbelegen lesbar platzieren.
 - [x] QR-Beschriftung und Klartext-Link vom Bon entfernen; aktualisierten Windows-Agent bereitstellen.
+- [x] Website-Bon mit Produkt- und Kassennotizen, Zahlungswunsch, kompakterem Abstand und Titel „Website“ ausgeben.

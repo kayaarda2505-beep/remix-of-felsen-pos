@@ -241,6 +241,7 @@ export function buildBill(opts: {
   footerNote?: string;
   deliveryRecipient?: { name: string; street: string; postal: string; phone?: string | null; note?: string | null };
   note?: string | null;
+  compact?: boolean;
 }): ReceiptPayload {
   const s = opts.settings ?? DEFAULT_SETTINGS;
   const cur = s.currency;
@@ -252,26 +253,26 @@ export function buildBill(opts: {
   lines.push({ text: "Badenerstrasse 696", align: "center", bold: true });
   lines.push({ text: "8048 Altstetten", align: "center", bold: true });
 
-  lines.push({ text: "", align: "center" });
+  if (!opts.compact) lines.push({ text: "", align: "center" });
   lines.push({
     text: opts.title ?? (opts.interim ? "ZWISCHENRECHNUNG" : "RECHNUNG"),
     align: "center",
     bold: true,
   });
-  lines.push({ text: "", align: "center" });
+  if (!opts.compact) lines.push({ text: "", align: "center" });
   if (opts.deliveryRecipient) {
     const recipient = opts.deliveryRecipient;
     lines.push({ text: recipient.name, bold: true });
-    lines.push({ text: "" });
+    if (!opts.compact) lines.push({ text: "" });
     lines.push({ text: recipient.street, bold: true });
-    lines.push({ text: "" });
+    if (!opts.compact) lines.push({ text: "" });
     lines.push({ text: recipient.postal, bold: true });
     if (recipient.phone) lines.push({ text: `Tel. ${recipient.phone}` });
     if (recipient.note) lines.push({ text: `Notiz: ${recipient.note}`, bold: true });
-    lines.push({ text: "" });
+    if (!opts.compact) lines.push({ text: "" });
   } else if (opts.note) {
     lines.push({ text: `Notiz: ${opts.note}`, bold: true });
-    lines.push({ text: "" });
+    if (!opts.compact) lines.push({ text: "" });
   }
   lines.push({ cols: ["Tisch", opts.tableName] });
   lines.push({ cols: ["Datum", nowStr()] });
@@ -302,9 +303,10 @@ export function buildBill(opts: {
       lines.push({ text: `   à ${cur} ${fmt(it.unit_price)}` });
     }
     if (it.modifiers?.length) {
-      lines.push({ text: `   + ${it.modifiers.join(", ")}` });
+      lines.push({ text: `   ${it.modifiers.map((m) => /^[+\-]/.test(m) ? m : `+ ${m}`).join(", ")}` });
     }
     for (const detail of pizzaDetailLines(it)) lines.push({ text: `   ${detail}` });
+    if (it.note) lines.push({ text: `   Notiz: ${it.note}`, bold: true });
   }
 
   lines.push({ separator: true });
@@ -326,13 +328,13 @@ export function buildBill(opts: {
   if (s.vatRate > 0 && s.vatIncluded) {
     const net = opts.total / (1 + s.vatRate / 100);
     const vat = opts.total - net;
-    lines.push({ text: "" });
+    if (!opts.compact) lines.push({ text: "" });
     lines.push({ cols: [`MWST inkl. ${s.vatRate.toFixed(1)}%`, `${cur} ${fmt(vat)}`] });
     lines.push({ cols: ["Netto", `${cur} ${fmt(net)}`] });
   }
 
   // Zahlung
-  if (opts.paymentMethod && !opts.interim) {
+  if (opts.paymentMethod) {
     lines.push({ separator: true });
     lines.push({ cols: ["Zahlart", opts.paymentMethod] });
   }
@@ -349,9 +351,9 @@ export function buildBill(opts: {
 
   // QR-Code: eigener Link oder Google-Bewertung auf finaler Rechnung
   if (opts.qrUrl) {
-    lines.push({ text: "" });
+    if (!opts.compact) lines.push({ text: "" });
     lines.push({ qr: opts.qrUrl, size: 7 });
-    lines.push({ text: "" });
+    if (!opts.compact) lines.push({ text: "" });
   } else if (!opts.interim) {
     lines.push({ text: "" });
     lines.push({ text: "Bitte bewerten Sie uns auf Google", align: "center", bold: true });
@@ -360,7 +362,7 @@ export function buildBill(opts: {
     lines.push({ text: "" });
   }
 
-  lines.push({ text: "", align: "center" });
+  if (!opts.compact) lines.push({ text: "", align: "center" });
   lines.push({ text: s.businessName, align: "center" });
 
   return { lines, cut: true };
@@ -504,6 +506,7 @@ export async function printBill(opts: {
   footerNote?: string;
   deliveryRecipient?: { name: string; street: string; postal: string; phone?: string | null; note?: string | null };
   note?: string | null;
+  compact?: boolean;
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => hasPrinterType(p, "rechnung")) ??

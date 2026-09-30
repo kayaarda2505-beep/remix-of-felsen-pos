@@ -744,6 +744,7 @@ export type Database = {
           opened_at: string
           opened_by_name: string | null
           order_type: string
+          payment_preference: string | null
           status: Database["public"]["Enums"]["order_status"]
           table_id: string | null
           total: number
@@ -771,6 +772,7 @@ export type Database = {
           opened_at?: string
           opened_by_name?: string | null
           order_type?: string
+          payment_preference?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           table_id?: string | null
           total?: number
@@ -798,6 +800,7 @@ export type Database = {
           opened_at?: string
           opened_by_name?: string | null
           order_type?: string
+          payment_preference?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           table_id?: string | null
           total?: number
