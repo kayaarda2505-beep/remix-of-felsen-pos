@@ -126,6 +126,15 @@ function estimateMinutes(itemCount: number) {
   return itemCount > 4 ? 15 : 10;
 }
 
+const fmtTime = (d: Date) => d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
+
+/** Bestellzeit + voraussichtliche Lieferzeit (Bestellung + 45 Minuten) */
+function etaLabel(openedAt: string) {
+  const t = new Date(openedAt);
+  const eta = new Date(t.getTime() + 45 * 60000);
+  return `Bestellt ${fmtTime(t)} · Lieferung bis ${fmtTime(eta)}`;
+}
+
 function Lieferung() {
   const qc = useQueryClient();
   const { operator } = useAuth();
@@ -645,7 +654,7 @@ function Lieferung() {
         label: `${o.order_number != null ? `#${o.order_number} · ` : ""}${[c.last_name, c.first_name].filter(Boolean).join(" ")} · CHF ${Number(o.total).toFixed(2)}`,
         sublabel: `${c.street} ${c.house_no}, ${c.zip} ${c.city}${
           o.courier_name ? ` — Kurier: ${o.courier_name}` : ""
-        }${kind === "enroute" ? " (unterwegs)" : ""}`,
+        }${kind === "enroute" ? " (unterwegs)" : ""}<br/>${etaLabel(o.opened_at)}`,
       });
     };
     todoOrders.forEach((o) => push(o, "todo"));
@@ -1082,12 +1091,12 @@ function Lieferung() {
                       <div key={o.id} className="glass rounded-xl px-3 py-2 flex items-center justify-between gap-3">
                          <div className="text-sm min-w-0">
                            <div className="truncate">{o.order_number != null ? `#${o.order_number} · ` : ""}{o.delivery_address ?? "Lieferung"}</div>
-                           <div className="text-xs text-muted-foreground">
-                             {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
-                             {o.courier_name ? ` · ${o.courier_name}` : ""}
-                             {o.courier_started_at ? " · unterwegs" : ""}
+                            <div className="text-xs text-muted-foreground">
+                              {etaLabel(o.opened_at)}
+                              {o.courier_name ? ` · ${o.courier_name}` : ""}
+                              {o.courier_started_at ? " · unterwegs" : ""}
 
-                          </div>
+                           </div>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <span className={`text-[10px] uppercase tracking-wider ${o.status === "paid" ? "text-emerald-400" : "text-amber-400"}`}>
@@ -1501,10 +1510,10 @@ function Lieferung() {
                   <div key={o.id} className="glass rounded-xl px-3 py-2 text-sm flex items-center justify-between gap-2">
                      <div className="min-w-0">
                        <div className="truncate">{o.order_number != null ? `#${o.order_number} · ` : ""}{o.delivery_address ?? "Lieferung"}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
-                        {o.courier_name ? ` · ${o.courier_name}` : ""}
-                      </div>
+                       <div className="text-xs text-muted-foreground">
+                         {etaLabel(o.opened_at)}
+                         {o.courier_name ? ` · ${o.courier_name}` : ""}
+                       </div>
                     </div>
                     <span className="tabular-nums font-semibold shrink-0">CHF {Number(o.total).toFixed(2)}</span>
                   </div>
@@ -1727,10 +1736,11 @@ function OrderGroup({
             <div key={o.id} className="glass rounded-xl px-3 py-2 space-y-1.5">
               <div className="flex items-start justify-between gap-2">
                  <div className="text-sm min-w-0">
-                   <div className="truncate">{o.order_number != null ? `#${o.order_number} · ` : ""}{o.delivery_address ?? "Lieferung"}</div>
-                  {o.delivery_note && (
-                    <div className="text-xs text-muted-foreground truncate">{o.delivery_note}</div>
-                  )}
+                    <div className="truncate">{o.order_number != null ? `#${o.order_number} · ` : ""}{o.delivery_address ?? "Lieferung"}</div>
+                   <div className="text-xs text-muted-foreground">{etaLabel(o.opened_at)}</div>
+                   {o.delivery_note && (
+                     <div className="text-xs text-muted-foreground truncate">{o.delivery_note}</div>
+                   )}
                   {o.customers && o.customers.lat == null && (
                     <div className="text-[10px] text-amber-400 flex items-center gap-1">
                       <MapPinIcon className="w-3 h-3" /> Adresse nicht auf Karte
