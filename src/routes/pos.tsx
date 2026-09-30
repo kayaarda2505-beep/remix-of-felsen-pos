@@ -49,6 +49,7 @@ interface OpenOrder {
   guests: number | null;
   total: number;
   opened_at: string;
+  order_number: number | null;
   dining_tables: { name: string; area: string } | null;
 }
 interface OrderItem {
