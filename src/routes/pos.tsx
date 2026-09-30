@@ -95,11 +95,11 @@ function POS() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, guests, total, opened_at, dining_tables(name, area)")
+        .select("id, table_id, guests, total, opened_at, order_type, opened_by_name, dining_tables(name, area)")
         .eq("status", "open")
         .order("opened_at");
       if (error) throw error;
-      return (data ?? []) as unknown as OpenOrder[];
+      return (data ?? []).filter((order) => !(order.order_type === "delivery" && order.opened_by_name === "Website")) as unknown as OpenOrder[];
     },
     refetchInterval: 5000,
   });
