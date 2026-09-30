@@ -91,27 +91,46 @@ export const searchStreets = createServerFn({ method: "POST" })
     const seen = new Map<string, string>();
     const results = await Promise.all(
       inputs.map(async (input) => {
-        const params = new URLSearchParams({
+        const body: Record<string, unknown> = {
           input,
-          types: "address",
-          components: "country:ch",
-          language: "de",
-        });
+          includedRegionCodes: ["ch"],
+          languageCode: "de",
+          includedPrimaryTypes: ["route", "street_address"],
+        };
         if (center) {
-          params.set("location", `${center.lat},${center.lng}`);
-          params.set("radius", "3000");
-          params.set("strictbounds", "true");
+          body.locationBias = {
+            circle: { center: { latitude: center.lat, longitude: center.lng }, radius: 3000 },
+          };
         }
         try {
           const res = await fetch(
-            `https://connector-gateway.lovable.dev/google_maps/maps/api/place/autocomplete/json?${params.toString()}`,
-            { headers },
+            `https://connector-gateway.lovable.dev/google_maps/places/v1/places:autocomplete`,
+            {
+              method: "POST",
+              headers: {
+                ...headers,
+                "Content-Type": "application/json",
+                "X-Goog-FieldMask":
+                  "suggestions.placePrediction.structuredFormat.mainText.text,suggestions.placePrediction.structuredFormat.secondaryText.text",
+              },
+              body: JSON.stringify(body),
+            },
           );
-          if (!res.ok) return [];
+          if (!res.ok) {
+            console.error("Strassensuche", res.status, await res.text());
+            return [];
+          }
           const json = (await res.json()) as {
-            predictions?: { structured_formatting?: { main_text?: string }; description?: string }[];
+            suggestions?: {
+              placePrediction?: {
+                structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } };
+              };
+            }[];
           };
-          return json.predictions ?? [];
+          return (json.suggestions ?? []).map((s) => ({
+            main: s.placePrediction?.structuredFormat?.mainText?.text ?? "",
+            secondary: s.placePrediction?.structuredFormat?.secondaryText?.text ?? "",
+          }));
         } catch {
           return [];
         }
@@ -120,9 +139,9 @@ export const searchStreets = createServerFn({ method: "POST" })
 
     for (const preds of results) {
       for (const p of preds) {
-        const main = (p.structured_formatting?.main_text ?? p.description ?? "").trim();
+        const main = p.main.trim();
         if (!main) continue;
-        // Hausnummern aus dem Vorschlag entfernen -> reiner Strassenname
+        if (p.secondary && !p.secondary.includes(data.zip) && city && !p.secondary.includes(city)) continue;
         const street = main.replace(/\s+\d+[a-zA-Z]?$/, "").trim();
         if (street.length < 3) continue;
         const key = street.toLowerCase();
