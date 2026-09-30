@@ -49,6 +49,7 @@ interface OpenOrder {
   guests: number | null;
   total: number;
   opened_at: string;
+  order_number: number | null;
   dining_tables: { name: string; area: string } | null;
 }
 interface OrderItem {
@@ -95,7 +96,7 @@ function POS() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, guests, total, opened_at, order_type, opened_by_name, dining_tables(name, area)")
+        .select("id, table_id, guests, total, opened_at, order_type, opened_by_name, order_number, dining_tables(name, area)")
         .eq("status", "open")
         .order("opened_at");
       if (error) throw error;
@@ -381,6 +382,7 @@ function POS() {
           total: paymentAmount,
           tip: effectiveTip,
           paymentMethod: method,
+          orderNo: activeOrder.order_number != null ? String(activeOrder.order_number) : undefined,
         });
         if (err) toast.error(`Druck: ${err}`);
       }
@@ -414,7 +416,7 @@ function POS() {
       const { data: order, error: oErr } = await supabase
         .from("orders")
         .insert({ status: "open", guests: 1, order_type: takeaway ? "takeaway" : "dine_in", opened_by_name: channelName })
-        .select("id")
+        .select("id, order_number")
         .single();
       if (oErr || !order) throw oErr ?? new Error("order");
       const rows = walkInCart.map((l) => ({
@@ -465,6 +467,7 @@ function POS() {
           total: totalAmt,
           tip: effectiveTip,
           paymentMethod: method,
+          orderNo: order.order_number != null ? String(order.order_number) : undefined,
         });
         if (err) toast.error(`Druck: ${err}`);
       }
@@ -543,6 +546,7 @@ function POS() {
       total,
       tip,
       interim: true,
+      orderNo: isTab && activeOrder?.order_number != null ? String(activeOrder.order_number) : undefined,
     });
     if (err) toast.error(`Druck: ${err}`);
   };

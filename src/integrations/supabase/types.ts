@@ -773,6 +773,7 @@ export type Database = {
           location_id: string | null
           opened_at: string
           opened_by_name: string | null
+          order_number: number | null
           order_type: string
           payment_preference: string | null
           status: Database["public"]["Enums"]["order_status"]
@@ -801,6 +802,7 @@ export type Database = {
           location_id?: string | null
           opened_at?: string
           opened_by_name?: string | null
+          order_number?: number | null
           order_type?: string
           payment_preference?: string | null
           status?: Database["public"]["Enums"]["order_status"]
@@ -829,6 +831,7 @@ export type Database = {
           location_id?: string | null
           opened_at?: string
           opened_by_name?: string | null
+          order_number?: number | null
           order_type?: string
           payment_preference?: string | null
           status?: Database["public"]["Enums"]["order_status"]

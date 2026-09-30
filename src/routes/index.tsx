@@ -54,6 +54,7 @@ interface OpenOrder {
   total: number;
   guests: number | null;
   opened_at: string;
+  order_number: number | null;
 }
 interface OrderItem {
   id: string;
@@ -124,7 +125,7 @@ function ServiceTablet() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, guests, opened_at")
+        .select("id, table_id, total, guests, opened_at, order_number")
         .eq("status", "open")
         .not("table_id", "is", null);
       if (error) throw error;
@@ -178,6 +179,7 @@ function ServiceTablet() {
     total: number;
     tip: number;
     paymentMethod: string;
+    orderNo?: string;
   } | null>(null);
 
   const payTab = useMutation({
@@ -200,6 +202,7 @@ function ServiceTablet() {
         total: finalTotal,
         tip: effectiveTip,
         paymentMethod,
+        orderNo: activeTableOrder.order_number != null ? String(activeTableOrder.order_number) : undefined,
       };
       const { data: existingPayments, error: existingErr } = await supabase
         .from("payment_requests")
@@ -272,6 +275,7 @@ function ServiceTablet() {
       })),
       total: Number(activeTableOrder.total),
       interim: true,
+      orderNo: activeTableOrder.order_number != null ? String(activeTableOrder.order_number) : undefined,
     });
     if (err) toast.error(`Druck: ${err}`);
     else toast.success("Zwischenrechnung gedruckt");
@@ -1002,9 +1006,10 @@ function ServiceTablet() {
                       items: data.items,
                       subtotal: data.subtotal,
                       total: data.total,
-                      tip: data.tip,
-                      paymentMethod: data.paymentMethod,
-                    });
+                       tip: data.tip,
+                       paymentMethod: data.paymentMethod,
+                       orderNo: data.orderNo,
+                     });
                     if (err) toast.error(`Druck: ${err}`);
                     else toast.success("Kundenquittung gedruckt");
                   }}

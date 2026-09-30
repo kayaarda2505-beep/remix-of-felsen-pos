@@ -88,6 +88,7 @@ interface DeliveryReceipt {
   createdAt: string;
   paid?: boolean;
   payMethod?: "open" | "cash" | "card";
+  orderNumber?: number | null;
 }
 
 function customerName(c: Customer) {
@@ -226,7 +227,7 @@ function Lieferung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, opened_at, delivery_address, delivery_note, courier_started_at, courier_id, courier_name")
+        .select("id, total, opened_at, delivery_address, delivery_note, courier_started_at, courier_id, courier_name, order_number")
         .eq("order_type", "delivery")
         .eq("status", "open")
         .is("courier_started_at", null)
@@ -245,7 +246,7 @@ function Lieferung() {
       start.setHours(0, 0, 0, 0);
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status, opened_at, delivery_address, delivery_note, customer_id, courier_started_at, courier_name")
+        .select("id, total, status, opened_at, delivery_address, delivery_note, customer_id, courier_started_at, courier_name, order_number")
         .eq("order_type", "delivery")
         .gte("opened_at", start.toISOString())
         .order("opened_at", { ascending: false });
@@ -285,7 +286,7 @@ function Lieferung() {
       start.setHours(0, 0, 0, 0);
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, status, opened_at, closed_at, delivery_address, delivery_note, contact_name, contact_phone")
+        .select("id, total, status, opened_at, closed_at, delivery_address, delivery_note, contact_name, contact_phone, order_number")
         .eq("order_type", "takeaway")
         .gte("opened_at", start.toISOString())
         .order("opened_at", { ascending: false });
@@ -443,7 +444,7 @@ function Lieferung() {
           total: 0,
           opened_by_name: operator?.name ?? null,
         } as any)
-        .select("id")
+        .select("id, order_number")
         .single();
       if (error) throw error;
 
@@ -502,8 +503,9 @@ function Lieferung() {
             items,
             total: subtotal,
              copies: 2,
-            paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
-            interim: true,
+             paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
+             orderNo: order.order_number != null ? String(order.order_number) : undefined,
+             interim: true,
             title: isTakeaway ? "TAKEAWAY" : "LIEFERSCHEIN",
             footerNote: isTakeaway
               ? `Offen — bei Abholung kassieren · ca. ${eta} Min.`
@@ -540,6 +542,7 @@ function Lieferung() {
           items: cart.map((l) => ({ name: l.item.name, qty: l.qty, price: lineUnit(l) })),
           total: subtotal,
           createdAt: new Date().toISOString(),
+          orderNumber: order.order_number ?? null,
         } as DeliveryReceipt,
 
       };
@@ -575,7 +578,7 @@ function Lieferung() {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, total, status, opened_at, delivery_address, delivery_note, courier_id, courier_name, courier_started_at, courier_delivered_at, customer_id, customers:customer_id(id, first_name, last_name, street, house_no, zip, city, phone, lat, lng)",
+          "id, total, status, opened_at, delivery_address, delivery_note, courier_id, courier_name, courier_started_at, courier_delivered_at, customer_id, order_number, customers:customer_id(id, first_name, last_name, street, house_no, zip, city, phone, lat, lng)",
         )
         .eq("order_type", "delivery")
         .gte("opened_at", start.toISOString())
@@ -1076,12 +1079,12 @@ function Lieferung() {
                   <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                     {todayDeliveries.map((o) => (
                       <div key={o.id} className="glass rounded-xl px-3 py-2 flex items-center justify-between gap-3">
-                        <div className="text-sm min-w-0">
-                          <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
-                            {o.courier_name ? ` · ${o.courier_name}` : ""}
-                            {o.courier_started_at ? " · unterwegs" : ""}
+                         <div className="text-sm min-w-0">
+                           <div className="truncate">{o.order_number != null ? `#${o.order_number} · ` : ""}{o.delivery_address ?? "Lieferung"}</div>
+                           <div className="text-xs text-muted-foreground">
+                             {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
+                             {o.courier_name ? ` · ${o.courier_name}` : ""}
+                             {o.courier_started_at ? " · unterwegs" : ""}
 
                           </div>
                         </div>
@@ -1495,8 +1498,8 @@ function Lieferung() {
               <div className="space-y-2">
                 {doneOrders.map((o: any) => (
                   <div key={o.id} className="glass rounded-xl px-3 py-2 text-sm flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
+                     <div className="min-w-0">
+                       <div className="truncate">{o.order_number != null ? `#${o.order_number} · ` : ""}{o.delivery_address ?? "Lieferung"}</div>
                       <div className="text-xs text-muted-foreground">
                         {new Date(o.opened_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}
                         {o.courier_name ? ` · ${o.courier_name}` : ""}
@@ -1722,8 +1725,8 @@ function OrderGroup({
           {orders.map((o) => (
             <div key={o.id} className="glass rounded-xl px-3 py-2 space-y-1.5">
               <div className="flex items-start justify-between gap-2">
-                <div className="text-sm min-w-0">
-                  <div className="truncate">{o.delivery_address ?? "Lieferung"}</div>
+                 <div className="text-sm min-w-0">
+                   <div className="truncate">{o.order_number != null ? `#${o.order_number} · ` : ""}{o.delivery_address ?? "Lieferung"}</div>
                   {o.delivery_note && (
                     <div className="text-xs text-muted-foreground truncate">{o.delivery_note}</div>
                   )}
@@ -1791,7 +1794,7 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
           </div>
           <h2 className="text-xl font-semibold mt-1">Lieferschein</h2>
           <div className="text-xs text-muted-foreground print:text-black">
-            #{receipt.orderId.slice(0, 8).toUpperCase()} ·{" "}
+            #{receipt.orderNumber ?? receipt.orderId.slice(0, 8).toUpperCase()} ·{" "}
             {new Date(receipt.createdAt).toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" })}
           </div>
         </div>

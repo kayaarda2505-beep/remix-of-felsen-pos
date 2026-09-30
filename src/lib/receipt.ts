@@ -462,6 +462,7 @@ export async function printOrderToStations(opts: {
   items: ReceiptItem[];
   operatorName?: string | null;
   orderType?: string;
+  orderNo?: string;
 }): Promise<string[]> {
   const errors: string[] = [];
   const { bar, kueche, pizza } = splitByStation(await withPizzaIngredients(opts.items));
@@ -469,7 +470,7 @@ export async function printOrderToStations(opts: {
   const barPrinter = opts.printers.find((p) => hasPrinterType(p, "bar"));
   const kuechePrinter = opts.printers.find((p) => hasPrinterType(p, "kueche"));
   const pizzaPrinter = opts.printers.find((p) => hasPrinterType(p, "pizza"));
-  const orderNo = shortId();
+  const orderNo = opts.orderNo ?? shortId();
 
   for (const [station, items, printer] of [
     ["pizza", pizza, pizzaPrinter],
@@ -508,6 +509,7 @@ export async function printBill(opts: {
   note?: string | null;
   compact?: boolean;
   copies?: number;
+  orderNo?: string;
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => hasPrinterType(p, "rechnung")) ??

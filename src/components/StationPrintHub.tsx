@@ -47,7 +47,7 @@ export function StationPrintHub() {
       try {
         const { data: order, error: orderError } = await supabase
           .from("orders")
-          .select("order_type, contact_name, delivery_address, opened_by_name, table_id")
+          .select("order_type, contact_name, delivery_address, opened_by_name, table_id, order_number")
           .eq("id", orderId)
           .maybeSingle();
         if (orderError) throw orderError;
@@ -89,6 +89,7 @@ export function StationPrintHub() {
           items,
           orderType,
           operatorName: order?.opened_by_name ?? null,
+          orderNo: order?.order_number != null ? String(order.order_number) : undefined,
         });
         if (!errors.length) return;
 
