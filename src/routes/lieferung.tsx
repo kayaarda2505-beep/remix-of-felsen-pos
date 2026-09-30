@@ -149,22 +149,24 @@ function Lieferung() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
-  // Strassen-Autocomplete auf Basis der PLZ
+  // Strassen-Autocomplete: komplette Strassenliste der PLZ einmal laden, danach sofort lokal filtern
   const [streetQuery, setStreetQuery] = useState("");
   const [streetOpen, setStreetOpen] = useState(false);
-  const [debouncedStreet, setDebouncedStreet] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedStreet(streetQuery.trim()), 300);
-    return () => clearTimeout(t);
-  }, [streetQuery]);
 
   const streetsQuery = useQuery({
-    queryKey: ["streets", form.zip, debouncedStreet],
+    queryKey: ["streets", form.zip],
     enabled: form.zip.length === 4,
-    staleTime: 10 * 60 * 1000,
-    queryFn: () => searchStreets({ data: { zip: form.zip, query: debouncedStreet || undefined } }),
+    staleTime: 60 * 60 * 1000,
+    queryFn: () => searchStreets({ data: { zip: form.zip } }),
   });
-  const streetOptions: string[] = streetsQuery.data?.streets ?? [];
+  const streetOptions: string[] = useMemo(() => {
+    const all: string[] = streetsQuery.data?.streets ?? [];
+    const q = streetQuery.trim().toLowerCase();
+    if (!q) return all;
+    const starts = all.filter((s) => s.toLowerCase().startsWith(q));
+    const contains = all.filter((s) => !s.toLowerCase().startsWith(q) && s.toLowerCase().includes(q));
+    return [...starts, ...contains];
+  }, [streetsQuery.data?.streets, streetQuery]);
 
   // Ort automatisch aus der PLZ übernehmen
   useEffect(() => {
