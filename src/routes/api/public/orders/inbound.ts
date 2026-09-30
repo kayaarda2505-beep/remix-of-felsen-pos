@@ -24,7 +24,7 @@ const Schema = z.object({
     city: z.string().max(80).nullable().optional(),
   }),
   note: z.string().max(500).nullable().optional(),
-  payment_method: z.enum(["cash", "card", "twint"]).nullable().optional(),
+  payment_method: z.enum(["cash", "card", "twint"]).nullable().optional().catch(null),
   items: z.array(ItemSchema).min(1).max(60),
   external_id: z.string().max(120).nullable().optional(),
 });
@@ -71,7 +71,7 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
 
         let payload: Payload;
         try {
-          payload = Schema.parse(await request.json());
+          payload = Schema.parse(normalizePayload(await request.json()));
         } catch (e: any) {
           return Response.json({ error: `Ungültige Daten: ${e?.message ?? ""}` }, { status: 400, headers: cors });
         }
