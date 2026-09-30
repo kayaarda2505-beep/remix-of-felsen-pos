@@ -45,112 +45,46 @@ export const lookupZip = createServerFn({ method: "POST" })
     return { city, lat: first.geometry.location.lat, lng: first.geometry.location.lng };
   });
 
-/** Liefert Strassen zu einer PLZ (Google Places Autocomplete, auf die PLZ eingegrenzt). */
+/** Liefert alle Strassen einer PLZ aus dem amtlichen Strassenverzeichnis der Schweiz (swisstopo). */
 export const searchStreets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => StreetSchema.parse(input))
   .handler(async ({ data }) => {
-    const headers = gatewayHeaders();
-
-    // Mittelpunkt der PLZ als Location-Bias, damit nur Strassen der Region kommen
-    let center: { lat: number; lng: number } | null = null;
-    let city: string | null = null;
+    const url =
+      "https://api3.geo.admin.ch/rest/services/api/MapServer/find?layer=ch.swisstopo.amtliches-strassenverzeichnis" +
+      `&searchText=${encodeURIComponent(data.zip)}&searchField=zip_label&returnGeometry=false&contains=true`;
     try {
-      const geo = await fetch(
-        `https://connector-gateway.lovable.dev/google_maps/maps/api/geocode/json?components=${encodeURIComponent(
-          `postal_code:${data.zip}|country:CH`,
-        )}&region=ch&language=de`,
-        { headers },
-      );
-      const gj = (await geo.json()) as {
-        results?: {
-          address_components: { long_name: string; types: string[] }[];
-          geometry: { location: { lat: number; lng: number } };
-        }[];
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.error("Strassenverzeichnis", res.status, await res.text());
+        return { city: null as string | null, streets: [] as string[] };
+      }
+      const json = (await res.json()) as {
+        results?: { attributes?: { stn_label?: string; zip_label?: string; str_type?: string; str_status?: string } }[];
       };
-      const first = gj.results?.[0];
-      if (first) {
-        center = first.geometry.location;
-        city =
-          first.address_components.find((c) => c.types.includes("locality"))?.long_name ??
-          first.address_components.find((c) => c.types.includes("postal_town"))?.long_name ??
-          null;
+      const seen = new Map<string, string>();
+      let city: string | null = null;
+      for (const r of json.results ?? []) {
+        const a = r.attributes;
+        if (!a?.stn_label || !a.zip_label) continue;
+        // zip_label kann mehrere PLZ enthalten ("8048 Zürich, 8047 Zürich")
+        const labels = a.zip_label.split(",").map((z) => z.trim());
+        const match = labels.find((z) => z.startsWith(`${data.zip} `));
+        if (!match) continue;
+        if (!city) city = match.slice(data.zip.length + 1).trim() || null;
+        if (a.str_type === "Benanntes Gebiet") continue;
+        if (a.str_status && a.str_status !== "bestehend") continue;
+        const name = a.stn_label.trim();
+        if (name.length < 3) continue;
+        const key = name.toLowerCase();
+        if (!seen.has(key)) seen.set(key, name);
       }
-    } catch {
-      center = null;
+      return {
+        city,
+        streets: [...seen.values()].sort((x, y) => x.localeCompare(y, "de")),
+      };
+    } catch (e) {
+      console.error("Strassenverzeichnis", e);
+      return { city: null as string | null, streets: [] as string[] };
     }
-
-    const term = (data.query ?? "").trim();
-    // Ohne Suchbegriff das Alphabet anspielen, damit eine breite Strassenliste entsteht
-    const inputs = term
-      ? [`${term}, ${data.zip}${city ? ` ${city}` : ""}`]
-      : "abcdefghiklmoprstuwz"
-          .split("")
-          .map((letter) => `${letter}, ${data.zip}${city ? ` ${city}` : ""}`);
-
-    const seen = new Map<string, string>();
-    const results = await Promise.all(
-      inputs.map(async (input) => {
-        const body: Record<string, unknown> = {
-          input,
-          includedRegionCodes: ["ch"],
-          languageCode: "de",
-          includedPrimaryTypes: ["route", "street_address"],
-        };
-        if (center) {
-          body.locationBias = {
-            circle: { center: { latitude: center.lat, longitude: center.lng }, radius: 3000 },
-          };
-        }
-        try {
-          const res = await fetch(
-            `https://connector-gateway.lovable.dev/google_maps/places/v1/places:autocomplete`,
-            {
-              method: "POST",
-              headers: {
-                ...headers,
-                "Content-Type": "application/json",
-                "X-Goog-FieldMask":
-                  "suggestions.placePrediction.structuredFormat.mainText.text,suggestions.placePrediction.structuredFormat.secondaryText.text",
-              },
-              body: JSON.stringify(body),
-            },
-          );
-          if (!res.ok) {
-            console.error("Strassensuche", res.status, await res.text());
-            return [];
-          }
-          const json = (await res.json()) as {
-            suggestions?: {
-              placePrediction?: {
-                structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } };
-              };
-            }[];
-          };
-          return (json.suggestions ?? []).map((s) => ({
-            main: s.placePrediction?.structuredFormat?.mainText?.text ?? "",
-            secondary: s.placePrediction?.structuredFormat?.secondaryText?.text ?? "",
-          }));
-        } catch {
-          return [];
-        }
-      }),
-    );
-
-    for (const preds of results) {
-      for (const p of preds) {
-        const main = p.main.trim();
-        if (!main) continue;
-        if (p.secondary && !p.secondary.includes(data.zip) && city && !p.secondary.includes(city)) continue;
-        const street = main.replace(/\s+\d+[a-zA-Z]?$/, "").trim();
-        if (street.length < 3) continue;
-        const key = street.toLowerCase();
-        if (!seen.has(key)) seen.set(key, street);
-      }
-    }
-
-    return {
-      city,
-      streets: [...seen.values()].sort((a, b) => a.localeCompare(b, "de")).slice(0, 60),
-    };
   });
