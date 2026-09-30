@@ -15,10 +15,11 @@ type WebOrder = {
   payment_preference: string | null;
   total: number | null;
   opened_at?: string | null;
+  order_number?: number | null;
 };
 
 const COLS =
-  "id, order_type, contact_name, contact_phone, delivery_address, delivery_note, payment_preference, total, opened_at";
+  "id, order_type, contact_name, contact_phone, delivery_address, delivery_note, payment_preference, total, opened_at, order_number";
 
 const paymentLabels: Record<string, string> = { cash: "Bar", card: "Karte", twint: "TWINT" };
 
@@ -141,6 +142,7 @@ export function WebOrderAlert() {
         compact: true,
         copies: 2,
         paymentMethod: paymentLabels[payment],
+        orderNo: o.order_number != null ? String(o.order_number) : undefined,
         footerNote: `Offen — ${paymentLabels[payment]} ${isDelivery ? "beim Kunden" : "bei Abholung"} kassieren`,
         ...(isDelivery
           ? {
