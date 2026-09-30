@@ -103,9 +103,21 @@ export function WebOrderAlert() {
         (supabase as any).from("printers").select("*").eq("active", true),
       ]);
       const isDelivery = o.order_type === "delivery";
+      const addressParts = (o.delivery_address ?? "").split(" · ");
+      const addressText = addressParts[1] ?? "";
+      const comma = addressText.lastIndexOf(", ");
+      const deliveryRecipient = isDelivery ? {
+        name: o.contact_name ?? addressParts[0] ?? "Gast",
+        street: comma >= 0 ? addressText.slice(0, comma) : addressText,
+        postal: comma >= 0 ? addressText.slice(comma + 2) : "",
+        phone: o.contact_phone,
+        note: o.delivery_note,
+      } : undefined;
       const billError = await printBill({
         printers: (printers ?? []) as any,
-        tableName: o.delivery_address ?? o.contact_name ?? "Website",
+        tableName: isDelivery ? "Lieferung" : o.contact_name ?? "Website",
+        deliveryRecipient,
+        note: isDelivery ? null : o.delivery_note,
         items: ((items ?? []) as any[]).map((i) => ({
           product_name: i.product_name,
           qty: i.qty,
@@ -119,11 +131,10 @@ export function WebOrderAlert() {
         total: Number(o.total ?? 0),
         interim: true,
         title: isDelivery ? "LIEFERSCHEIN · WEBSITE" : "TAKEAWAY · WEBSITE",
-        footerNote: o.delivery_note ? `Notiz: ${o.delivery_note}` : "Offen — beim Kunden kassieren",
+        footerNote: "Offen — beim Kunden kassieren",
         ...(isDelivery
           ? {
               qrUrl: `${window.location.origin}/kurier/${o.id}`,
-              qrLabel: "QR scannen: Adresse, Navigation & Anruf",
             }
           : {}),
       });

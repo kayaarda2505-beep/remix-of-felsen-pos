@@ -28,7 +28,7 @@ const EscPosEncoder = require("esc-pos-encoder");
 import { LOGO_B64, LOGO_WIDTH, LOGO_HEIGHT } from "./logo";
 import qrcode from "qrcode-generator";
 
-const VERSION = "1.0.3";
+const VERSION = "1.0.4";
 const PORT = Number(process.env.PORT ?? 9110);
 const HOST = "0.0.0.0";
 
@@ -176,16 +176,12 @@ function buildPayload(payload: ReceiptPayload): Buffer {
       enc.align("center").size("normal").width(1).height(1).bold(false);
       try {
         printNativeQr(enc, line.qr, line.size ?? 7);
-        enc.align("center").size("normal").bold(false).line("Kurier-Link:");
-        enc.line(line.qr);
       } catch (e) {
         try {
           const qr = qrRaster(line.qr, line.size ?? 6);
           printRaster(enc, qr.width, qr.height, qr.bytes);
-          enc.align("center").size("normal").bold(false).line("Kurier-Link:");
-          enc.line(line.qr);
         } catch {
-          enc.line(line.qr);
+          // Kein Klartext-Link auf dem Bon; QR-Druckfehler wird nicht als URL ausgegeben.
         }
       }
       continue;

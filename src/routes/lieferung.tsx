@@ -488,12 +488,16 @@ function Lieferung() {
            const billError = await printBill({
             printers: (printers ?? []) as any,
             tableName: isTakeaway
-              ? `TAKEAWAY · ${guestName}${guestPhone ? ` · ${guestPhone}` : ""}${
-                  deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""
-                }`
-              : `LIEFERUNG · ${guestName} · ${address}${guestPhone ? ` · ${guestPhone}` : ""}${
-                  deliveryNote.trim() ? ` · ${deliveryNote.trim()}` : ""
-                }`,
+              ? `TAKEAWAY · ${guestName}`
+              : "Lieferung",
+            deliveryRecipient: !isTakeaway && customer ? {
+              name: guestName,
+              street: `${customer.street} ${customer.house_no}`.trim(),
+              postal: `${customer.zip} ${customer.city}`.trim(),
+              phone: guestPhone,
+              note: [customer.note, deliveryNote.trim()].filter(Boolean).join(" · "),
+            } : undefined,
+            note: isTakeaway ? deliveryNote.trim() : undefined,
             items,
             total: subtotal,
             paymentMethod: pay === "cash" ? "Bar" : pay === "card" ? "Karte" : null,
@@ -511,7 +515,6 @@ function Lieferung() {
               ? {}
               : {
                   qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
-                  qrLabel: "QR scannen: Adresse, Navigation & Anruf",
                 }),
           });
            if (billError) toast.error(`Lieferschein: ${billError}`);
@@ -1791,9 +1794,10 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
           </div>
         </div>
 
-        <div className="mt-4 text-sm space-y-0.5">
+        <div className="mt-4 text-sm">
           <div className="font-semibold">{receipt.customerName}</div>
-          <div>{receipt.address}</div>
+          <div className="mt-3 font-semibold">{receipt.address.split(", ")[0]}</div>
+          <div className="mt-3 font-semibold">{receipt.address.split(", ").slice(1).join(", ")}</div>
           {receipt.phone && <div className="text-muted-foreground print:text-black">Tel. {receipt.phone}</div>}
           {receipt.customerNote && (
             <div className="text-muted-foreground print:text-black">Kunde: {receipt.customerNote}</div>
@@ -1830,10 +1834,6 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
             alt={`QR-Code zum Lieferauftrag ${receipt.orderId.slice(0, 8)}`}
             className="w-40 h-40 rounded-xl bg-white p-2"
           />
-          <div className="text-[11px] text-center text-muted-foreground mt-2 print:text-black">
-            QR scannen für Adresse, Navigation & Anruf
-          </div>
-          <div className="text-[10px] text-center text-muted-foreground break-all print:text-black">{courierUrl}</div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mt-5 print:hidden">

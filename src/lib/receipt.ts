@@ -238,8 +238,9 @@ export function buildBill(opts: {
   orderNo?: string;
   title?: string;            // z.B. "LIEFERSCHEIN"
   qrUrl?: string;            // eigener QR-Code (statt Google-Bewertung)
-  qrLabel?: string;
   footerNote?: string;
+  deliveryRecipient?: { name: string; street: string; postal: string; phone?: string | null; note?: string | null };
+  note?: string | null;
 }): ReceiptPayload {
   const s = opts.settings ?? DEFAULT_SETTINGS;
   const cur = s.currency;
@@ -248,8 +249,8 @@ export function buildBill(opts: {
   // Kopf
   lines.push({ logo: true });
   lines.push({ text: s.businessName, align: "center", bold: true, size: "double-h" });
-  lines.push({ text: "Fegergasse 4", align: "center" });
-  lines.push({ text: "4300 Zofingen", align: "center" });
+  lines.push({ text: "Badenerstrasse 696", align: "center", bold: true });
+  lines.push({ text: "8048 Altstetten", align: "center", bold: true });
 
   lines.push({ text: "", align: "center" });
   lines.push({
@@ -258,6 +259,20 @@ export function buildBill(opts: {
     bold: true,
   });
   lines.push({ text: "", align: "center" });
+  if (opts.deliveryRecipient) {
+    const recipient = opts.deliveryRecipient;
+    lines.push({ text: recipient.name, bold: true });
+    lines.push({ text: "" });
+    lines.push({ text: recipient.street, bold: true });
+    lines.push({ text: "" });
+    lines.push({ text: recipient.postal, bold: true });
+    if (recipient.phone) lines.push({ text: `Tel. ${recipient.phone}` });
+    if (recipient.note) lines.push({ text: `Notiz: ${recipient.note}`, bold: true });
+    lines.push({ text: "" });
+  } else if (opts.note) {
+    lines.push({ text: `Notiz: ${opts.note}`, bold: true });
+    lines.push({ text: "" });
+  }
   lines.push({ cols: ["Tisch", opts.tableName] });
   lines.push({ cols: ["Datum", nowStr()] });
   lines.push({ cols: ["Bon-Nr.", opts.orderNo ?? shortId()] });
@@ -332,10 +347,8 @@ export function buildBill(opts: {
     bold: !opts.interim,
   });
 
-  // QR-Code: eigener (z.B. Kurier-Link) oder Google-Bewertung auf finaler Rechnung
+  // QR-Code: eigener Link oder Google-Bewertung auf finaler Rechnung
   if (opts.qrUrl) {
-    lines.push({ text: "" });
-    if (opts.qrLabel) lines.push({ text: opts.qrLabel, align: "center", bold: true });
     lines.push({ text: "" });
     lines.push({ qr: opts.qrUrl, size: 7 });
     lines.push({ text: "" });
@@ -382,7 +395,8 @@ export function buildCardReceipt(info: CardReceiptInfo, s: ReceiptSettings): Rec
   const lines: ReceiptPayload["lines"] = [];
 
   lines.push({ text: s.businessName, align: "center", bold: true, size: "double-h" });
-  lines.push({ text: "Fegergasse 4 · 4300 Zofingen", align: "center" });
+  lines.push({ text: "Badenerstrasse 696", align: "center", bold: true });
+  lines.push({ text: "8048 Altstetten", align: "center", bold: true });
   lines.push({ text: "" });
   lines.push({ text: "KARTEN-BELEG", align: "center", bold: true });
   lines.push({ text: "Händlerbeleg", align: "center" });
@@ -487,8 +501,9 @@ export async function printBill(opts: {
   paymentMethod?: string | null;
   title?: string;
   qrUrl?: string;
-  qrLabel?: string;
   footerNote?: string;
+  deliveryRecipient?: { name: string; street: string; postal: string; phone?: string | null; note?: string | null };
+  note?: string | null;
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => hasPrinterType(p, "rechnung")) ??
@@ -536,8 +551,8 @@ export function buildDailyReport(d: DailyReportData, s: ReceiptSettings): Receip
 
   lines.push({ logo: true });
   lines.push({ text: s.businessName, align: "center", bold: true, size: "double-h" });
-  lines.push({ text: "Fegergasse 4", align: "center" });
-  lines.push({ text: "4300 Zofingen", align: "center" });
+  lines.push({ text: "Badenerstrasse 696", align: "center", bold: true });
+  lines.push({ text: "8048 Altstetten", align: "center", bold: true });
   lines.push({ text: "" });
   lines.push({ text: "TAGESABSCHLUSS", align: "center", bold: true });
   lines.push({ text: d.rangeLabel, align: "center" });
