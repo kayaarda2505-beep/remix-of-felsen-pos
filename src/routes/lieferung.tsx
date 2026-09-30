@@ -1794,7 +1794,7 @@ function DeliveryReceiptOverlay({ receipt, onClose }: { receipt: DeliveryReceipt
           </div>
           <h2 className="text-xl font-semibold mt-1">Lieferschein</h2>
           <div className="text-xs text-muted-foreground print:text-black">
-            #{receipt.orderId.slice(0, 8).toUpperCase()} ·{" "}
+            #{receipt.orderNumber ?? receipt.orderId.slice(0, 8).toUpperCase()} ·{" "}
             {new Date(receipt.createdAt).toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" })}
           </div>
         </div>
