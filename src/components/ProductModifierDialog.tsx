@@ -188,11 +188,15 @@ export function ProductModifierDialog({
                       : DEFAULT_MODIFIER_GROUPS;
                   const pastaChoice = mods.some((m) => /^(pasta |penne |spaghetti )/i.test(m));
                   const chosenPasta = mods.find((m) => /^(pasta |penne |spaghetti )/i.test(m)) ?? "";
-                  const pastaShape: ModifierGroup[] = isLunchMenu && /pasta/i.test(product.name) && pastaChoice && !/lasagne|cannelloni|tortellini|al forno/i.test(chosenPasta)
+                  const hasPastaShapeGroup = groups.some((group) => /nudelsorte/i.test(group.label));
+                  const pastaShape: ModifierGroup[] = isLunchMenu && /pasta/i.test(product.name) && pastaChoice && !hasPastaShapeGroup && !/lasagne|cannelloni|tortellini|al forno/i.test(chosenPasta)
                     ? [{ label: "Nudelsorte wählen", items: [{ label: "Spaghetti" }, { label: "Penne" }] }]
                     : [];
                   const menuGroups = groups.map((group) => /salatsosse/i.test(group.label) && isLunchMenu
-                    ? { ...group, items: [...group.items, { label: "Keine Sosse" }, { label: "Eigene Sosse" }] }
+                    ? { ...group, items: [
+                        ...group.items,
+                        ...[{ label: "Keine Sosse" }, { label: "Eigene Sosse" }].filter((item) => !group.items.some((existing) => existing.label === item.label)),
+                      ] }
                     : group);
                   return [...menuGroups, ...pastaShape].filter((group) =>
                     !isPizzaItem(product.name, product.category) || !/^(eis|zitrone)$/i.test(group.label.trim()),

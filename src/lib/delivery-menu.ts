@@ -1684,9 +1684,11 @@ for (const category of DELIVERY_MENU) {
     if (!/mittagsmen/i.test(category.category)) continue;
     for (const group of item.modifierGroups ?? []) {
       if (/pizza/i.test(group.label)) group.items.sort((a, b) => a.label.localeCompare(b.label, "de-CH"));
-      if (/salatsosse/i.test(group.label)) group.items.push({ label: "Keine Sosse" }, { label: "Eigene Sosse" });
+      if (/salatsosse/i.test(group.label)) group.items.push(
+        ...[{ label: "Keine Sosse" }, { label: "Eigene Sosse" }].filter((option) => !group.items.some((item) => item.label === option.label)),
+      );
     }
-    if (/pasta/i.test(item.name)) item.modifierGroups?.splice(1, 0, {
+    if (/pasta/i.test(item.name) && !item.modifierGroups?.some((group) => /nudelsorte/i.test(group.label))) item.modifierGroups?.splice(1, 0, {
       label: "Nudelsorte wählen",
       items: [{ label: "Spaghetti" }, { label: "Penne" }],
     });
