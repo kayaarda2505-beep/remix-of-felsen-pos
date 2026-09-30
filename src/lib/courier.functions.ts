@@ -34,6 +34,8 @@ export const getCourierOrder = createServerFn({ method: "GET" })
       note: string | null;
     } | null = null;
 
+    // Die beim Bestellen festgehaltene Adresse hat Vorrang: Kundenstammdaten
+    // können später geändert oder von einer anderen Bestellung wiederverwendet werden.
     if (order.customer_id) {
       const { data: c } = await supabaseAdmin
         .from("customers")
@@ -51,6 +53,21 @@ export const getCourierOrder = createServerFn({ method: "GET" })
           note: c.note,
         };
       }
+    }
+
+    if (order.delivery_address) {
+      const parts = order.delivery_address.split(" · ");
+      const address = parts.length >= 2 ? parts[1] : order.delivery_address;
+      const comma = address.lastIndexOf(", ");
+      customer = {
+        name: order.contact_name || (parts.length >= 2 ? parts[0] : customer?.name ?? ""),
+        street: comma >= 0 ? address.slice(0, comma) : address,
+        house_no: "",
+        zip: comma >= 0 ? address.slice(comma + 2) : "",
+        city: "",
+        phone: order.contact_phone || (parts.length >= 3 ? parts[2] : customer?.phone ?? ""),
+        note: customer?.note ?? null,
+      };
     }
 
     const { data: payments } = await supabaseAdmin

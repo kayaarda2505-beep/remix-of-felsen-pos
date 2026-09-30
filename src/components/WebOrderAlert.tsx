@@ -139,6 +139,7 @@ export function WebOrderAlert() {
         interim: true,
         title: "WEBSITE",
         compact: true,
+        copies: 2,
         paymentMethod: paymentLabels[payment],
         footerNote: `Offen — ${paymentLabels[payment]} ${isDelivery ? "beim Kunden" : "bei Abholung"} kassieren`,
         ...(isDelivery
@@ -148,7 +149,7 @@ export function WebOrderAlert() {
           : {}),
       });
       if (billError) toast.error(`Quittung: ${billError}`);
-      else toast.success("Bestellung angenommen — Quittung wird gedruckt");
+      else toast.success("Bestellung angenommen — zwei Quittungen werden gedruckt");
     } catch (e: any) {
       toast.error(e?.message ?? "Annehmen fehlgeschlagen");
     } finally {

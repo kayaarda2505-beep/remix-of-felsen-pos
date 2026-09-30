@@ -507,6 +507,7 @@ export async function printBill(opts: {
   deliveryRecipient?: { name: string; street: string; postal: string; phone?: string | null; note?: string | null };
   note?: string | null;
   compact?: boolean;
+  copies?: number;
 }): Promise<string | null> {
   let billPrinter: PrinterConfig | undefined =
     opts.printers.find((p) => hasPrinterType(p, "rechnung")) ??
@@ -526,8 +527,12 @@ export async function printBill(opts: {
 
   const settings = await loadReceiptSettings();
   const items = await withPizzaIngredients(opts.items);
-  const r = await printReceipt(billPrinter, buildBill({ ...opts, items, settings }));
-  return r.ok ? null : r.error ?? "Druckfehler";
+  const payload = buildBill({ ...opts, items, settings });
+  for (let copy = 0; copy < (opts.copies ?? 1); copy++) {
+    const r = await printReceipt(billPrinter, payload);
+    if (!r.ok) return `${copy} von ${opts.copies ?? 1} Bons gedruckt: ${r.error ?? "Druckfehler"}`;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
