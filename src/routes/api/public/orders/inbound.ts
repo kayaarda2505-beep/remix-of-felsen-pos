@@ -95,6 +95,7 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
         try {
           payload = Schema.parse(normalizePayload(body));
         } catch (e: any) {
+          console.error("[inbound] invalid", e?.message, JSON.stringify(body).slice(0, 1500));
           return Response.json({ error: `Ungültige Daten: ${e?.message ?? ""}` }, { status: 400, headers: cors });
         }
 
@@ -250,8 +251,36 @@ function normalizePayload(body: any) {
   let pay: unknown = null;
   for (const k of PAY_KEYS) if (body[k] != null) { pay = body[k]; break; }
   out.payment_method = mapPayment(pay);
+  const t = String(body.type ?? body.order_type ?? body.orderType ?? "").toLowerCase();
+  out.type = /deliver|liefer|kurier/.test(t) ? "delivery" : "takeaway";
+  const cust: any = { ...c };
+  for (const k of ["first_name", "last_name", "name", "street", "house_no", "zip", "city"]) {
+    if (cust[k] != null) cust[k] = String(cust[k]).trim().slice(0, k === "name" ? 160 : 80) || null;
+  }
+  cust.phone = String(c.phone ?? body.phone ?? "").trim().slice(0, 30);
+  if (cust.house_no) cust.house_no = cust.house_no.slice(0, 20);
+  if (cust.zip) cust.zip = cust.zip.slice(0, 12);
+  out.customer = cust;
+  if (out.external_id != null) out.external_id = String(out.external_id).slice(0, 120);
   if (Array.isArray(body.items)) {
-    out.items = body.items.map((i: any) => ({ ...i, note: pickStr(i, NOTE_KEYS) }));
+    out.items = body.items.map((i: any) => {
+      const mods = Array.isArray(i.modifiers ?? i.extras ?? i.options)
+        ? (i.modifiers ?? i.extras ?? i.options)
+            .map((m: any) => (typeof m === "string" ? m : m?.name ?? m?.label ?? m?.title ?? ""))
+            .map((m: string) => String(m).trim().slice(0, 120))
+            .filter(Boolean)
+            .slice(0, 30)
+        : [];
+      return {
+        product_id: i.product_id != null ? String(i.product_id).slice(0, 64) : undefined,
+        product_name: String(i.product_name ?? i.name ?? i.title ?? "Artikel").slice(0, 200),
+        category: i.category ? String(i.category).slice(0, 64) : null,
+        unit_price: Number(i.unit_price ?? i.price ?? 0) || 0,
+        qty: Math.max(1, Math.min(99, Math.round(Number(i.qty ?? i.quantity ?? 1) || 1))),
+        note: pickStr(i, NOTE_KEYS),
+        modifiers: mods,
+      };
+    });
   }
   console.log("[inbound] keys", Object.keys(body), "note?", !!out.note, "pay", out.payment_method);
   return out;
