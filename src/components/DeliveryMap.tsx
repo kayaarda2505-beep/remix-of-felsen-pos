@@ -105,6 +105,7 @@ export function DeliveryMap({
   const ref = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const lastIdsRef = useRef<string>("");
   const infoRef = useRef<any>(null);
   const routeLinesRef = useRef<any[]>([]);
   const routeCacheRef = useRef<Record<string, { path: any[]; info: RouteInfo }>>({});
@@ -180,6 +181,10 @@ export function DeliveryMap({
       bounds.extend(marker.getPosition());
     });
 
+    const idSig = pins.map((p) => p.id).sort().join("|");
+    const shouldFit = idSig !== lastIdsRef.current;
+    lastIdsRef.current = idSig;
+    if (!shouldFit) return;
     if (pins.length === 1) {
       mapRef.current.setCenter(bounds.getCenter());
       mapRef.current.setZoom(14);

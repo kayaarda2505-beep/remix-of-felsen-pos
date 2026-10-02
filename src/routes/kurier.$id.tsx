@@ -7,9 +7,11 @@ import { Bike, Check, Loader2, MapPin, Navigation, Phone, StickyNote } from "luc
 import {
   completeCourierDelivery,
   getCourierOrder,
+  listMyCourierOrders,
   resendTrackingSms,
   startCourierDelivery,
 } from "@/lib/courier.functions";
+import { useCourierGeo } from "@/hooks/use-courier-geo";
 
 
 export const Route = createFileRoute("/kurier/$id")({
@@ -34,6 +36,13 @@ function isApple() {
 function CourierPage() {
   const { id } = Route.useParams();
   const fetchOrder = useServerFn(getCourierOrder);
+  const listOrders = useServerFn(listMyCourierOrders);
+  const { data: mine } = useQuery({
+    queryKey: ["my-courier-orders"],
+    queryFn: () => listOrders({ data: {} as never }),
+    refetchInterval: 20_000,
+  });
+  useCourierGeo((mine as any)?.courier?.id);
   const startDelivery = useServerFn(startCourierDelivery);
   const qc = useQueryClient();
   const finishDelivery = useServerFn(completeCourierDelivery);
