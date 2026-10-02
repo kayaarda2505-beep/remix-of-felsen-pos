@@ -1,0 +1,2 @@
+ALTER TABLE public.team_members ADD COLUMN IF NOT EXISTS tracker_token text UNIQUE DEFAULT encode(extensions.gen_random_bytes(9), 'hex');
+UPDATE public.team_members SET tracker_token = encode(extensions.gen_random_bytes(9), 'hex') WHERE tracker_token IS NULL;

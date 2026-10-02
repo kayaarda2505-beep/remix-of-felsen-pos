@@ -43,6 +43,13 @@
       "when": 1790781128963,
       "tag": "0005_daily_order_number",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790955346126,
+      "tag": "0006_courier_tracker_token",
+      "breakpoints": true
     }
   ]
 }

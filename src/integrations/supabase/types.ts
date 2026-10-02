@@ -1517,6 +1517,7 @@ export type Database = {
           phone: string | null
           pin_hash: string
           role: Database["public"]["Enums"]["team_role"]
+          tracker_token: string | null
           user_id: string | null
           withholding_tax: boolean
           withholding_tax_rate: number
@@ -1539,6 +1540,7 @@ export type Database = {
           phone?: string | null
           pin_hash: string
           role?: Database["public"]["Enums"]["team_role"]
+          tracker_token?: string | null
           user_id?: string | null
           withholding_tax?: boolean
           withholding_tax_rate?: number
@@ -1561,6 +1563,7 @@ export type Database = {
           phone?: string | null
           pin_hash?: string
           role?: Database["public"]["Enums"]["team_role"]
+          tracker_token?: string | null
           user_id?: string | null
           withholding_tax?: boolean
           withholding_tax_rate?: number
