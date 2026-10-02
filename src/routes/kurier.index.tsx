@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useCourierGeo } from "@/hooks/use-courier-geo";
 import { Bike, Loader2, LogOut, MapPin } from "lucide-react";
 
 import { listMyCourierOrders } from "@/lib/courier.functions";
@@ -71,7 +71,7 @@ function CourierHome() {
           </div>
           {geoState !== "on" && (
             <button
-              onClick={() => setGeoTick((t) => t + 1)}
+              onClick={retry}
               className="glass-strong rounded-xl px-3 py-2 font-medium"
             >
               Standort freigeben
