@@ -638,8 +638,22 @@ function Lieferung() {
       if (error) throw error;
       return (data ?? []) as any[];
     },
-    refetchInterval: 10000,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
   });
+
+  // Live: Kurier-Standorte sofort übernehmen
+  useEffect(() => {
+    const ch = supabase
+      .channel("courier-locations-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "courier_locations" }, () => {
+        qc.invalidateQueries({ queryKey: ["courier_locations"] });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [qc]);
 
   // Fehlende Koordinaten automatisch nachtragen
   const geocode = useServerFn(geocodeCustomers);
