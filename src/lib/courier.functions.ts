@@ -313,12 +313,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 async function memberForUser(userId: string) {
   const { data, error } = await (supabaseAdmin as any)
     .from("team_members")
-    .select("id, name, role, active")
+    .select("id, name, role, active, tracker_token")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data || data.active === false) return null;
-  return { id: data.id as string, name: data.name as string, role: data.role as string };
+  return { id: data.id as string, name: data.name as string, role: data.role as string, trackerToken: (data.tracker_token ?? null) as string | null };
 }
 
 export const getMyCourier = createServerFn({ method: "POST" })

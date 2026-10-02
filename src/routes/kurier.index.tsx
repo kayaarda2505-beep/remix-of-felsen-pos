@@ -80,6 +80,25 @@ function CourierHome() {
         </div>
       )}
 
+      {courier?.trackerToken && (
+        <details className="glass rounded-2xl p-3 mb-4 text-xs">
+          <summary className="font-medium cursor-pointer">Standort im Hintergrund (Tracker-App einrichten)</summary>
+          <ol className="list-decimal pl-4 mt-2 space-y-1.5 text-muted-foreground">
+            <li>Gratis-App <b className="text-foreground">„Traccar Client"</b> aus dem App Store / Play Store installieren.</li>
+            <li>
+              <b className="text-foreground">Server-URL</b>:{" "}
+              <code className="text-foreground break-all select-all">https://app.piratino-pizzeria.ch/api/public/courier-location</code>
+            </li>
+            <li>
+              <b className="text-foreground">Geräte-Kennung</b>:{" "}
+              <code className="text-foreground select-all">{courier.trackerToken}</code>
+            </li>
+            <li>Genauigkeit „Hoch", Intervall 10 Sekunden, Standort „Immer erlauben".</li>
+            <li>Dienst einschalten — der Standort läuft dann auch bei gesperrtem Handy.</li>
+          </ol>
+        </details>
+      )}
+
       {isLoading && (
         <div className="flex justify-center py-10">
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
