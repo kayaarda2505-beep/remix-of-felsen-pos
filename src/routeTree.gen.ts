@@ -9,132 +9,57 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ExpensesRouteImport } from './routes/expenses'
-import { Route as InventoryRouteImport } from './routes/inventory'
-import { Route as KitchenRouteImport } from './routes/kitchen'
-import { Route as LieferungRouteImport } from './routes/lieferung'
-import { Route as MarketingRouteImport } from './routes/marketing'
-import { Route as MitarbeiterRouteImport } from './routes/mitarbeiter'
-import { Route as MusikRouteImport } from './routes/musik'
-import { Route as PaymentsRouteImport } from './routes/payments'
-import { Route as PosRouteImport } from './routes/pos'
-import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as SchichtplanRouteImport } from './routes/schichtplan'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SongsRouteImport } from './routes/songs'
-import { Route as SpotifyCallbackRouteImport } from './routes/spotify-callback'
-import { Route as SpotifyPlayerRouteImport } from './routes/spotify-player'
-import { Route as StaffRouteImport } from './routes/staff'
 import { Route as TablesRouteImport } from './routes/tables'
-import { Route as BewertungTokenRouteImport } from './routes/bewertung.$token'
-import { Route as KurierIndexRouteImport } from './routes/kurier.index'
-import { Route as KurierIdRouteImport } from './routes/kurier.$id'
-import { Route as OrderTokenRouteImport } from './routes/order.$token'
+import { Route as StaffRouteImport } from './routes/staff'
+import { Route as SpotifyPlayerRouteImport } from './routes/spotify-player'
+import { Route as SpotifyCallbackRouteImport } from './routes/spotify-callback'
+import { Route as SongsRouteImport } from './routes/songs'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SchichtplanRouteImport } from './routes/schichtplan'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as PosRouteImport } from './routes/pos'
+import { Route as PaymentsRouteImport } from './routes/payments'
+import { Route as MusikRouteImport } from './routes/musik'
+import { Route as MitarbeiterRouteImport } from './routes/mitarbeiter'
+import { Route as MarketingRouteImport } from './routes/marketing'
+import { Route as LieferungRouteImport } from './routes/lieferung'
+import { Route as KitchenRouteImport } from './routes/kitchen'
+import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as ExpensesRouteImport } from './routes/expenses'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
-import { Route as SettingsDatabaseRouteImport } from './routes/settings.database'
-import { Route as SettingsHappyHourRouteImport } from './routes/settings.happy-hour'
-import { Route as SettingsLocationsRouteImport } from './routes/settings.locations'
-import { Route as SettingsMembersRouteImport } from './routes/settings.members'
-import { Route as SettingsPrintersRouteImport } from './routes/settings.printers'
-import { Route as SettingsProductsRouteImport } from './routes/settings.products'
-import { Route as SettingsQrRouteImport } from './routes/settings.qr'
-import { Route as SettingsRecipesRouteImport } from './routes/settings.recipes'
-import { Route as SettingsRegionRouteImport } from './routes/settings.region'
-import { Route as SettingsSpotifyRouteImport } from './routes/settings.spotify'
+import { Route as KurierIndexRouteImport } from './routes/kurier.index'
 import { Route as TrackTokenRouteImport } from './routes/track.$token'
-import { Route as ApiPublicOrderRouteImport } from './routes/api/public/order'
-import { Route as ApiPublicPaymentRequestRouteImport } from './routes/api/public/payment-request'
-import { Route as ApiPublicServiceCallRouteImport } from './routes/api/public/service-call'
-import { Route as ApiPublicSmsStatusRouteImport } from './routes/api/public/sms-status'
-import { Route as ApiPublicSongRequestRouteImport } from './routes/api/public/song-request'
-import { Route as ApiPublicSpotifySearchRouteImport } from './routes/api/public/spotify-search'
+import { Route as SettingsSpotifyRouteImport } from './routes/settings.spotify'
+import { Route as SettingsRegionRouteImport } from './routes/settings.region'
+import { Route as SettingsRecipesRouteImport } from './routes/settings.recipes'
+import { Route as SettingsQrRouteImport } from './routes/settings.qr'
+import { Route as SettingsProductsRouteImport } from './routes/settings.products'
+import { Route as SettingsPrintersRouteImport } from './routes/settings.printers'
+import { Route as SettingsMembersRouteImport } from './routes/settings.members'
+import { Route as SettingsLocationsRouteImport } from './routes/settings.locations'
+import { Route as SettingsHappyHourRouteImport } from './routes/settings.happy-hour'
+import { Route as SettingsDatabaseRouteImport } from './routes/settings.database'
+import { Route as OrderTokenRouteImport } from './routes/order.$token'
+import { Route as KurierIdRouteImport } from './routes/kurier.$id'
+import { Route as BewertungTokenRouteImport } from './routes/bewertung.$token'
 import { Route as OrderTokenPaidRouteImport } from './routes/order.$token.paid'
-import { Route as ApiPublicOrdersInboundRouteImport } from './routes/api/public/orders/inbound'
-import { Route as ApiPublicPaymentsCreateTableCheckoutRouteImport } from './routes/api/public/payments/create-table-checkout'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as ApiPublicReviewsDispatchRouteImport } from './routes/api/public/reviews/dispatch'
-import { Route as ApiPublicTableTokenRouteImport } from './routes/api/public/table.$token'
+import { Route as ApiPublicSpotifySearchRouteImport } from './routes/api/public/spotify-search'
+import { Route as ApiPublicSongRequestRouteImport } from './routes/api/public/song-request'
+import { Route as ApiPublicSmsStatusRouteImport } from './routes/api/public/sms-status'
+import { Route as ApiPublicServiceCallRouteImport } from './routes/api/public/service-call'
+import { Route as ApiPublicPaymentRequestRouteImport } from './routes/api/public/payment-request'
+import { Route as ApiPublicOrderRouteImport } from './routes/api/public/order'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as ApiPublicTableTokenRouteImport } from './routes/api/public/table.$token'
+import { Route as ApiPublicReviewsDispatchRouteImport } from './routes/api/public/reviews/dispatch'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicPaymentsCreateTableCheckoutRouteImport } from './routes/api/public/payments/create-table-checkout'
+import { Route as ApiPublicOrdersInboundRouteImport } from './routes/api/public/orders/inbound'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExpensesRoute = ExpensesRouteImport.update({
-  id: '/expenses',
-  path: '/expenses',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InventoryRoute = InventoryRouteImport.update({
-  id: '/inventory',
-  path: '/inventory',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KitchenRoute = KitchenRouteImport.update({
-  id: '/kitchen',
-  path: '/kitchen',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LieferungRoute = LieferungRouteImport.update({
-  id: '/lieferung',
-  path: '/lieferung',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MarketingRoute = MarketingRouteImport.update({
-  id: '/marketing',
-  path: '/marketing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MitarbeiterRoute = MitarbeiterRouteImport.update({
-  id: '/mitarbeiter',
-  path: '/mitarbeiter',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MusikRoute = MusikRouteImport.update({
-  id: '/musik',
-  path: '/musik',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PaymentsRoute = PaymentsRouteImport.update({
-  id: '/payments',
-  path: '/payments',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PosRoute = PosRouteImport.update({
-  id: '/pos',
-  path: '/pos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SchichtplanRoute = SchichtplanRouteImport.update({
-  id: '/schichtplan',
-  path: '/schichtplan',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SongsRoute = SongsRouteImport.update({
-  id: '/songs',
-  path: '/songs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpotifyCallbackRoute = SpotifyCallbackRouteImport.update({
-  id: '/spotify-callback',
-  path: '/spotify-callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpotifyPlayerRoute = SpotifyPlayerRouteImport.update({
-  id: '/spotify-player',
-  path: '/spotify-player',
+const TablesRoute = TablesRouteImport.update({
+  id: '/tables',
+  path: '/tables',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StaffRoute = StaffRouteImport.update({
@@ -142,29 +67,84 @@ const StaffRoute = StaffRouteImport.update({
   path: '/staff',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TablesRoute = TablesRouteImport.update({
-  id: '/tables',
-  path: '/tables',
+const SpotifyPlayerRoute = SpotifyPlayerRouteImport.update({
+  id: '/spotify-player',
+  path: '/spotify-player',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BewertungTokenRoute = BewertungTokenRouteImport.update({
-  id: '/bewertung/$token',
-  path: '/bewertung/$token',
+const SpotifyCallbackRoute = SpotifyCallbackRouteImport.update({
+  id: '/spotify-callback',
+  path: '/spotify-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const KurierIndexRoute = KurierIndexRouteImport.update({
-  id: '/kurier/',
-  path: '/kurier/',
+const SongsRoute = SongsRouteImport.update({
+  id: '/songs',
+  path: '/songs',
   getParentRoute: () => rootRouteImport,
 } as any)
-const KurierIdRoute = KurierIdRouteImport.update({
-  id: '/kurier/$id',
-  path: '/kurier/$id',
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OrderTokenRoute = OrderTokenRouteImport.update({
-  id: '/order/$token',
-  path: '/order/$token',
+const SchichtplanRoute = SchichtplanRouteImport.update({
+  id: '/schichtplan',
+  path: '/schichtplan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PosRoute = PosRouteImport.update({
+  id: '/pos',
+  path: '/pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentsRoute = PaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MusikRoute = MusikRouteImport.update({
+  id: '/musik',
+  path: '/musik',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MitarbeiterRoute = MitarbeiterRouteImport.update({
+  id: '/mitarbeiter',
+  path: '/mitarbeiter',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingRoute = MarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LieferungRoute = LieferungRouteImport.update({
+  id: '/lieferung',
+  path: '/lieferung',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KitchenRoute = KitchenRouteImport.update({
+  id: '/kitchen',
+  path: '/kitchen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpensesRoute = ExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -172,44 +152,19 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SettingsRoute,
 } as any)
-const SettingsDatabaseRoute = SettingsDatabaseRouteImport.update({
-  id: '/database',
-  path: '/database',
-  getParentRoute: () => SettingsRoute,
+const KurierIndexRoute = KurierIndexRouteImport.update({
+  id: '/kurier/',
+  path: '/kurier/',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsHappyHourRoute = SettingsHappyHourRouteImport.update({
-  id: '/happy-hour',
-  path: '/happy-hour',
-  getParentRoute: () => SettingsRoute,
+const TrackTokenRoute = TrackTokenRouteImport.update({
+  id: '/track/$token',
+  path: '/track/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsLocationsRoute = SettingsLocationsRouteImport.update({
-  id: '/locations',
-  path: '/locations',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsMembersRoute = SettingsMembersRouteImport.update({
-  id: '/members',
-  path: '/members',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsPrintersRoute = SettingsPrintersRouteImport.update({
-  id: '/printers',
-  path: '/printers',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsProductsRoute = SettingsProductsRouteImport.update({
-  id: '/products',
-  path: '/products',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsQrRoute = SettingsQrRouteImport.update({
-  id: '/qr',
-  path: '/qr',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsRecipesRoute = SettingsRecipesRouteImport.update({
-  id: '/recipes',
-  path: '/recipes',
+const SettingsSpotifyRoute = SettingsSpotifyRouteImport.update({
+  id: '/spotify',
+  path: '/spotify',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsRegionRoute = SettingsRegionRouteImport.update({
@@ -217,44 +172,59 @@ const SettingsRegionRoute = SettingsRegionRouteImport.update({
   path: '/region',
   getParentRoute: () => SettingsRoute,
 } as any)
-const SettingsSpotifyRoute = SettingsSpotifyRouteImport.update({
-  id: '/spotify',
-  path: '/spotify',
+const SettingsRecipesRoute = SettingsRecipesRouteImport.update({
+  id: '/recipes',
+  path: '/recipes',
   getParentRoute: () => SettingsRoute,
 } as any)
-const TrackTokenRoute = TrackTokenRouteImport.update({
-  id: '/track/$token',
-  path: '/track/$token',
+const SettingsQrRoute = SettingsQrRouteImport.update({
+  id: '/qr',
+  path: '/qr',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsProductsRoute = SettingsProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsPrintersRoute = SettingsPrintersRouteImport.update({
+  id: '/printers',
+  path: '/printers',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsMembersRoute = SettingsMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsLocationsRoute = SettingsLocationsRouteImport.update({
+  id: '/locations',
+  path: '/locations',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsHappyHourRoute = SettingsHappyHourRouteImport.update({
+  id: '/happy-hour',
+  path: '/happy-hour',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsDatabaseRoute = SettingsDatabaseRouteImport.update({
+  id: '/database',
+  path: '/database',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const OrderTokenRoute = OrderTokenRouteImport.update({
+  id: '/order/$token',
+  path: '/order/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicOrderRoute = ApiPublicOrderRouteImport.update({
-  id: '/api/public/order',
-  path: '/api/public/order',
+const KurierIdRoute = KurierIdRouteImport.update({
+  id: '/kurier/$id',
+  path: '/kurier/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicPaymentRequestRoute = ApiPublicPaymentRequestRouteImport.update({
-  id: '/api/public/payment-request',
-  path: '/api/public/payment-request',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicServiceCallRoute = ApiPublicServiceCallRouteImport.update({
-  id: '/api/public/service-call',
-  path: '/api/public/service-call',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicSmsStatusRoute = ApiPublicSmsStatusRouteImport.update({
-  id: '/api/public/sms-status',
-  path: '/api/public/sms-status',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicSongRequestRoute = ApiPublicSongRequestRouteImport.update({
-  id: '/api/public/song-request',
-  path: '/api/public/song-request',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicSpotifySearchRoute = ApiPublicSpotifySearchRouteImport.update({
-  id: '/api/public/spotify-search',
-  path: '/api/public/spotify-search',
+const BewertungTokenRoute = BewertungTokenRouteImport.update({
+  id: '/bewertung/$token',
+  path: '/bewertung/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrderTokenPaidRoute = OrderTokenPaidRouteImport.update({
@@ -262,32 +232,34 @@ const OrderTokenPaidRoute = OrderTokenPaidRouteImport.update({
   path: '/paid',
   getParentRoute: () => OrderTokenRoute,
 } as any)
-const ApiPublicOrdersInboundRoute = ApiPublicOrdersInboundRouteImport.update({
-  id: '/api/public/orders/inbound',
-  path: '/api/public/orders/inbound',
+const ApiPublicSpotifySearchRoute = ApiPublicSpotifySearchRouteImport.update({
+  id: '/api/public/spotify-search',
+  path: '/api/public/spotify-search',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicPaymentsCreateTableCheckoutRoute =
-  ApiPublicPaymentsCreateTableCheckoutRouteImport.update({
-    id: '/api/public/payments/create-table-checkout',
-    path: '/api/public/payments/create-table-checkout',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicReviewsDispatchRoute =
-  ApiPublicReviewsDispatchRouteImport.update({
-    id: '/api/public/reviews/dispatch',
-    path: '/api/public/reviews/dispatch',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicTableTokenRoute = ApiPublicTableTokenRouteImport.update({
-  id: '/api/public/table/$token',
-  path: '/api/public/table/$token',
+const ApiPublicSongRequestRoute = ApiPublicSongRequestRouteImport.update({
+  id: '/api/public/song-request',
+  path: '/api/public/song-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSmsStatusRoute = ApiPublicSmsStatusRouteImport.update({
+  id: '/api/public/sms-status',
+  path: '/api/public/sms-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicServiceCallRoute = ApiPublicServiceCallRouteImport.update({
+  id: '/api/public/service-call',
+  path: '/api/public/service-call',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPaymentRequestRoute = ApiPublicPaymentRequestRouteImport.update({
+  id: '/api/public/payment-request',
+  path: '/api/public/payment-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicOrderRoute = ApiPublicOrderRouteImport.update({
+  id: '/api/public/order',
+  path: '/api/public/order',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LovableEmailQueueProcessRoute =
@@ -296,6 +268,34 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicTableTokenRoute = ApiPublicTableTokenRouteImport.update({
+  id: '/api/public/table/$token',
+  path: '/api/public/table/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicReviewsDispatchRoute =
+  ApiPublicReviewsDispatchRouteImport.update({
+    id: '/api/public/reviews/dispatch',
+    path: '/api/public/reviews/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsCreateTableCheckoutRoute =
+  ApiPublicPaymentsCreateTableCheckoutRouteImport.update({
+    id: '/api/public/payments/create-table-checkout',
+    path: '/api/public/payments/create-table-checkout',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicOrdersInboundRoute = ApiPublicOrdersInboundRouteImport.update({
+  id: '/api/public/orders/inbound',
+  path: '/api/public/orders/inbound',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -633,116 +633,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/expenses': {
-      id: '/expenses'
-      path: '/expenses'
-      fullPath: '/expenses'
-      preLoaderRoute: typeof ExpensesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/inventory': {
-      id: '/inventory'
-      path: '/inventory'
-      fullPath: '/inventory'
-      preLoaderRoute: typeof InventoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kitchen': {
-      id: '/kitchen'
-      path: '/kitchen'
-      fullPath: '/kitchen'
-      preLoaderRoute: typeof KitchenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lieferung': {
-      id: '/lieferung'
-      path: '/lieferung'
-      fullPath: '/lieferung'
-      preLoaderRoute: typeof LieferungRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/marketing': {
-      id: '/marketing'
-      path: '/marketing'
-      fullPath: '/marketing'
-      preLoaderRoute: typeof MarketingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mitarbeiter': {
-      id: '/mitarbeiter'
-      path: '/mitarbeiter'
-      fullPath: '/mitarbeiter'
-      preLoaderRoute: typeof MitarbeiterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/musik': {
-      id: '/musik'
-      path: '/musik'
-      fullPath: '/musik'
-      preLoaderRoute: typeof MusikRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/payments': {
-      id: '/payments'
-      path: '/payments'
-      fullPath: '/payments'
-      preLoaderRoute: typeof PaymentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pos': {
-      id: '/pos'
-      path: '/pos'
-      fullPath: '/pos'
-      preLoaderRoute: typeof PosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/schichtplan': {
-      id: '/schichtplan'
-      path: '/schichtplan'
-      fullPath: '/schichtplan'
-      preLoaderRoute: typeof SchichtplanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/songs': {
-      id: '/songs'
-      path: '/songs'
-      fullPath: '/songs'
-      preLoaderRoute: typeof SongsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/spotify-callback': {
-      id: '/spotify-callback'
-      path: '/spotify-callback'
-      fullPath: '/spotify-callback'
-      preLoaderRoute: typeof SpotifyCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/spotify-player': {
-      id: '/spotify-player'
-      path: '/spotify-player'
-      fullPath: '/spotify-player'
-      preLoaderRoute: typeof SpotifyPlayerRouteImport
+    '/tables': {
+      id: '/tables'
+      path: '/tables'
+      fullPath: '/tables'
+      preLoaderRoute: typeof TablesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/staff': {
@@ -752,39 +647,116 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tables': {
-      id: '/tables'
-      path: '/tables'
-      fullPath: '/tables'
-      preLoaderRoute: typeof TablesRouteImport
+    '/spotify-player': {
+      id: '/spotify-player'
+      path: '/spotify-player'
+      fullPath: '/spotify-player'
+      preLoaderRoute: typeof SpotifyPlayerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bewertung/$token': {
-      id: '/bewertung/$token'
-      path: '/bewertung/$token'
-      fullPath: '/bewertung/$token'
-      preLoaderRoute: typeof BewertungTokenRouteImport
+    '/spotify-callback': {
+      id: '/spotify-callback'
+      path: '/spotify-callback'
+      fullPath: '/spotify-callback'
+      preLoaderRoute: typeof SpotifyCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/kurier/': {
-      id: '/kurier/'
-      path: '/kurier'
-      fullPath: '/kurier/'
-      preLoaderRoute: typeof KurierIndexRouteImport
+    '/songs': {
+      id: '/songs'
+      path: '/songs'
+      fullPath: '/songs'
+      preLoaderRoute: typeof SongsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/kurier/$id': {
-      id: '/kurier/$id'
-      path: '/kurier/$id'
-      fullPath: '/kurier/$id'
-      preLoaderRoute: typeof KurierIdRouteImport
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/order/$token': {
-      id: '/order/$token'
-      path: '/order/$token'
-      fullPath: '/order/$token'
-      preLoaderRoute: typeof OrderTokenRouteImport
+    '/schichtplan': {
+      id: '/schichtplan'
+      path: '/schichtplan'
+      fullPath: '/schichtplan'
+      preLoaderRoute: typeof SchichtplanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pos': {
+      id: '/pos'
+      path: '/pos'
+      fullPath: '/pos'
+      preLoaderRoute: typeof PosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payments': {
+      id: '/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof PaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/musik': {
+      id: '/musik'
+      path: '/musik'
+      fullPath: '/musik'
+      preLoaderRoute: typeof MusikRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mitarbeiter': {
+      id: '/mitarbeiter'
+      path: '/mitarbeiter'
+      fullPath: '/mitarbeiter'
+      preLoaderRoute: typeof MitarbeiterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing': {
+      id: '/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof MarketingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lieferung': {
+      id: '/lieferung'
+      path: '/lieferung'
+      fullPath: '/lieferung'
+      preLoaderRoute: typeof LieferungRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kitchen': {
+      id: '/kitchen'
+      path: '/kitchen'
+      fullPath: '/kitchen'
+      preLoaderRoute: typeof KitchenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expenses': {
+      id: '/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof ExpensesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
@@ -794,60 +766,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/settings/database': {
-      id: '/settings/database'
-      path: '/database'
-      fullPath: '/settings/database'
-      preLoaderRoute: typeof SettingsDatabaseRouteImport
-      parentRoute: typeof SettingsRoute
+    '/kurier/': {
+      id: '/kurier/'
+      path: '/kurier'
+      fullPath: '/kurier/'
+      preLoaderRoute: typeof KurierIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/settings/happy-hour': {
-      id: '/settings/happy-hour'
-      path: '/happy-hour'
-      fullPath: '/settings/happy-hour'
-      preLoaderRoute: typeof SettingsHappyHourRouteImport
-      parentRoute: typeof SettingsRoute
+    '/track/$token': {
+      id: '/track/$token'
+      path: '/track/$token'
+      fullPath: '/track/$token'
+      preLoaderRoute: typeof TrackTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/settings/locations': {
-      id: '/settings/locations'
-      path: '/locations'
-      fullPath: '/settings/locations'
-      preLoaderRoute: typeof SettingsLocationsRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/members': {
-      id: '/settings/members'
-      path: '/members'
-      fullPath: '/settings/members'
-      preLoaderRoute: typeof SettingsMembersRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/printers': {
-      id: '/settings/printers'
-      path: '/printers'
-      fullPath: '/settings/printers'
-      preLoaderRoute: typeof SettingsPrintersRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/products': {
-      id: '/settings/products'
-      path: '/products'
-      fullPath: '/settings/products'
-      preLoaderRoute: typeof SettingsProductsRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/qr': {
-      id: '/settings/qr'
-      path: '/qr'
-      fullPath: '/settings/qr'
-      preLoaderRoute: typeof SettingsQrRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/recipes': {
-      id: '/settings/recipes'
-      path: '/recipes'
-      fullPath: '/settings/recipes'
-      preLoaderRoute: typeof SettingsRecipesRouteImport
+    '/settings/spotify': {
+      id: '/settings/spotify'
+      path: '/spotify'
+      fullPath: '/settings/spotify'
+      preLoaderRoute: typeof SettingsSpotifyRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/region': {
@@ -857,60 +794,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRegionRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/settings/spotify': {
-      id: '/settings/spotify'
-      path: '/spotify'
-      fullPath: '/settings/spotify'
-      preLoaderRoute: typeof SettingsSpotifyRouteImport
+    '/settings/recipes': {
+      id: '/settings/recipes'
+      path: '/recipes'
+      fullPath: '/settings/recipes'
+      preLoaderRoute: typeof SettingsRecipesRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/track/$token': {
-      id: '/track/$token'
-      path: '/track/$token'
-      fullPath: '/track/$token'
-      preLoaderRoute: typeof TrackTokenRouteImport
+    '/settings/qr': {
+      id: '/settings/qr'
+      path: '/qr'
+      fullPath: '/settings/qr'
+      preLoaderRoute: typeof SettingsQrRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/products': {
+      id: '/settings/products'
+      path: '/products'
+      fullPath: '/settings/products'
+      preLoaderRoute: typeof SettingsProductsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/printers': {
+      id: '/settings/printers'
+      path: '/printers'
+      fullPath: '/settings/printers'
+      preLoaderRoute: typeof SettingsPrintersRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/members': {
+      id: '/settings/members'
+      path: '/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof SettingsMembersRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/locations': {
+      id: '/settings/locations'
+      path: '/locations'
+      fullPath: '/settings/locations'
+      preLoaderRoute: typeof SettingsLocationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/happy-hour': {
+      id: '/settings/happy-hour'
+      path: '/happy-hour'
+      fullPath: '/settings/happy-hour'
+      preLoaderRoute: typeof SettingsHappyHourRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/database': {
+      id: '/settings/database'
+      path: '/database'
+      fullPath: '/settings/database'
+      preLoaderRoute: typeof SettingsDatabaseRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/order/$token': {
+      id: '/order/$token'
+      path: '/order/$token'
+      fullPath: '/order/$token'
+      preLoaderRoute: typeof OrderTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/order': {
-      id: '/api/public/order'
-      path: '/api/public/order'
-      fullPath: '/api/public/order'
-      preLoaderRoute: typeof ApiPublicOrderRouteImport
+    '/kurier/$id': {
+      id: '/kurier/$id'
+      path: '/kurier/$id'
+      fullPath: '/kurier/$id'
+      preLoaderRoute: typeof KurierIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/payment-request': {
-      id: '/api/public/payment-request'
-      path: '/api/public/payment-request'
-      fullPath: '/api/public/payment-request'
-      preLoaderRoute: typeof ApiPublicPaymentRequestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/service-call': {
-      id: '/api/public/service-call'
-      path: '/api/public/service-call'
-      fullPath: '/api/public/service-call'
-      preLoaderRoute: typeof ApiPublicServiceCallRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/sms-status': {
-      id: '/api/public/sms-status'
-      path: '/api/public/sms-status'
-      fullPath: '/api/public/sms-status'
-      preLoaderRoute: typeof ApiPublicSmsStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/song-request': {
-      id: '/api/public/song-request'
-      path: '/api/public/song-request'
-      fullPath: '/api/public/song-request'
-      preLoaderRoute: typeof ApiPublicSongRequestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/spotify-search': {
-      id: '/api/public/spotify-search'
-      path: '/api/public/spotify-search'
-      fullPath: '/api/public/spotify-search'
-      preLoaderRoute: typeof ApiPublicSpotifySearchRouteImport
+    '/bewertung/$token': {
+      id: '/bewertung/$token'
+      path: '/bewertung/$token'
+      fullPath: '/bewertung/$token'
+      preLoaderRoute: typeof BewertungTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/order/$token/paid': {
@@ -920,32 +878,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrderTokenPaidRouteImport
       parentRoute: typeof OrderTokenRoute
     }
-    '/api/public/orders/inbound': {
-      id: '/api/public/orders/inbound'
-      path: '/api/public/orders/inbound'
-      fullPath: '/api/public/orders/inbound'
-      preLoaderRoute: typeof ApiPublicOrdersInboundRouteImport
+    '/api/public/spotify-search': {
+      id: '/api/public/spotify-search'
+      path: '/api/public/spotify-search'
+      fullPath: '/api/public/spotify-search'
+      preLoaderRoute: typeof ApiPublicSpotifySearchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/payments/create-table-checkout': {
-      id: '/api/public/payments/create-table-checkout'
-      path: '/api/public/payments/create-table-checkout'
-      fullPath: '/api/public/payments/create-table-checkout'
-      preLoaderRoute: typeof ApiPublicPaymentsCreateTableCheckoutRouteImport
+    '/api/public/song-request': {
+      id: '/api/public/song-request'
+      path: '/api/public/song-request'
+      fullPath: '/api/public/song-request'
+      preLoaderRoute: typeof ApiPublicSongRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+    '/api/public/sms-status': {
+      id: '/api/public/sms-status'
+      path: '/api/public/sms-status'
+      fullPath: '/api/public/sms-status'
+      preLoaderRoute: typeof ApiPublicSmsStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/reviews/dispatch': {
-      id: '/api/public/reviews/dispatch'
-      path: '/api/public/reviews/dispatch'
-      fullPath: '/api/public/reviews/dispatch'
-      preLoaderRoute: typeof ApiPublicReviewsDispatchRouteImport
+    '/api/public/service-call': {
+      id: '/api/public/service-call'
+      path: '/api/public/service-call'
+      fullPath: '/api/public/service-call'
+      preLoaderRoute: typeof ApiPublicServiceCallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payment-request': {
+      id: '/api/public/payment-request'
+      path: '/api/public/payment-request'
+      fullPath: '/api/public/payment-request'
+      preLoaderRoute: typeof ApiPublicPaymentRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/order': {
+      id: '/api/public/order'
+      path: '/api/public/order'
+      fullPath: '/api/public/order'
+      preLoaderRoute: typeof ApiPublicOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/table/$token': {
@@ -955,11 +934,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTableTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+    '/api/public/reviews/dispatch': {
+      id: '/api/public/reviews/dispatch'
+      path: '/api/public/reviews/dispatch'
+      fullPath: '/api/public/reviews/dispatch'
+      preLoaderRoute: typeof ApiPublicReviewsDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/create-table-checkout': {
+      id: '/api/public/payments/create-table-checkout'
+      path: '/api/public/payments/create-table-checkout'
+      fullPath: '/api/public/payments/create-table-checkout'
+      preLoaderRoute: typeof ApiPublicPaymentsCreateTableCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/orders/inbound': {
+      id: '/api/public/orders/inbound'
+      path: '/api/public/orders/inbound'
+      fullPath: '/api/public/orders/inbound'
+      preLoaderRoute: typeof ApiPublicOrdersInboundRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
