@@ -50,6 +50,13 @@
       "when": 1790955346126,
       "tag": "0006_courier_tracker_token",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791293086270,
+      "tag": "0007_payment_requests_allow_card_twint",
+      "breakpoints": true
     }
   ]
 }
