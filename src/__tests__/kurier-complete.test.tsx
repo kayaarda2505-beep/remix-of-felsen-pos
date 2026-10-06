@@ -25,7 +25,7 @@ vi.mock("@/lib/courier.functions", () => ({
   completeCourierDelivery: vi.fn((args: any) => state.completeImpl(args)),
 }));
 
-import { Route } from "./kurier.$id";
+import { Route } from "@/routes/kurier.$id";
 import { completeCourierDelivery } from "@/lib/courier.functions";
 
 function renderPage() {
