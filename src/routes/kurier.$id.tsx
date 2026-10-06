@@ -290,6 +290,11 @@ function CourierPage() {
                       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                     </div>
                   )}
+                  {complete.isError && (
+                    <div role="alert" className="mt-2 rounded-xl bg-destructive/10 text-destructive text-xs px-3 py-2 text-center">
+                      Abschluss fehlgeschlagen: {(complete.error as Error)?.message ?? "Unbekannter Fehler"}
+                    </div>
+                  )}
                 </div>
               )}
               {order.paid <= 0 && !showPay && (
