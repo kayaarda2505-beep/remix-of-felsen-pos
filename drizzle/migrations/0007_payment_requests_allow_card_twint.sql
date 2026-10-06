@@ -1,0 +1,2 @@
+ALTER TABLE public.payment_requests DROP CONSTRAINT payment_requests_method_check;
+ALTER TABLE public.payment_requests ADD CONSTRAINT payment_requests_method_check CHECK (method = ANY (ARRAY['cash','card_terminal','card','twint','stripe']));
