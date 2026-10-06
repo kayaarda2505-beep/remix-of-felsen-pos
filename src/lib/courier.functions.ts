@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { CompleteSchema, runCompleteCourierDelivery } from "./courier-complete.server";
 
 const IdSchema = z.object({ id: z.string().uuid() });
 
@@ -168,64 +169,9 @@ export const resendTrackingSms = createServerFn({ method: "POST" })
 
 
 
-const CompleteSchema = z.object({
-  id: z.string().uuid(),
-  method: z.enum(["cash", "card", "twint"]),
-  tip: z.number().min(0).max(1000).optional(),
-});
-
 export const completeCourierDelivery = createServerFn({ method: "POST" })
   .inputValidator((input) => CompleteSchema.parse(input))
-  .handler(async ({ data }) => {
-    const { data: order, error: oErr } = await (supabaseAdmin as any)
-      .from("orders")
-      .select("id, status, total")
-      .eq("id", data.id)
-      .eq("order_type", "delivery")
-      .maybeSingle();
-    if (oErr) throw new Error(oErr.message);
-    if (!order) throw new Error("Bestellung nicht gefunden");
-    if (order.status === "paid") {
-      await (supabaseAdmin as any)
-        .from("orders")
-        .update({ courier_delivered_at: new Date().toISOString() })
-        .eq("id", data.id)
-        .is("courier_delivered_at", null);
-      await scheduleReviewRequest(data.id);
-      return { ok: true, alreadyPaid: true };
-    }
-
-    const { data: existing } = await (supabaseAdmin as any)
-      .from("payment_requests")
-      .select("amount")
-      .eq("order_id", data.id)
-      .eq("status", "paid");
-    const alreadyPaid = (existing ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0);
-    const open = Math.max(0, Number(order.total) - alreadyPaid);
-
-    if (open > 0 || (existing ?? []).length === 0) {
-      const { error: pErr } = await (supabaseAdmin as any).from("payment_requests").insert({
-        order_id: data.id,
-        amount: open,
-        method: data.method,
-        status: "paid",
-        tip: data.tip ?? 0,
-        handled_at: new Date().toISOString(),
-        note: "Kurier",
-      });
-      if (pErr) throw new Error(pErr.message);
-    }
-
-    const { error: uErr } = await (supabaseAdmin as any)
-      .from("orders")
-      .update({ status: "paid", closed_at: new Date().toISOString(), courier_delivered_at: new Date().toISOString() })
-      .eq("id", data.id);
-    if (uErr) throw new Error(uErr.message);
-
-    await scheduleReviewRequest(data.id);
-
-    return { ok: true, amount: open, method: data.method };
-  });
+  .handler(async ({ data }) => runCompleteCourierDelivery(supabaseAdmin, data, scheduleReviewRequest));
 
 /** Plant 30 Minuten nach Lieferung eine Bewertungs-SMS ein. */
 async function scheduleReviewRequest(orderId: string) {
