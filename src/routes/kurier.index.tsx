@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useCourierGeo } from "@/hooks/use-courier-geo";
+import { CourierSumupPay } from "@/components/CourierSumupPay";
 import { Bike, Loader2, LogOut, MapPin } from "lucide-react";
 
 import { listMyCourierOrders } from "@/lib/courier.functions";
@@ -97,6 +98,12 @@ function CourierHome() {
             <li>Dienst einschalten — der Standort läuft dann auch bei gesperrtem Handy.</li>
           </ol>
         </details>
+      )}
+
+      {courier && (
+        <div className="mb-4">
+          <CourierSumupPay defaultAmount={0} orderLabel={`Kurier ${courier.name ?? ""}`.trim()} defaultOpen />
+        </div>
       )}
 
       {isLoading && (
