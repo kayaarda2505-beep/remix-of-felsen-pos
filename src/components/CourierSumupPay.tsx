@@ -5,10 +5,10 @@ import { sumupGetTransactionStatus, sumupSendToReader } from "@/lib/sumup.functi
 
 type Phase = "idle" | "sending" | "waiting" | "success" | "failed";
 
-export function CourierSumupPay({ defaultAmount, orderLabel }: { defaultAmount: number; orderLabel: string }) {
+export function CourierSumupPay({ defaultAmount, orderLabel, defaultOpen = false }: { defaultAmount: number; orderLabel: string; defaultOpen?: boolean }) {
   const send = useServerFn(sumupSendToReader);
   const getStatus = useServerFn(sumupGetTransactionStatus);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [amount, setAmount] = useState(defaultAmount > 0 ? defaultAmount.toFixed(2) : "");
   const [phase, setPhase] = useState<Phase>("idle");
   const [msg, setMsg] = useState("");
