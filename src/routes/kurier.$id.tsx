@@ -12,6 +12,7 @@ import {
   startCourierDelivery,
 } from "@/lib/courier.functions";
 import { useCourierGeo } from "@/hooks/use-courier-geo";
+import { CourierSumupPay } from "@/components/CourierSumupPay";
 
 
 export const Route = createFileRoute("/kurier/$id")({
@@ -306,6 +307,13 @@ function CourierPage() {
           )}
 
         </section>
+
+        {order.status !== "paid" && (
+          <CourierSumupPay
+            defaultAmount={Math.max(0, Number(order.total || 0) - Number(order.paid || 0))}
+            orderLabel={`Lieferung #${order.id.slice(0, 8).toUpperCase()}`}
+          />
+        )}
       </div>
     </div>
   );
