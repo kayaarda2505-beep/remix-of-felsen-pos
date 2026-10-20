@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bike, PhoneIncoming, ShoppingBag, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { phoneKey, phonesMatch } from "@/lib/phone-match";
+
+type Cust = { id: string; name: string; address: string };
 
 type Call = {
   id: string;
@@ -49,19 +52,55 @@ export function IncomingCallAlert() {
   }, [remove]);
 
   const call = queue[0];
+  const [matches, setMatches] = useState<Cust[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMatches([]);
+    setSelected(call?.customer_id ?? null);
+    if (!call) return;
+    let alive = true;
+    const tail = phoneKey(call.phone).slice(-4);
+    void (supabase as any)
+      .from("customers")
+      .select("id, first_name, last_name, street, house_no, zip, city, phone, phone2")
+      .or(`phone.ilike.%${tail}%,phone2.ilike.%${tail}%`)
+      .limit(500)
+      .then(({ data }: any) => {
+        if (!alive) return;
+        const list: Cust[] = (data ?? [])
+          .filter((x: any) => phonesMatch(x.phone, call.phone) || phonesMatch(x.phone2, call.phone))
+          .map((c: any) => ({
+            id: c.id,
+            name: [c.first_name, c.last_name].filter(Boolean).join(" ") || "Kunde",
+            address: `${[c.street, c.house_no].filter(Boolean).join(" ")}, ${c.zip ?? ""} ${c.city ?? ""}`.trim(),
+          }));
+        setMatches(list);
+        if (list.length && !list.some((m) => m.id === call.customer_id)) setSelected(list[0]!.id);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [call?.id]);
+
   if (!call) return null;
 
   const handle = async (mode: "delivery" | "takeaway" | null) => {
     remove(call.id);
     await (supabase as any).from("incoming_calls").update({ handled_at: new Date().toISOString() }).eq("id", call.id);
     if (!mode) return;
-    const start: CallStart = { mode, phone: call.phone, customerId: call.customer_id, name: call.customer_name };
+    const sel = matches.find((m) => m.id === selected);
+    const start: CallStart = sel
+      ? { mode, phone: call.phone, customerId: sel.id, name: sel.name }
+      : selected === null && matches.length
+        ? { mode, phone: call.phone, customerId: null, name: null }
+        : { mode, phone: call.phone, customerId: call.customer_id, name: call.customer_name };
     sessionStorage.setItem(CALL_START_KEY, JSON.stringify(start));
     window.dispatchEvent(new CustomEvent(CALL_START_EVENT));
     void navigate({ to: "/lieferung" });
   };
 
-  const found = !!call.customer_id;
+  const found = matches.length > 0 || !!call.customer_id;
   return (
     <div className="fixed inset-0 z-[90] bg-background/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="glass-strong rounded-3xl p-6 w-full max-w-md space-y-4 border border-accent/40">
@@ -72,18 +111,37 @@ export function IncomingCallAlert() {
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Eingehender Anruf</div>
-              <div className="text-lg font-semibold">{found ? "Kunde wurde gefunden" : "Neuer Kunde"}</div>
+              <div className="text-lg font-semibold">{matches.length > 1 ? `${matches.length} Kunden gefunden` : found ? "Kunde wurde gefunden" : "Neuer Kunde"}</div>
             </div>
           </div>
           <button onClick={() => handle(null)} className="w-9 h-9 rounded-xl glass flex items-center justify-center" aria-label="Schliessen">
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="glass rounded-2xl p-4 space-y-1">
-          {found && <div className="font-medium">{call.customer_name || "Kunde"}</div>}
-          {found && call.customer_address && <div className="text-sm text-muted-foreground">{call.customer_address}</div>}
-          <div className="text-base tabular-nums">{call.phone}</div>
-        </div>
+        {matches.length > 1 ? (
+          <div className="space-y-2">
+            <div className="text-base tabular-nums text-center">{call.phone}</div>
+            <div className="max-h-64 overflow-y-auto space-y-2">
+              {matches.map((m) => (
+                <button key={m.id} onClick={() => setSelected(m.id)}
+                  className={`w-full text-left rounded-2xl p-3 border ${selected === m.id ? "border-primary bg-primary/10" : "border-border glass"}`}>
+                  <div className="font-medium">{m.name}</div>
+                  <div className="text-sm text-muted-foreground">{m.address}</div>
+                </button>
+              ))}
+              <button onClick={() => setSelected(null)}
+                className={`w-full text-left rounded-2xl p-3 border ${selected === null ? "border-primary bg-primary/10" : "border-border glass"}`}>
+                <div className="font-medium">+ Neuer Kunde / andere Adresse</div>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="glass rounded-2xl p-4 space-y-1">
+            {found && <div className="font-medium">{matches[0]?.name ?? call.customer_name ?? "Kunde"}</div>}
+            {found && (matches[0]?.address ?? call.customer_address) && <div className="text-sm text-muted-foreground">{matches[0]?.address ?? call.customer_address}</div>}
+            <div className="text-base tabular-nums">{call.phone}</div>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <button onClick={() => handle("delivery")} className="rounded-2xl py-5 bg-primary text-primary-foreground flex flex-col items-center gap-1.5 font-medium">
             <Bike className="w-5 h-5" /> Kurier
