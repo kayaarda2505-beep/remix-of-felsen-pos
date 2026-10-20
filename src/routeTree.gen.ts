@@ -44,6 +44,7 @@ import { Route as SettingsRegionRouteImport } from './routes/settings.region'
 import { Route as SettingsSpotifyRouteImport } from './routes/settings.spotify'
 import { Route as TrackTokenRouteImport } from './routes/track.$token'
 import { Route as ApiPublicCourierLocationRouteImport } from './routes/api/public/courier-location'
+import { Route as ApiPublicIncomingCallRouteImport } from './routes/api/public/incoming-call'
 import { Route as ApiPublicOrderRouteImport } from './routes/api/public/order'
 import { Route as ApiPublicPaymentRequestRouteImport } from './routes/api/public/payment-request'
 import { Route as ApiPublicServiceCallRouteImport } from './routes/api/public/service-call'
@@ -234,6 +235,11 @@ const ApiPublicCourierLocationRoute =
     path: '/api/public/courier-location',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicIncomingCallRoute = ApiPublicIncomingCallRouteImport.update({
+  id: '/api/public/incoming-call',
+  path: '/api/public/incoming-call',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOrderRoute = ApiPublicOrderRouteImport.update({
   id: '/api/public/order',
   path: '/api/public/order',
@@ -340,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/kurier/': typeof KurierIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/courier-location': typeof ApiPublicCourierLocationRoute
+  '/api/public/incoming-call': typeof ApiPublicIncomingCallRoute
   '/api/public/order': typeof ApiPublicOrderRoute
   '/api/public/payment-request': typeof ApiPublicPaymentRequestRoute
   '/api/public/service-call': typeof ApiPublicServiceCallRoute
@@ -389,6 +396,7 @@ export interface FileRoutesByTo {
   '/kurier': typeof KurierIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/api/public/courier-location': typeof ApiPublicCourierLocationRoute
+  '/api/public/incoming-call': typeof ApiPublicIncomingCallRoute
   '/api/public/order': typeof ApiPublicOrderRoute
   '/api/public/payment-request': typeof ApiPublicPaymentRequestRoute
   '/api/public/service-call': typeof ApiPublicServiceCallRoute
@@ -440,6 +448,7 @@ export interface FileRoutesById {
   '/kurier/': typeof KurierIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/courier-location': typeof ApiPublicCourierLocationRoute
+  '/api/public/incoming-call': typeof ApiPublicIncomingCallRoute
   '/api/public/order': typeof ApiPublicOrderRoute
   '/api/public/payment-request': typeof ApiPublicPaymentRequestRoute
   '/api/public/service-call': typeof ApiPublicServiceCallRoute
@@ -492,6 +501,7 @@ export interface FileRouteTypes {
     | '/kurier/'
     | '/settings/'
     | '/api/public/courier-location'
+    | '/api/public/incoming-call'
     | '/api/public/order'
     | '/api/public/payment-request'
     | '/api/public/service-call'
@@ -541,6 +551,7 @@ export interface FileRouteTypes {
     | '/kurier'
     | '/settings'
     | '/api/public/courier-location'
+    | '/api/public/incoming-call'
     | '/api/public/order'
     | '/api/public/payment-request'
     | '/api/public/service-call'
@@ -591,6 +602,7 @@ export interface FileRouteTypes {
     | '/kurier/'
     | '/settings/'
     | '/api/public/courier-location'
+    | '/api/public/incoming-call'
     | '/api/public/order'
     | '/api/public/payment-request'
     | '/api/public/service-call'
@@ -631,6 +643,7 @@ export interface RootRouteChildren {
   TrackTokenRoute: typeof TrackTokenRoute
   KurierIndexRoute: typeof KurierIndexRoute
   ApiPublicCourierLocationRoute: typeof ApiPublicCourierLocationRoute
+  ApiPublicIncomingCallRoute: typeof ApiPublicIncomingCallRoute
   ApiPublicOrderRoute: typeof ApiPublicOrderRoute
   ApiPublicPaymentRequestRoute: typeof ApiPublicPaymentRequestRoute
   ApiPublicServiceCallRoute: typeof ApiPublicServiceCallRoute
@@ -892,6 +905,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCourierLocationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/incoming-call': {
+      id: '/api/public/incoming-call'
+      path: '/api/public/incoming-call'
+      fullPath: '/api/public/incoming-call'
+      preLoaderRoute: typeof ApiPublicIncomingCallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/order': {
       id: '/api/public/order'
       path: '/api/public/order'
@@ -1055,6 +1075,7 @@ const rootRouteChildren: RootRouteChildren = {
   TrackTokenRoute: TrackTokenRoute,
   KurierIndexRoute: KurierIndexRoute,
   ApiPublicCourierLocationRoute: ApiPublicCourierLocationRoute,
+  ApiPublicIncomingCallRoute: ApiPublicIncomingCallRoute,
   ApiPublicOrderRoute: ApiPublicOrderRoute,
   ApiPublicPaymentRequestRoute: ApiPublicPaymentRequestRoute,
   ApiPublicServiceCallRoute: ApiPublicServiceCallRoute,
