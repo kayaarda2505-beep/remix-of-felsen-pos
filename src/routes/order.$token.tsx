@@ -163,10 +163,20 @@ function OrderPage() {
   };
 
   const effectiveCat = activeCat || categories[0] || "";
-  const visible = useMemo(
-    () => products.filter((p) => p.category === effectiveCat).sort((a, b) => /pizza/i.test(effectiveCat) ? a.name.localeCompare(b.name, "de-CH") : 0),
-    [products, effectiveCat],
-  );
+  const normalize = (s: string) =>
+    s.toLowerCase().replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u");
+  const visible = useMemo(() => {
+    const q = normalize(search.trim());
+    if (q) {
+      return products
+        .filter((p) => normalize(`${p.name} ${p.category} ${p.description ?? ""}`).includes(q))
+        .sort((a, b) => a.name.localeCompare(b.name, "de-CH"));
+    }
+    return products
+      .filter((p) => p.category === effectiveCat)
+      .sort((a, b) => (/pizza/i.test(effectiveCat) ? a.name.localeCompare(b.name, "de-CH") : 0));
+  }, [products, effectiveCat, search]);
+  const searching = search.trim().length > 0;
   const total = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
   const count = cart.reduce((s, c) => s + c.qty, 0);
 
