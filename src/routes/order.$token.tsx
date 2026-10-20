@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Plus, Minus, ShoppingBag, Check, Loader2, Utensils, X, Music, Banknote, CreditCard, Wallet, Bell } from "lucide-react";
+import { Plus, Minus, ShoppingBag, Check, Loader2, Utensils, X, Music, Banknote, CreditCard, Wallet, Bell, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { useProducts, type Product } from "@/hooks/use-products";
@@ -49,6 +49,7 @@ function OrderPage() {
   const { token } = Route.useParams();
   const { products, categories } = useProducts();
   const [activeCat, setActiveCat] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [modProduct, setModProduct] = useState<Product | null>(null);
   const [showPay, setShowPay] = useState(false);
