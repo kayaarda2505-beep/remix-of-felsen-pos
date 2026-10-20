@@ -289,14 +289,38 @@ function OrderPage() {
             )}
           </button>
         </div>
+        {/* Suche */}
+        <div className="max-w-3xl mx-auto px-4 pb-2">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Pizza oder Gericht suchen…"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-accent/50 placeholder:text-muted-foreground"
+            />
+            {searching && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-white/10"
+                aria-label="Suche löschen"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+        </div>
         {/* Categories */}
         <div className="max-w-3xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-none">
           {categories.map((c) => (
             <button
               key={c}
-              onClick={() => setActiveCat(c)}
+              onClick={() => {
+                setActiveCat(c);
+                setSearch("");
+              }}
               className={`shrink-0 rounded-xl px-3 py-1.5 text-xs border transition-all ${
-                effectiveCat === c
+                !searching && effectiveCat === c
                   ? "bg-accent/20 border-accent/50 text-foreground"
                   : "border-transparent bg-white/5 text-muted-foreground hover:text-foreground"
               }`}
