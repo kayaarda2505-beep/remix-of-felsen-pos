@@ -57,6 +57,13 @@
       "when": 1791293086270,
       "tag": "0007_payment_requests_allow_card_twint",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792500619916,
+      "tag": "0008_incoming_calls",
+      "breakpoints": true
     }
   ]
 }

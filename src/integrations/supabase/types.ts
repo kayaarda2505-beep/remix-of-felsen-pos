@@ -501,6 +501,39 @@ export type Database = {
         }
         Relationships: []
       }
+      incoming_calls: {
+        Row: {
+          created_at: string
+          customer_address: string | null
+          customer_id: string | null
+          customer_name: string | null
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          customer_address?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          customer_address?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       ingredient_suppliers: {
         Row: {
           address: string | null
