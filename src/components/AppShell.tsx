@@ -34,6 +34,7 @@ import { UrgentAlertOverlay, pushUrgentAlert, playUrgentRing } from "@/component
 import { StationPrintHub } from "@/components/StationPrintHub";
 import { WebOrderAlert } from "@/components/WebOrderAlert";
 import { ReservationAlert } from "@/components/ReservationAlert";
+import { IncomingCallAlert } from "@/components/IncomingCallAlert";
 import { installAudioUnlock, getAudioContext } from "@/lib/audio-unlock";
 
 async function autoPrintServiceCall(r: any) {
@@ -558,6 +559,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <StationPrintHub />
     {!operatorStationKey && <WebOrderAlert />}
     {!operatorStationKey && <ReservationAlert />}
+    {!operatorStationKey && <IncomingCallAlert />}
     <div className="h-[100dvh] flex w-full overflow-hidden">
       <aside className="hidden md:flex w-20 lg:w-60 flex-col p-3 lg:p-4 gap-1 border-r border-border/40 bg-sidebar/60 backdrop-blur-2xl overflow-y-auto">
 
