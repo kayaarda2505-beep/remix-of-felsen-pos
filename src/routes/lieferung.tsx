@@ -33,6 +33,7 @@ import { printBill, printOrderToStations, type ReceiptItem } from "@/lib/receipt
 import { isAutoPrintEnabled, isDesktopApp } from "@/lib/printer-bridge";
 import { sendOrderReceivedSms } from "@/lib/order-sms.functions";
 import { searchStreets } from "@/lib/addresses.functions";
+import { CALL_START_EVENT, CALL_START_KEY, type CallStart } from "@/components/IncomingCallAlert";
 
 
 
@@ -609,6 +610,57 @@ function Lieferung() {
 
   // ── Karten-Daten ────────────────────────────────
   const [showWizard, setShowWizard] = useState(false);
+
+  // Eingehender Anruf → Bestellfenster mit Kundendaten öffnen
+  useEffect(() => {
+    const consume = async () => {
+      const raw = sessionStorage.getItem(CALL_START_KEY);
+      if (!raw) return;
+      sessionStorage.removeItem(CALL_START_KEY);
+      let start: CallStart;
+      try {
+        start = JSON.parse(raw);
+      } catch {
+        return;
+      }
+      setCart([]);
+      setDeliveryNote("");
+      setSearch("");
+      setMode(start.mode);
+      if (start.mode === "takeaway") {
+        setCustomer(null);
+        setTaPhone(start.phone);
+        setTaName(start.name ?? "");
+        setStep(start.name ? "order" : "customer");
+      } else {
+        setTaPhone("");
+        setTaName("");
+        let found: Customer | null = null;
+        if (start.customerId) {
+          const { data } = await supabase
+            .from("customers")
+            .select("id, last_name, first_name, street, house_no, zip, city, phone, phone2, note")
+            .eq("id", start.customerId)
+            .maybeSingle();
+          found = (data as Customer | null) ?? null;
+        }
+        setCustomer(found);
+        if (found) {
+          setShowForm(false);
+          setStep("order");
+        } else {
+          setForm({ ...EMPTY_FORM, phone: start.phone });
+          setShowForm(true);
+          setStep("customer");
+        }
+      }
+      setShowWizard(true);
+    };
+    void consume();
+    const onEvt = () => void consume();
+    window.addEventListener(CALL_START_EVENT, onEvt);
+    return () => window.removeEventListener(CALL_START_EVENT, onEvt);
+  }, []);
 
   const { data: mapOrders = [] } = useQuery({
     queryKey: ["orders", "delivery", "map"],
