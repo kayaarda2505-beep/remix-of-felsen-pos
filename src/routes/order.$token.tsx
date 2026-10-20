@@ -333,6 +333,11 @@ function OrderPage() {
 
       {/* Products */}
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-4 pb-32">
+        {searching && visible.length === 0 && (
+          <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">
+            Nichts gefunden für «{search.trim()}»
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {visible.map((p) => {
             const lines = cart.filter((c) => c.product.id === p.id);
