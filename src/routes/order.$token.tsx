@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Plus, Minus, ShoppingBag, Check, Loader2, Utensils, X, Music, Banknote, CreditCard, Wallet, Bell } from "lucide-react";
+import { Plus, Minus, ShoppingBag, Check, Loader2, Utensils, X, Music, Banknote, CreditCard, Wallet, Bell, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { useProducts, type Product } from "@/hooks/use-products";
@@ -49,6 +49,7 @@ function OrderPage() {
   const { token } = Route.useParams();
   const { products, categories } = useProducts();
   const [activeCat, setActiveCat] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [modProduct, setModProduct] = useState<Product | null>(null);
   const [showPay, setShowPay] = useState(false);
@@ -162,10 +163,20 @@ function OrderPage() {
   };
 
   const effectiveCat = activeCat || categories[0] || "";
-  const visible = useMemo(
-    () => products.filter((p) => p.category === effectiveCat).sort((a, b) => /pizza/i.test(effectiveCat) ? a.name.localeCompare(b.name, "de-CH") : 0),
-    [products, effectiveCat],
-  );
+  const normalize = (s: string) =>
+    s.toLowerCase().replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u");
+  const visible = useMemo(() => {
+    const q = normalize(search.trim());
+    if (q) {
+      return products
+        .filter((p) => normalize(`${p.name} ${p.category} ${p.description ?? ""}`).includes(q))
+        .sort((a, b) => a.name.localeCompare(b.name, "de-CH"));
+    }
+    return products
+      .filter((p) => p.category === effectiveCat)
+      .sort((a, b) => (/pizza/i.test(effectiveCat) ? a.name.localeCompare(b.name, "de-CH") : 0));
+  }, [products, effectiveCat, search]);
+  const searching = search.trim().length > 0;
   const total = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
   const count = cart.reduce((s, c) => s + c.qty, 0);
 
@@ -278,14 +289,38 @@ function OrderPage() {
             )}
           </button>
         </div>
+        {/* Suche */}
+        <div className="max-w-3xl mx-auto px-4 pb-2">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Pizza oder Gericht suchen…"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-accent/50 placeholder:text-muted-foreground"
+            />
+            {searching && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-white/10"
+                aria-label="Suche löschen"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+        </div>
         {/* Categories */}
         <div className="max-w-3xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-none">
           {categories.map((c) => (
             <button
               key={c}
-              onClick={() => setActiveCat(c)}
+              onClick={() => {
+                setActiveCat(c);
+                setSearch("");
+              }}
               className={`shrink-0 rounded-xl px-3 py-1.5 text-xs border transition-all ${
-                effectiveCat === c
+                !searching && effectiveCat === c
                   ? "bg-accent/20 border-accent/50 text-foreground"
                   : "border-transparent bg-white/5 text-muted-foreground hover:text-foreground"
               }`}
@@ -298,6 +333,11 @@ function OrderPage() {
 
       {/* Products */}
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-4 pb-32">
+        {searching && visible.length === 0 && (
+          <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">
+            Nichts gefunden für «{search.trim()}»
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {visible.map((p) => {
             const lines = cart.filter((c) => c.product.id === p.id);
