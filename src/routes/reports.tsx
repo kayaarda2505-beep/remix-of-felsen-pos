@@ -949,7 +949,7 @@ function Auswertung() {
                       >
                         <div className={`w-2 h-2 rounded-full ${o.status === "paid" ? "bg-success" : "bg-accent/60"}`} />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm truncate">#{String(o.id).slice(0, 8)} · {time}</div>
+                          <div className="text-sm truncate">{o.order_number ? `#${o.order_number}` : `#${String(o.id).slice(0, 8)}`} · {label} · {time}</div>
                           <div className="text-[10px] text-muted-foreground">
                             {o.status === "paid" ? "Bezahlt" : o.status}{o.guests ? ` · ${o.guests} Gäste` : ""} · {methods}{tipSum > 0 ? ` · TG ${tipSum.toFixed(2)}` : ""}
                           </div>
