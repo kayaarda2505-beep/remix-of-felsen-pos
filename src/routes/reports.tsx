@@ -919,6 +919,14 @@ function Auswertung() {
                   const paidAt = Math.max(...orderPays.map((p) => new Date(p.handled_at ?? p.created_at).getTime()), new Date(o.closed_at ?? o.created_at).getTime());
                   const dt = new Date(paidAt);
                   const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+                  const tName = String(o.tables?.name ?? "").trim();
+                  const labelType = o.order_type === "delivery" ? "Lieferung" : o.order_type === "takeaway" ? "Take Away" : "Restaurant";
+                  const labelName = o.order_type === "delivery"
+                    ? String(o.contact_name || String(o.delivery_address ?? "").split("·")[0].trim() || "").trim()
+                    : String(o.contact_name || "").trim();
+                  const label = labelType === "Restaurant"
+                    ? `Restaurant — Tisch ${tName || "?"}`
+                    : `${labelType}${labelName ? ` — ${labelName}` : ""}`;
                   const orderItems = (reportItems as any[]).filter((it) => it.order_id === o.id);
                   const itemSubtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
                   const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
