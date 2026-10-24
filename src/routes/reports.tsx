@@ -919,7 +919,7 @@ function Auswertung() {
                   const paidAt = Math.max(...orderPays.map((p) => new Date(p.handled_at ?? p.created_at).getTime()), new Date(o.closed_at ?? o.created_at).getTime());
                   const dt = new Date(paidAt);
                   const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-                  const tName = String(o.tables?.name ?? "").trim();
+                  const tName = String(o.dining_tables?.name ?? "").trim();
                   const labelType = o.order_type === "delivery" ? "Lieferung" : o.order_type === "takeaway" ? "Take Away" : "Restaurant";
                   const labelName = o.order_type === "delivery"
                     ? String(o.contact_name || String(o.delivery_address ?? "").split("·")[0].trim() || "").trim()
