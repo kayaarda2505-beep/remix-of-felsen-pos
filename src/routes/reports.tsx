@@ -87,7 +87,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, tables(name)")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
         .limit(10000);
@@ -260,7 +260,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, tables(name)")
         .eq("status", "paid")
         .gte("closed_at", `${isoFrom}T00:00:00`)
         .lt("closed_at", `${isoToNext}T00:00:00`)
@@ -276,7 +276,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, tables(name)")
         .in("id", paymentOrderIds)
         .limit(10000);
       if (error) throw error;
@@ -919,6 +919,14 @@ function Auswertung() {
                   const paidAt = Math.max(...orderPays.map((p) => new Date(p.handled_at ?? p.created_at).getTime()), new Date(o.closed_at ?? o.created_at).getTime());
                   const dt = new Date(paidAt);
                   const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+                  const tName = String(o.tables?.name ?? "").trim();
+                  const labelType = o.order_type === "delivery" ? "Lieferung" : o.order_type === "takeaway" ? "Take Away" : "Restaurant";
+                  const labelName = o.order_type === "delivery"
+                    ? String(o.contact_name || String(o.delivery_address ?? "").split("·")[0].trim() || "").trim()
+                    : String(o.contact_name || "").trim();
+                  const label = labelType === "Restaurant"
+                    ? `Restaurant — ${tName || "ohne Tisch"}`
+                    : `${labelType}${labelName ? ` — ${labelName}` : ""}`;
                   const orderItems = (reportItems as any[]).filter((it) => it.order_id === o.id);
                   const itemSubtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
                   const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -941,7 +949,7 @@ function Auswertung() {
                       >
                         <div className={`w-2 h-2 rounded-full ${o.status === "paid" ? "bg-success" : "bg-accent/60"}`} />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm truncate">#{String(o.id).slice(0, 8)} · {time}</div>
+                          <div className="text-sm truncate">{o.order_number ? `#${o.order_number}` : `#${String(o.id).slice(0, 8)}`} · {label} · {time}</div>
                           <div className="text-[10px] text-muted-foreground">
                             {o.status === "paid" ? "Bezahlt" : o.status}{o.guests ? ` · ${o.guests} Gäste` : ""} · {methods}{tipSum > 0 ? ` · TG ${tipSum.toFixed(2)}` : ""}
                           </div>
