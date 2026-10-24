@@ -932,12 +932,14 @@ function Auswertung() {
                   const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
                   const tName = String(o.dining_tables?.name ?? "").trim();
                   const labelType = o.order_type === "delivery" ? "Lieferung" : o.order_type === "takeaway" ? "Take Away" : "Restaurant";
+                  const isWebsiteOrder = String(o.opened_by_name ?? "").trim().toLowerCase() === "website";
+                  const channel = labelType === "Restaurant" ? "" : (isWebsiteOrder ? "Website" : "Telefon");
                   const labelName = o.order_type === "delivery"
                     ? String(o.contact_name || String(o.delivery_address ?? "").split("·")[0].trim() || "").trim()
                     : String(o.contact_name || "").trim();
                   const label = labelType === "Restaurant"
                     ? `Restaurant — ${tName || "ohne Tisch"}`
-                    : `${labelType}${labelName ? ` — ${labelName}` : ""}`;
+                    : `${labelType} · ${channel}${labelName ? ` — ${labelName}` : ""}`;
                   const orderItems = (reportItems as any[]).filter((it) => it.order_id === o.id);
                   const itemSubtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
                   const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
