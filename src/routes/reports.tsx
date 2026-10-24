@@ -906,6 +906,7 @@ function Auswertung() {
             <div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Einzelne Umsätze</div>
               <div className="text-xl font-semibold tabular-nums mt-0.5">{reportOrders.length} Bestellungen</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">Lieferung + Take Away: {channelCounts.website} Website · {channelCounts.phone} Telefon</div>
             </div>
             <div className="text-xs text-muted-foreground">{revenue.toFixed(2)} CHF gesamt</div>
           </div>
