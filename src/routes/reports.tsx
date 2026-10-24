@@ -87,7 +87,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, tables(name)")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, dining_tables(name)")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
         .limit(10000);
@@ -260,7 +260,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, tables(name)")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, dining_tables(name)")
         .eq("status", "paid")
         .gte("closed_at", `${isoFrom}T00:00:00`)
         .lt("closed_at", `${isoToNext}T00:00:00`)
@@ -276,7 +276,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, tables(name)")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, dining_tables(name)")
         .in("id", paymentOrderIds)
         .limit(10000);
       if (error) throw error;
@@ -919,7 +919,7 @@ function Auswertung() {
                   const paidAt = Math.max(...orderPays.map((p) => new Date(p.handled_at ?? p.created_at).getTime()), new Date(o.closed_at ?? o.created_at).getTime());
                   const dt = new Date(paidAt);
                   const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-                  const tName = String(o.tables?.name ?? "").trim();
+                  const tName = String(o.dining_tables?.name ?? "").trim();
                   const labelType = o.order_type === "delivery" ? "Lieferung" : o.order_type === "takeaway" ? "Take Away" : "Restaurant";
                   const labelName = o.order_type === "delivery"
                     ? String(o.contact_name || String(o.delivery_address ?? "").split("·")[0].trim() || "").trim()
