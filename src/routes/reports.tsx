@@ -925,7 +925,7 @@ function Auswertung() {
                     ? String(o.contact_name || String(o.delivery_address ?? "").split("·")[0].trim() || "").trim()
                     : String(o.contact_name || "").trim();
                   const label = labelType === "Restaurant"
-                    ? `Restaurant — Tisch ${tName || "?"}`
+                    ? `Restaurant — ${tName || "ohne Tisch"}`
                     : `${labelType}${labelName ? ` — ${labelName}` : ""}`;
                   const orderItems = (reportItems as any[]).filter((it) => it.order_id === o.id);
                   const itemSubtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
