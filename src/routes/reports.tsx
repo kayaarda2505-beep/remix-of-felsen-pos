@@ -290,6 +290,16 @@ function Auswertung() {
     return [...m.values()];
   }, [orders, closedOrders, paymentOrders]);
 
+  // Kanal-Zählung: Website vs. Telefon für Lieferung/Take Away (Restaurant immer Kasse)
+  const channelCounts = useMemo(() => {
+    let website = 0, phone = 0;
+    for (const o of reportOrders as any[]) {
+      if (o.order_type === "dine_in") continue;
+      if (String(o.opened_by_name ?? "").trim().toLowerCase() === "website") website++; else phone++;
+    }
+    return { website, phone };
+  }, [reportOrders]);
+
   const extraItemOrderIds = useMemo(() => {
     const baseIds = new Set((orders as any[]).map((o) => o.id));
     return reportOrders.map((o: any) => o.id).filter((id: string) => !baseIds.has(id));
@@ -896,6 +906,7 @@ function Auswertung() {
             <div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Einzelne Umsätze</div>
               <div className="text-xl font-semibold tabular-nums mt-0.5">{reportOrders.length} Bestellungen</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">Lieferung + Take Away: {channelCounts.website} Website · {channelCounts.phone} Telefon</div>
             </div>
             <div className="text-xs text-muted-foreground">{revenue.toFixed(2)} CHF gesamt</div>
           </div>
@@ -921,12 +932,14 @@ function Auswertung() {
                   const time = dt.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
                   const tName = String(o.dining_tables?.name ?? "").trim();
                   const labelType = o.order_type === "delivery" ? "Lieferung" : o.order_type === "takeaway" ? "Take Away" : "Restaurant";
+                  const isWebsiteOrder = String(o.opened_by_name ?? "").trim().toLowerCase() === "website";
+                  const channel = labelType === "Restaurant" ? "" : (isWebsiteOrder ? "Website" : "Telefon");
                   const labelName = o.order_type === "delivery"
                     ? String(o.contact_name || String(o.delivery_address ?? "").split("·")[0].trim() || "").trim()
                     : String(o.contact_name || "").trim();
                   const label = labelType === "Restaurant"
                     ? `Restaurant — ${tName || "ohne Tisch"}`
-                    : `${labelType}${labelName ? ` — ${labelName}` : ""}`;
+                    : `${labelType} · ${channel}${labelName ? ` — ${labelName}` : ""}`;
                   const orderItems = (reportItems as any[]).filter((it) => it.order_id === o.id);
                   const itemSubtotal = orderItems.reduce((s, it) => s + Number(it.unit_price) * Number(it.qty), 0);
                   const paidSum = orderPays.reduce((s, p) => s + Number(p.amount || 0), 0);
