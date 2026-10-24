@@ -290,6 +290,16 @@ function Auswertung() {
     return [...m.values()];
   }, [orders, closedOrders, paymentOrders]);
 
+  // Kanal-Zählung: Website vs. Telefon für Lieferung/Take Away (Restaurant immer Kasse)
+  const channelCounts = useMemo(() => {
+    let website = 0, phone = 0;
+    for (const o of reportOrders as any[]) {
+      if (o.order_type === "dine_in") continue;
+      if (String(o.opened_by_name ?? "").trim().toLowerCase() === "website") website++; else phone++;
+    }
+    return { website, phone };
+  }, [reportOrders]);
+
   const extraItemOrderIds = useMemo(() => {
     const baseIds = new Set((orders as any[]).map((o) => o.id));
     return reportOrders.map((o: any) => o.id).filter((id: string) => !baseIds.has(id));
