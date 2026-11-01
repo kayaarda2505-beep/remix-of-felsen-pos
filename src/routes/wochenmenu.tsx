@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
-import { Camera, FileDown, FileText, Loader2, Plus, Trash2 } from "lucide-react";
+import { Camera, FileDown, FileText, ImageIcon, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import logoAsset from "@/assets/piratino-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,7 @@ const EMPTY: WeeklyDish = { name: "", description: "", price: "" };
 function WochenmenuPage() {
   const extract = useServerFn(extractWeeklyMenu);
   const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [week, setWeek] = useState(defaultWeek);
   const [subtitle, setSubtitle] = useState("Menù della Settimana");
@@ -78,6 +79,7 @@ function WochenmenuPage() {
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
+      if (galleryRef.current) galleryRef.current.value = "";
     }
   };
 
@@ -113,10 +115,17 @@ function WochenmenuPage() {
         </div>
 
         <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.target.files?.[0])} />
-        <Button size="lg" className="w-full" onClick={() => fileRef.current?.click()} disabled={busy}>
-          {busy ? <Loader2 className="animate-spin" /> : <Camera />}
-          {busy ? "Notizen werden gelesen…" : "Foto der Notizen hochladen"}
-        </Button>
+        <input ref={galleryRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="lg" onClick={() => fileRef.current?.click()} disabled={busy}>
+            {busy ? <Loader2 className="animate-spin" /> : <Camera />}
+            Kamera
+          </Button>
+          <Button size="lg" variant="outline" onClick={() => galleryRef.current?.click()} disabled={busy}>
+            <ImageIcon />
+            Aus Galerie
+          </Button>
+        </div>
 
         <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">Woche</label>
