@@ -169,9 +169,25 @@ function WochenmenuPage() {
         </p>
       </div>
 
-      <div className="overflow-auto">
-        <div className="menu-preview-scale origin-top-left scale-[0.55] sm:scale-75 xl:scale-90 w-[210mm]">
-          <MenuSheet week={week} subtitle={subtitle} dishes={valid} footer={footer} />
+      <div ref={previewRef} className="overflow-hidden">
+        <div
+          style={{
+            width: 794 * sheetScale,
+            height: 1123 * sheetScale,
+            maxWidth: "100%",
+            margin: "0 auto",
+          }}
+        >
+          <div
+            style={{
+              width: 794,
+              height: 1123,
+              transform: `scale(${sheetScale})`,
+              transformOrigin: "top left",
+            }}
+          >
+            <MenuSheet week={week} subtitle={subtitle} dishes={valid} footer={footer} />
+          </div>
         </div>
       </div>
     </div>
