@@ -58,6 +58,7 @@ const EMPTY: WeeklyDish = { name: "", description: "", price: "" };
 function WochenmenuPage() {
   const extract = useServerFn(extractWeeklyMenu);
   const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [week, setWeek] = useState(defaultWeek);
   const [subtitle, setSubtitle] = useState("Menù della Settimana");
@@ -78,6 +79,7 @@ function WochenmenuPage() {
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
+      if (galleryRef.current) galleryRef.current.value = "";
     }
   };
 
