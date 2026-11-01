@@ -31,6 +31,16 @@ export interface Product {
   modifier_groups: ModifierGroup[];
 }
 
+function zurichToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(new Date());
+}
+/** Wochenmenü-Produkte tragen meta "weekly:YYYY-MM-DD:YYYY-MM-DD" und sind nur in dieser Woche sichtbar. */
+export function weeklyValid(meta: string | null | undefined, today: string) {
+  const m = /^weekly:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/.exec(meta ?? "");
+  if (!m) return true;
+  return today >= m[1] && today <= m[2];
+}
+
 export function useProducts() {
   const queryClient = useQueryClient();
   const q = useQuery({
@@ -79,12 +89,17 @@ export function useProducts() {
     const t = setInterval(() => setLunchTime(isLunchTime()), 60_000);
     return () => clearInterval(t);
   }, []);
+  const [today, setToday] = useState(zurichToday);
+  useEffect(() => {
+    const t = setInterval(() => setToday(zurichToday()), 60_000);
+    return () => clearInterval(t);
+  }, []);
   const products = useMemo(
     () =>
       (q.data ?? []).filter(
-        (p) => p.active && (lunchTime || !/mittagsmen/i.test(p.category)),
+        (p) => p.active && (lunchTime || !/mittagsmen/i.test(p.category)) && weeklyValid(p.meta, today),
       ),
-    [q.data, lunchTime],
+    [q.data, lunchTime, today],
   );
   const allProducts = q.data ?? [];
   const categories = useMemo(() => {
