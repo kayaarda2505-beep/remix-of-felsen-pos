@@ -59,6 +59,8 @@ function WochenmenuPage() {
   const extract = useServerFn(extractWeeklyMenu);
   const fileRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [sheetScale, setSheetScale] = useState(0.6);
   const [busy, setBusy] = useState(false);
   const [week, setWeek] = useState(defaultWeek);
   const [subtitle, setSubtitle] = useState("Menù della Settimana");
