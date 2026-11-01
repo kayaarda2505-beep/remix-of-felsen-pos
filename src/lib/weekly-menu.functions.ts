@@ -22,60 +22,91 @@ Regeln:
 - price: nur wenn im Foto ein Preis steht, als Zahl z.B. "24.50", sonst leer.
 - Überschriften wie "Wochen Menü" sind keine Gerichte.`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: {
+        "Lovable-API-Key": apiKey,
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "X-Lovable-AIG-SDK": "fetch",
+      },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: system },
+        model: "openai/gpt-6-astra",
+        stream: true,
+        store: false,
+        reasoning: { effort: "low" },
+        instructions: system,
+        input: [
           {
             role: "user",
             content: [
-              { type: "text", text: "Lies die Gerichte aus diesen Notizen." },
-              { type: "image_url", image_url: { url: data.imageDataUrl } },
+              { type: "input_text", text: "Lies die Gerichte aus diesen Notizen." },
+              { type: "input_image", image_url: data.imageDataUrl },
             ],
           },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "save_menu",
-              description: "Speichert die Gerichte",
-              parameters: {
-                type: "object",
-                properties: {
-                  dishes: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        description: { type: "string" },
-                        price: { type: "string" },
-                      },
-                      required: ["name"],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "menu",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["dishes"],
+              properties: {
+                dishes: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["name", "description", "price"],
+                    properties: {
+                      name: { type: "string" },
+                      description: { type: "string" },
+                      price: { type: "string" },
                     },
                   },
                 },
-                required: ["dishes"],
               },
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "save_menu" } },
+        },
       }),
     });
 
-    if (!resp.ok) {
+    if (!resp.ok || !resp.body) {
       const txt = await resp.text().catch(() => "");
       if (resp.status === 429) return { ok: false, error: "Zu viele Anfragen – kurz warten." };
       if (resp.status === 402) return { ok: false, error: "AI-Guthaben verbraucht." };
       return { ok: false, error: `Fehler ${resp.status}: ${txt.slice(0, 200)}` };
     }
-    const json = await resp.json();
-    const args = json?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    // SSE lesen
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    let args = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i).trim();
+        buf = buf.slice(i + 1);
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        try {
+          const ev = JSON.parse(payload);
+          if (ev.type === "response.output_text.delta") args += ev.delta ?? "";
+          if (ev.type === "response.failed" || ev.type === "error")
+            return { ok: false, error: ev?.response?.error?.message ?? ev?.message ?? "AI Fehler" };
+        } catch {
+          /* ignore */
+        }
+      }
+    }
     if (!args) return { ok: false, error: "Keine Gerichte erkannt" };
     try {
       const parsed = JSON.parse(args) as { dishes?: Partial<WeeklyDish>[] };
