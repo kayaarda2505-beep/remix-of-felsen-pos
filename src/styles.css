@@ -387,6 +387,7 @@
   html, body { background: var(--menu-paper) !important; }
   body * { visibility: hidden !important; }
   #menu-sheet, #menu-sheet * { visibility: visible !important; }
+  .menu-preview-scale { transform: none !important; scale: none !important; }
   #menu-sheet { position: fixed !important; inset: 0 !important; width: 210mm !important; height: 297mm !important; transform: none !important; box-shadow: none !important; margin: 0 !important; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
