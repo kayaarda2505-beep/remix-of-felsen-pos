@@ -64,6 +64,13 @@
       "when": 1792500619916,
       "tag": "0008_incoming_calls",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793555760473,
+      "tag": "0009_weekly_menus",
+      "breakpoints": true
     }
   ]
 }

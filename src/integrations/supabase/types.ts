@@ -1662,6 +1662,45 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_menus: {
+        Row: {
+          created_at: string
+          dishes: Json
+          footer: string | null
+          id: string
+          published_at: string | null
+          subtitle: string
+          updated_at: string
+          valid_from: string
+          valid_until: string
+          week_label: string
+        }
+        Insert: {
+          created_at?: string
+          dishes?: Json
+          footer?: string | null
+          id?: string
+          published_at?: string | null
+          subtitle?: string
+          updated_at?: string
+          valid_from: string
+          valid_until: string
+          week_label: string
+        }
+        Update: {
+          created_at?: string
+          dishes?: Json
+          footer?: string | null
+          id?: string
+          published_at?: string | null
+          subtitle?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string
+          week_label?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       dining_tables_safe: {
