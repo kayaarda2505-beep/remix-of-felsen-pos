@@ -2,13 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer, Banknote, Coins, AlertTriangle, Save } from "lucide-react";
+import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer, Banknote, Coins, AlertTriangle, Save, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { printDailyReport, printBill } from "@/lib/receipt";
 import { isDesktopApp, type PrinterConfig } from "@/lib/printer-bridge";
 import { ReportDocuments } from "@/components/ReportDocuments";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 
 
