@@ -787,9 +787,39 @@ function Auswertung() {
       />
 
 
-      <div className="glass rounded-2xl px-4 py-3 mb-4 text-sm capitalize">
-        <span className="font-medium">{rangeLabel}</span>
-      </div>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            title="Datum / Zeitraum ändern"
+            className="glass rounded-2xl px-4 py-3 mb-4 text-sm capitalize w-full flex items-center justify-between gap-3 text-left hover:border-accent/40 transition-colors cursor-pointer"
+          >
+            <span className="font-medium">{rangeLabel}</span>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+              <CalendarDays className="w-4 h-4" />
+              Ändern
+            </span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-3 pointer-events-auto" align="start">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Zeitraum wählen</div>
+          <div className="flex items-center gap-2">
+            <input type="date" value={fmtISO(from)} onChange={(e) => { if (e.target.value) { setPreset("custom"); setFrom(new Date(e.target.value + "T00:00:00")); } }}
+              className="glass rounded-lg text-xs px-2 h-9 outline-none tabular-nums" />
+            <span className="text-xs text-muted-foreground">–</span>
+            <input type="date" value={fmtISO(to)} onChange={(e) => { if (e.target.value) { setPreset("custom"); setTo(new Date(e.target.value + "T00:00:00")); } }}
+              className="glass rounded-lg text-xs px-2 h-9 outline-none tabular-nums" />
+          </div>
+          <div className="flex gap-1 mt-2">
+            {(["today","week","month","year"] as RangePreset[]).map(p => (
+              <button key={p} type="button" onClick={() => applyPreset(p)} disabled={isRangePending}
+                className={`px-2 h-7 rounded-md text-[11px] transition-colors disabled:opacity-60 ${preset===p ? "bg-accent/20 text-accent" : "hover:bg-white/10"}`}>
+                {p==="today"?"Heute":p==="week"?"Woche":p==="month"?"Monat":"Jahr"}
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
