@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
-import { Camera, FileDown, FileText, ImageIcon, Loader2, Plus, Trash2 } from "lucide-react";
+import { Camera, Save, Send, FileDown, FileText, ImageIcon, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import logoAsset from "@/assets/piratino-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +23,23 @@ export const Route = createFileRoute("/wochenmenu")({
   }),
   component: WochenmenuPage,
 });
+
+function isoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function weekRange() {
+  const d = new Date();
+  const day = (d.getDay() + 6) % 7;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - day + (day >= 5 ? 7 : 0));
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  return { from: isoDate(mon), until: isoDate(sun) };
+}
+function parsePrice(p: string) {
+  const n = Number(String(p).replace(/[^\d.,]/g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
 
 function defaultWeek() {
   const d = new Date();
@@ -66,6 +85,75 @@ function WochenmenuPage() {
   const [subtitle, setSubtitle] = useState("Menù della Settimana");
   const [dishes, setDishes] = useState<WeeklyDish[]>([]);
   const [footer, setFooter] = useState("Montag bis Freitag · 11 – 14 Uhr");
+  const [range, setRange] = useState(weekRange);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [saving, setSaving] = useState<"" | "save" | "publish">("");
+  const qc = useQueryClient();
+  const saved = useQuery({
+    queryKey: ["weekly_menus"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("weekly_menus").select("*").order("valid_from", { ascending: false }).limit(20);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const saveMenu = async (publish: boolean) => {
+    const list = dishes.filter((d) => d.name.trim());
+    if (!list.length) return;
+    if (publish && list.some((d) => !parsePrice(d.price))) return toast.error("Bitte bei allen Gerichten einen Preis eintragen");
+    if (range.until < range.from) return toast.error("Gültig-bis liegt vor Gültig-ab");
+    setSaving(publish ? "publish" : "save");
+    try {
+      const row = {
+        week_label: week, subtitle, footer, dishes: list as any, valid_from: range.from, valid_until: range.until,
+        ...(publish ? { published_at: new Date().toISOString() } : {}),
+      };
+      let id = menuId;
+      if (id) {
+        const { error } = await supabase.from("weekly_menus").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from("weekly_menus").insert(row).select("id").single();
+        if (error) throw error;
+        id = data.id;
+        setMenuId(id);
+      }
+      if (publish) {
+        const { error: offErr } = await supabase.from("products").update({ active: false }).like("id", "wm-%");
+        if (offErr) throw offErr;
+        const prods = list.map((d, i) => ({
+          id: `wm-${id!.slice(0, 8)}-${i + 1}`,
+          name: d.name.trim(),
+          description: d.description?.trim() || null,
+          category: "Wochenmenü",
+          price: parsePrice(d.price),
+          meta: `weekly:${range.from}:${range.until}`,
+          active: true,
+          sort_order: -1000 + i,
+          modifier_groups: [] as any,
+        }));
+        const { error } = await supabase.from("products").upsert(prods);
+        if (error) throw error;
+        qc.invalidateQueries({ queryKey: ["products"] });
+      }
+      qc.invalidateQueries({ queryKey: ["weekly_menus"] });
+      toast.success(publish ? "Im Menü eingepflegt – erscheint bis Sonntag auf der QR-Karte" : "Wochenmenü gespeichert");
+    } catch (e) {
+      toast.error((e as Error).message || "Speichern fehlgeschlagen (nur Admin/Manager)");
+    } finally {
+      setSaving("");
+    }
+  };
+
+  const loadMenu = (m: any) => {
+    setMenuId(m.id);
+    setWeek(m.week_label);
+    setSubtitle(m.subtitle);
+    setFooter(m.footer ?? "");
+    setDishes(Array.isArray(m.dishes) ? m.dishes : []);
+    setRange({ from: m.valid_from, until: m.valid_until });
+  };
 
   useEffect(() => {
     const el = previewRef.current;
@@ -202,6 +290,33 @@ function WochenmenuPage() {
             <FileText /> Word
           </Button>
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs text-muted-foreground">Gültig ab
+            <Input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+          </label>
+          <label className="text-xs text-muted-foreground">Gültig bis
+            <Input type="date" value={range.until} onChange={(e) => setRange((r) => ({ ...r, until: e.target.value }))} />
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" disabled={!valid.length || !!saving} onClick={() => saveMenu(false)}>
+            {saving === "save" ? <Loader2 className="animate-spin" /> : <Save />} Speichern
+          </Button>
+          <Button disabled={!valid.length || !!saving} onClick={() => saveMenu(true)}>
+            {saving === "publish" ? <Loader2 className="animate-spin" /> : <Send />} Ins Menü einpflegen
+          </Button>
+        </div>
+        {!!saved.data?.length && (
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-muted-foreground">Gespeicherte Menüs</div>
+            {saved.data.map((m: any) => (
+              <button key={m.id} onClick={() => loadMenu(m)} className={`w-full text-left text-sm rounded-md border px-3 py-2 hover:bg-muted ${m.id === menuId ? "border-primary" : ""}`}>
+                {m.week_label}
+                {m.published_at && <span className="ml-2 text-xs text-primary">· eingepflegt</span>}
+              </button>
+            ))}
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">
           PDF wird als fertige A4-Datei heruntergeladen – randlos, ohne Kopf-/Fusszeilen.
         </p>
