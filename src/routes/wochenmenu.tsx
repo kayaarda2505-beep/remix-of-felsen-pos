@@ -67,6 +67,16 @@ function WochenmenuPage() {
   const [dishes, setDishes] = useState<WeeklyDish[]>([]);
   const [footer, setFooter] = useState("Montag bis Freitag · 11 – 14 Uhr");
 
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const update = () => setSheetScale(Math.min(1, (el.clientWidth - 16) / 794));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const onFile = async (f?: File) => {
     if (!f) return;
     setBusy(true);
