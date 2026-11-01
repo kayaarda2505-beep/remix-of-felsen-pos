@@ -98,6 +98,34 @@ function WochenmenuPage() {
   const update = (i: number, k: keyof WeeklyDish, v: string) =>
     setDishes((ds) => ds.map((d, j) => (j === i ? { ...d, [k]: v } : d)));
 
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const downloadPdf = async () => {
+    const el = document.getElementById("menu-sheet");
+    if (!el) return;
+    setPdfBusy(true);
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas-pro"), import("jspdf")]);
+      const clone = el.cloneNode(true) as HTMLElement;
+      const holder = document.createElement("div");
+      holder.style.cssText = "position:fixed;left:-10000px;top:0;";
+      clone.style.boxShadow = "none";
+      holder.appendChild(clone);
+      document.body.appendChild(holder);
+      await document.fonts.ready;
+      await Promise.all(Array.from(clone.querySelectorAll("img")).map((i) => i.decode().catch(() => {})));
+      const canvas = await html2canvas(clone, { scale: 3, useCORS: true });
+      holder.remove();
+      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
+      pdf.save(`Wochenmenue-${week.replace(/[^\w]+/g, "-")}.pdf`);
+    } catch (e) {
+      console.error(e);
+      toast.error("PDF konnte nicht erstellt werden");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   const downloadWord = async () => {
     try {
       const { buildWeeklyMenuDocx } = await import("@/lib/weekly-menu-docx");
