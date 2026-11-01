@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, FileDown, FileText, ImageIcon, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import logoAsset from "@/assets/piratino-logo.png.asset.json";
@@ -59,11 +59,23 @@ function WochenmenuPage() {
   const extract = useServerFn(extractWeeklyMenu);
   const fileRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [sheetScale, setSheetScale] = useState(0.6);
   const [busy, setBusy] = useState(false);
   const [week, setWeek] = useState(defaultWeek);
   const [subtitle, setSubtitle] = useState("Menù della Settimana");
   const [dishes, setDishes] = useState<WeeklyDish[]>([]);
   const [footer, setFooter] = useState("Montag bis Freitag · 11 – 14 Uhr");
+
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const update = () => setSheetScale(Math.min(1, (el.clientWidth - 16) / 794));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const onFile = async (f?: File) => {
     if (!f) return;
@@ -167,9 +179,25 @@ function WochenmenuPage() {
         </p>
       </div>
 
-      <div className="overflow-auto">
-        <div className="menu-preview-scale origin-top-left scale-[0.55] sm:scale-75 xl:scale-90 w-[210mm]">
-          <MenuSheet week={week} subtitle={subtitle} dishes={valid} footer={footer} />
+      <div ref={previewRef} className="overflow-hidden">
+        <div
+          style={{
+            width: 794 * sheetScale,
+            height: 1123 * sheetScale,
+            maxWidth: "100%",
+            margin: "0 auto",
+          }}
+        >
+          <div
+            style={{
+              width: 794,
+              height: 1123,
+              transform: `scale(${sheetScale})`,
+              transformOrigin: "top left",
+            }}
+          >
+            <MenuSheet week={week} subtitle={subtitle} dishes={valid} footer={footer} />
+          </div>
         </div>
       </div>
     </div>
