@@ -371,3 +371,23 @@
   font-size: 0.85rem !important;
 }
 
+
+/* Wochenmenü – Druckpapier */
+:root {
+  --menu-paper: oklch(0.985 0.012 85);
+  --menu-ink: oklch(0.24 0.02 60);
+  --menu-muted: oklch(0.45 0.025 60);
+  --menu-gold: oklch(0.66 0.09 75);
+}
+.menu-sheet { background: var(--menu-paper); color: var(--menu-ink); }
+.menu-serif { font-family: "Cormorant Garamond", Georgia, serif; }
+.menu-caps { font-family: "Cinzel", "Times New Roman", serif; }
+@media print {
+  @page { size: A4; margin: 0; }
+  html, body { background: var(--menu-paper) !important; }
+  body * { visibility: hidden !important; }
+  #menu-sheet, #menu-sheet * { visibility: visible !important; }
+  .menu-preview-scale { transform: none !important; scale: none !important; }
+  #menu-sheet { position: fixed !important; inset: 0 !important; width: 210mm !important; height: 297mm !important; transform: none !important; box-shadow: none !important; margin: 0 !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

@@ -27,6 +27,7 @@ import { Route as SpotifyCallbackRouteImport } from './routes/spotify-callback'
 import { Route as SpotifyPlayerRouteImport } from './routes/spotify-player'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as TablesRouteImport } from './routes/tables'
+import { Route as WochenmenuRouteImport } from './routes/wochenmenu'
 import { Route as BewertungTokenRouteImport } from './routes/bewertung.$token'
 import { Route as KurierIndexRouteImport } from './routes/kurier.index'
 import { Route as KurierIdRouteImport } from './routes/kurier.$id'
@@ -147,6 +148,11 @@ const StaffRoute = StaffRouteImport.update({
 const TablesRoute = TablesRouteImport.update({
   id: '/tables',
   path: '/tables',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WochenmenuRoute = WochenmenuRouteImport.update({
+  id: '/wochenmenu',
+  path: '/wochenmenu',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BewertungTokenRoute = BewertungTokenRouteImport.update({
@@ -329,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/spotify-player': typeof SpotifyPlayerRoute
   '/staff': typeof StaffRoute
   '/tables': typeof TablesRoute
+  '/wochenmenu': typeof WochenmenuRoute
   '/bewertung/$token': typeof BewertungTokenRoute
   '/kurier/$id': typeof KurierIdRoute
   '/order/$token': typeof OrderTokenRouteWithChildren
@@ -379,6 +386,7 @@ export interface FileRoutesByTo {
   '/spotify-player': typeof SpotifyPlayerRoute
   '/staff': typeof StaffRoute
   '/tables': typeof TablesRoute
+  '/wochenmenu': typeof WochenmenuRoute
   '/bewertung/$token': typeof BewertungTokenRoute
   '/kurier/$id': typeof KurierIdRoute
   '/order/$token': typeof OrderTokenRouteWithChildren
@@ -431,6 +439,7 @@ export interface FileRoutesById {
   '/spotify-player': typeof SpotifyPlayerRoute
   '/staff': typeof StaffRoute
   '/tables': typeof TablesRoute
+  '/wochenmenu': typeof WochenmenuRoute
   '/bewertung/$token': typeof BewertungTokenRoute
   '/kurier/$id': typeof KurierIdRoute
   '/order/$token': typeof OrderTokenRouteWithChildren
@@ -484,6 +493,7 @@ export interface FileRouteTypes {
     | '/spotify-player'
     | '/staff'
     | '/tables'
+    | '/wochenmenu'
     | '/bewertung/$token'
     | '/kurier/$id'
     | '/order/$token'
@@ -534,6 +544,7 @@ export interface FileRouteTypes {
     | '/spotify-player'
     | '/staff'
     | '/tables'
+    | '/wochenmenu'
     | '/bewertung/$token'
     | '/kurier/$id'
     | '/order/$token'
@@ -585,6 +596,7 @@ export interface FileRouteTypes {
     | '/spotify-player'
     | '/staff'
     | '/tables'
+    | '/wochenmenu'
     | '/bewertung/$token'
     | '/kurier/$id'
     | '/order/$token'
@@ -637,6 +649,7 @@ export interface RootRouteChildren {
   SpotifyPlayerRoute: typeof SpotifyPlayerRoute
   StaffRoute: typeof StaffRoute
   TablesRoute: typeof TablesRoute
+  WochenmenuRoute: typeof WochenmenuRoute
   BewertungTokenRoute: typeof BewertungTokenRoute
   KurierIdRoute: typeof KurierIdRoute
   OrderTokenRoute: typeof OrderTokenRouteWithChildren
@@ -784,6 +797,13 @@ declare module '@tanstack/react-router' {
       path: '/tables'
       fullPath: '/tables'
       preLoaderRoute: typeof TablesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wochenmenu': {
+      id: '/wochenmenu'
+      path: '/wochenmenu'
+      fullPath: '/wochenmenu'
+      preLoaderRoute: typeof WochenmenuRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bewertung/$token': {
@@ -1069,6 +1089,7 @@ const rootRouteChildren: RootRouteChildren = {
   SpotifyPlayerRoute: SpotifyPlayerRoute,
   StaffRoute: StaffRoute,
   TablesRoute: TablesRoute,
+  WochenmenuRoute: WochenmenuRoute,
   BewertungTokenRoute: BewertungTokenRoute,
   KurierIdRoute: KurierIdRoute,
   OrderTokenRoute: OrderTokenRouteWithChildren,
