@@ -167,15 +167,15 @@ function WochenmenuPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Button disabled={!valid.length} onClick={() => window.print()}>
-            <FileDown /> PDF / Drucken
+          <Button onClick={downloadPdf} disabled={!valid.length || pdfBusy}>
+            {pdfBusy ? <Loader2 className="animate-spin" /> : <FileDown />} PDF
           </Button>
           <Button variant="secondary" disabled={!valid.length} onClick={downloadWord}>
             <FileText /> Word
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          PDF: im Druckfenster «Als PDF speichern» wählen oder direkt drucken (A4, Ränder «Keine»).
+          PDF wird als fertige A4-Datei heruntergeladen – randlos, ohne Kopf-/Fusszeilen.
         </p>
       </div>
 
@@ -231,7 +231,7 @@ function MenuSheet({ week, subtitle, dishes, footer }: { week: string; subtitle:
         </div>
         <div className="mt-7"><Ornament /></div>
 
-        <div className={`flex-1 flex flex-col justify-center w-full ${many ? "gap-5" : "gap-8"}`}>
+        <div className={`flex-1 flex flex-col justify-start w-full pt-[12mm] ${many ? "gap-5" : "gap-8"}`}>
           {dishes.map((d, i) => (
             <div key={i}>
               <div className={`menu-caps ${many ? "text-[12pt]" : "text-[14pt]"} tracking-[0.2em]`}>{d.name.toUpperCase()}</div>
