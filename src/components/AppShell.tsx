@@ -24,6 +24,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { stationForAccount } from "@/lib/station-accounts";
+import { playStationBell } from "@/lib/station-sound";
 import { useTheme } from "@/hooks/use-theme";
 import { PiratinoLogo } from "./PiratinoLogo";
 import { SpotifyPlayer } from "./SpotifyPlayer";
@@ -437,27 +438,32 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Barkeeper / Küche Alert: neue Bestellung an passender Station
   const handledDrinkItemIds = useRef<Set<string>>(new Set());
+  // Glockenton bei jeder neuen Küchen-/Pizza-Bestellung – auf allen Bildschirmen
+  const lastStationRing = useRef<Record<string, number>>({});
+  const pathRef = useRef(path);
+  useEffect(() => { pathRef.current = path; }, [path]);
   const handleStationOrderItem = useCallback(async (it: any) => {
     if (!it?.id || handledDrinkItemIds.current.has(it.id)) return;
-    const myStation = stationForAccount(operatorAccountRef.current);
-    if (myStation) {
-      // Station-Account: Ton nur bei Bestellungen der eigenen Station
-      if (routeForItem(it.category, it.product_name) !== myStation) return;
-    } else {
-      const station = routeForCategory(it.category); // "bar" | "kueche"
-      if (operatorRole === "barkeeper" && station !== "bar") return;
-      if (operatorRole === "kueche" && station !== "kueche") return;
-      if (operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
-    }
-    const station = routeForCategory(it.category);
     handledDrinkItemIds.current.add(it.id);
-
-    // Kein rotes Popup mehr für Küchen-/Bar-Bestellungen – nur noch der laute Ton.
-    playUrgentRing();
+    if (pathRef.current.startsWith("/kitchen")) return; // Stationsseite klingelt selbst
+    const station = routeForItem(it.category, it.product_name);
+    const myStation = stationForAccount(operatorAccountRef.current);
+    if (myStation && station !== myStation) return;
+    if (station === "bar" && !myStation && operatorRole !== "barkeeper") return;
+    const now = Date.now();
+    const key = `${it.order_id}-${station}`;
+    if (now - (lastStationRing.current[key] ?? 0) < 8000) return;
+    // nicht zwei gleiche Töne übereinander
+    const anyKey = `__${station}`;
+    if (now - (lastStationRing.current[anyKey] ?? 0) < 6000) return;
+    lastStationRing.current[key] = now;
+    lastStationRing.current[anyKey] = now;
+    const other = station === "pizza" ? "__kueche" : "__pizza";
+    const delay = Math.max(0, 5800 - (now - (lastStationRing.current[other] ?? 0)));
+    setTimeout(() => playStationBell(station), station === "bar" ? 0 : delay);
   }, [operatorRole]);
 
   useEffect(() => {
-    if (!operatorStationKey && operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
     const ch = supabase
       .channel(`order_items_station_notify_${Math.random().toString(36).slice(2)}`)
       .on(
@@ -474,12 +480,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [handleStationOrderItem, operatorRole]);
+  }, [handleStationOrderItem]);
 
   useEffect(() => {
-    if (operatorRole !== "barkeeper" && operatorRole !== "kueche") return;
     const pollStationItems = async () => {
-      const sinceIso = new Date(mountedAt.current - 5000).toISOString();
+      const sinceIso = new Date(Math.max(mountedAt.current - 5000, Date.now() - 60000)).toISOString();
       const { data } = await supabase
         .from("order_items")
         .select("id, order_id, product_name, qty, category, sent_at")
@@ -493,7 +498,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }, 5000);
     void pollStationItems();
     return () => window.clearInterval(interval);
-  }, [handleStationOrderItem, operatorRole]);
+  }, [handleStationOrderItem]);
 
   useEffect(() => {
     const ch = supabase
