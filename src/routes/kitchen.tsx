@@ -71,26 +71,43 @@ const saveAcked = (m: Record<string, number>) => localStorage.setItem(ACK_KEY, J
 
 const SOUND_KEY = "kitchen.sound.v1";
 
-/** Lauter Alarm-Ton (mehrere Beeps) für neue Bestellungen. */
-function playAlarm(loud: boolean) {
-  const ctx = getAudioContext();
-  if (!ctx) return;
-  const beeps = loud ? 4 : 2;
-  const gainPeak = loud ? 1 : 0.35;
-  for (let i = 0; i < beeps; i++) {
-    const start = ctx.currentTime + i * 0.32;
+/** Glocken-Schlag mit Obertönen (klingt wie eine echte Glocke). */
+function bell(ctx: AudioContext, freq: number, at: number, peak: number, decay: number) {
+  const partials: [number, number][] = [[1, 1], [2.0, 0.5], [3.01, 0.28], [4.2, 0.15]];
+  for (const [mult, amp] of partials) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = "square";
-    osc.frequency.setValueAtTime(loud ? 980 : 760, start);
-    osc.frequency.setValueAtTime(loud ? 1320 : 900, start + 0.12);
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(gainPeak, start + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.26);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq * mult, at);
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(peak * amp, at + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + decay / mult ** 0.3);
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.start(start);
-    osc.stop(start + 0.28);
+    osc.start(at);
+    osc.stop(at + decay + 0.05);
+  }
+}
+
+/**
+ * Stationston, ca. 5–6 Sekunden, stoppt von selbst.
+ * Küche: helles „Ding Ding", Pizza: tiefes „Dong Dong", Bar: kurzer Beep.
+ */
+function playAlarm(station: "kueche" | "pizza" | "bar") {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const t0 = ctx.currentTime + 0.05;
+  if (station === "bar") {
+    for (let i = 0; i < 3; i++) bell(ctx, 1320, t0 + i * 0.35, 0.5, 0.4);
+    return;
+  }
+  const kitchen = station === "kueche";
+  const [hi, lo] = kitchen ? [1568, 1319] : [523, 392];
+  // 4 Paare über ~5.5 s
+  for (let r = 0; r < 4; r++) {
+    const base = t0 + r * 1.4;
+    bell(ctx, hi, base, 0.9, kitchen ? 1.0 : 1.4);
+    bell(ctx, lo, base + 0.45, 0.9, kitchen ? 1.0 : 1.4);
   }
 }
 
@@ -288,8 +305,10 @@ function KitchenView() {
     const fresh = relevant.filter((t) => !seenKeys.current!.has(t.key));
     seenKeys.current = new Set(relevant.map((t) => t.key));
     if (fresh.length === 0 || !soundOn) return;
-    const loud = lockedStation ? lockedStation === "pizza" : fresh.some((t) => t.station === "pizza");
-    playAlarm(loud);
+    const stations = new Set(fresh.map((t) => t.station));
+    if (stations.has("pizza")) playAlarm("pizza");
+    if (stations.has("kueche")) setTimeout(() => playAlarm("kueche"), stations.has("pizza") ? 5800 : 0);
+    if (!stations.has("pizza") && !stations.has("kueche") && stations.has("bar")) playAlarm("bar");
   }, [tickets, filter, soundOn, lockedStation]);
 
   const ackTicket = (key: string, orderId?: string) => {
@@ -332,7 +351,7 @@ function KitchenView() {
                 const next = !soundOn;
                 setSoundOn(next);
                 localStorage.setItem(SOUND_KEY, next ? "on" : "off");
-                if (next) playAlarm(filter === "pizza");
+                if (next) playAlarm(filter === "kueche" ? "kueche" : "pizza");
               }}
               className={`glass rounded-xl px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-colors ${
                 soundOn ? "text-foreground" : "text-muted-foreground"
