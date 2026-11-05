@@ -166,6 +166,9 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
               },
               {
                 "label": "Balsamico"
+              },
+              {
+                "label": "Suppe"
               }
             ]
           },
@@ -198,6 +201,21 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
               },
               {
                 "label": "Tony El Mate"
+              },
+              {
+                "label": "Rivella Blau"
+              },
+              {
+                "label": "Rivella Rot"
+              },
+              {
+                "label": "Apfelschorle"
+              },
+              {
+                "label": "Stange"
+              },
+              {
+                "label": "Grosses"
               }
             ]
           }
@@ -264,6 +282,9 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
               },
               {
                 "label": "Balsamico"
+              },
+              {
+                "label": "Suppe"
               }
             ]
           },
@@ -296,6 +317,21 @@ export const DELIVERY_MENU: DeliveryMenuCategory[] = [
               },
               {
                 "label": "Tony El Mate"
+              },
+              {
+                "label": "Rivella Blau"
+              },
+              {
+                "label": "Rivella Rot"
+              },
+              {
+                "label": "Apfelschorle"
+              },
+              {
+                "label": "Stange"
+              },
+              {
+                "label": "Grosses"
               }
             ]
           }
