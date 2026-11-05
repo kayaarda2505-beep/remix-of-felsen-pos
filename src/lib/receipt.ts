@@ -501,6 +501,131 @@ export async function printOrderToStations(opts: {
   return errors;
 }
 
+// ---------------------------------------------------------------------------
+// Beleg-Nachdruck (Reports): rekonstruiert exakt die Original-Quittung
+// aus den gespeicherten Bestelldaten – gleicher Aufbau wie beim Erstdruck.
+// ---------------------------------------------------------------------------
+
+export type ReprintOrder = {
+  id: string;
+  table_id?: string | null;
+  order_type?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  delivery_address?: string | null;
+  delivery_note?: string | null;
+  order_number?: number | null;
+  opened_by_name?: string | null;
+  payment_preference?: string | null;
+  total?: number | null;
+};
+
+export type ReprintPayment = { method?: string | null; amount?: number | null; tip?: number | null };
+
+export function receiptMethodLabel(m?: string | null): string {
+  if (!m) return "";
+  const v = m.toLowerCase();
+  if (v === "cash" || v === "bar") return "Bar";
+  if (v === "card" || v === "card_terminal" || v === "karte") return "Karte";
+  if (v === "twint") return "TWINT";
+  if (v === "stripe") return "Stripe";
+  return m;
+}
+
+function parseDeliveryRecipient(order: ReprintOrder):
+  | { name: string; street: string; postal: string; phone?: string | null; note?: string | null }
+  | undefined {
+  const addr = (order.delivery_address ?? "").trim();
+  if (!addr || /^takeaway/i.test(addr)) return undefined;
+  // Format: "Name · Strasse Nr, PLZ Ort · Telefon"
+  const parts = addr.split(" · ").map((s) => s.trim());
+  const name = order.contact_name?.trim() || parts[0] || "";
+  const phone = order.contact_phone?.trim() || parts[2] || null;
+  const addrPart = parts[1] ?? "";
+  const commaIdx = addrPart.lastIndexOf(",");
+  const street = commaIdx >= 0 ? addrPart.slice(0, commaIdx).trim() : addrPart;
+  const postal = commaIdx >= 0 ? addrPart.slice(commaIdx + 1).trim() : "";
+  if (!name && !street) return undefined;
+  return { name, street, postal, phone, note: order.delivery_note ?? null };
+}
+
+/**
+ * Baut die printBill-Optionen für den Nachdruck so, wie die Quittung
+ * ursprünglich gedruckt wurde (Service, Theke, Takeaway, Lieferung/Website).
+ */
+export function buildReprintBillOpts(opts: {
+  order: ReprintOrder;
+  tableName?: string | null; // aufgelöster Tischname (dining_tables)
+  items: ReceiptItem[];
+  payments: ReprintPayment[];
+}): Omit<Parameters<typeof printBill>[0], "printers"> {
+  const { order, items, payments } = opts;
+  const addr = (order.delivery_address ?? "").trim();
+  const isTakeaway =
+    order.order_type === "takeaway" || /^takeaway/i.test(addr);
+  const isDelivery =
+    !isTakeaway && (order.order_type === "delivery" || order.order_type === "website" || !!parseDeliveryRecipient(order));
+
+  // Tisch-/Kanalname wie beim Originaldruck
+  let tableName: string;
+  if (opts.tableName) tableName = opts.tableName;
+  else if (order.table_id) tableName = "Tisch";
+  else if (isTakeaway)
+    tableName = order.contact_name?.trim() ? `Takeaway · ${order.contact_name.trim()}` : "Takeaway";
+  else if (isDelivery) tableName = "Lieferung";
+  else tableName = order.opened_by_name?.trim() || "Theke";
+
+  // Zahlungsart: echte Zahlung zuerst, sonst Zahlungswunsch (Website)
+  const primaryMethod = payments[0]?.method ?? order.payment_preference ?? null;
+  const paymentMethod = primaryMethod ? receiptMethodLabel(primaryMethod) : null;
+  const tip = payments.reduce((s, p) => s + Number(p.tip ?? 0), 0);
+  const paidSum = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const total = paidSum > 0 ? paidSum : Number(order.total ?? 0);
+
+  const orderNo = order.order_number != null ? String(order.order_number) : undefined;
+
+  if (isDelivery) {
+    // Original: LIEFERSCHEIN mit Empfänger, Kurier-QR und 2 Exemplaren
+    return {
+      tableName,
+      items,
+      total,
+      tip: tip > 0 ? tip : undefined,
+      paymentMethod,
+      title: "LIEFERSCHEIN",
+      deliveryRecipient: parseDeliveryRecipient(order),
+      note: order.delivery_note ?? null,
+      qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
+      copies: 2,
+      orderNo,
+      ...(payments.length === 0
+        ? {
+            interim: true,
+            footerNote:
+              order.payment_preference === "cash"
+                ? "Offen — bar beim Kunden kassieren"
+                : order.payment_preference === "card"
+                  ? "Offen — mit Karte beim Kunden kassieren"
+                  : order.payment_preference === "twint"
+                    ? "Offen — mit TWINT beim Kunden kassieren"
+                    : "Offen — beim Kunden kassieren",
+          }
+        : {}),
+    };
+  }
+
+  // Service / Theke / Takeaway: bezahlte Kundenquittung wie an der Kasse
+  return {
+    tableName,
+    items,
+    total,
+    tip: tip > 0 ? tip : undefined,
+    paymentMethod,
+    note: isTakeaway ? (order.delivery_note ?? null) : null,
+    orderNo,
+  };
+}
+
 export async function printBill(opts: {
   printers: PrinterConfig[];
   tableName: string;
