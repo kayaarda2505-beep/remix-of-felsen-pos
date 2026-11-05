@@ -6,7 +6,7 @@ import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Pr
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
-import { printDailyReport, printBill } from "@/lib/receipt";
+import { printDailyReport, printBill, buildReprintBillOpts } from "@/lib/receipt";
 import { isDesktopApp, type PrinterConfig } from "@/lib/printer-bridge";
 import { ReportDocuments } from "@/components/ReportDocuments";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -133,7 +133,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_items")
-        .select("id, order_id, product_name, category, qty, unit_price, note, sent_at")
+        .select("id, order_id, product_name, category, qty, unit_price, note, modifiers, sent_at")
         .gte("sent_at", `${isoFrom}T00:00:00`)
         .lt("sent_at", `${isoToNext}T00:00:00`)
         .limit(20000);
@@ -312,7 +312,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_items")
-        .select("id, order_id, product_name, category, qty, unit_price, note, sent_at")
+        .select("id, order_id, product_name, category, qty, unit_price, note, modifiers, sent_at")
         .in("order_id", extraItemOrderIds)
         .limit(20000);
       if (error) throw error;
