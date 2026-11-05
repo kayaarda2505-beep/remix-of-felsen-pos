@@ -1064,22 +1064,25 @@ function Auswertung() {
                                   return;
                                 }
                                 const tbl = tables.find((t) => t.id === o.table_id);
-                                const tableName = tbl?.name || (o.table_id ? "Tisch" : "Walk-in");
-                                const primaryMethod = orderPays[0]?.method ?? null;
-                                const err = await printBill({
-                                  printers: printers as PrinterConfig[],
-                                  tableName,
+                                const reprintOpts = buildReprintBillOpts({
+                                  order: o,
+                                  tableName: tbl?.name ?? null,
                                   items: orderItems.map((it) => ({
                                     product_name: it.product_name,
                                     qty: Number(it.qty),
                                     unit_price: Number(it.unit_price),
+                                    modifiers: Array.isArray((it as any).modifiers) ? (it as any).modifiers : [],
                                     note: it.note ?? null,
                                   })),
-                                  subtotal: itemSubtotal,
-                                  total: displayTotal,
-                                  tip: tipSum,
-                                  interim: false,
-                                  paymentMethod: primaryMethod,
+                                  payments: orderPays.map((p) => ({
+                                    method: p.method,
+                                    amount: Number(p.amount),
+                                    tip: Number(p.tip ?? 0),
+                                  })),
+                                });
+                                const err = await printBill({
+                                  printers: printers as PrinterConfig[],
+                                  ...reprintOpts,
                                 });
                                 if (err) toast.error(`Druck: ${err}`);
                                 else toast.success("Beleg gedruckt");
