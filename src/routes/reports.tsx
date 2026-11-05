@@ -6,7 +6,7 @@ import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Pr
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
-import { printDailyReport, printBill } from "@/lib/receipt";
+import { printDailyReport, printBill, buildReprintBillOpts } from "@/lib/receipt";
 import { isDesktopApp, type PrinterConfig } from "@/lib/printer-bridge";
 import { ReportDocuments } from "@/components/ReportDocuments";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -88,7 +88,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, dining_tables(name)")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, delivery_note, contact_name, contact_phone, opened_by_name, order_number, payment_preference, dining_tables(name)")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
         .limit(10000);
@@ -133,7 +133,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_items")
-        .select("id, order_id, product_name, category, qty, unit_price, note, sent_at")
+        .select("id, order_id, product_name, category, qty, unit_price, note, modifiers, sent_at")
         .gte("sent_at", `${isoFrom}T00:00:00`)
         .lt("sent_at", `${isoToNext}T00:00:00`)
         .limit(20000);
@@ -261,7 +261,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, dining_tables(name)")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, delivery_note, contact_name, contact_phone, opened_by_name, order_number, payment_preference, dining_tables(name)")
         .eq("status", "paid")
         .gte("closed_at", `${isoFrom}T00:00:00`)
         .lt("closed_at", `${isoToNext}T00:00:00`)
@@ -277,7 +277,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, dining_tables(name)")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, delivery_note, contact_name, contact_phone, opened_by_name, order_number, payment_preference, dining_tables(name)")
         .in("id", paymentOrderIds)
         .limit(10000);
       if (error) throw error;
@@ -312,7 +312,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_items")
-        .select("id, order_id, product_name, category, qty, unit_price, note, sent_at")
+        .select("id, order_id, product_name, category, qty, unit_price, note, modifiers, sent_at")
         .in("order_id", extraItemOrderIds)
         .limit(20000);
       if (error) throw error;
@@ -1064,22 +1064,25 @@ function Auswertung() {
                                   return;
                                 }
                                 const tbl = tables.find((t) => t.id === o.table_id);
-                                const tableName = tbl?.name || (o.table_id ? "Tisch" : "Walk-in");
-                                const primaryMethod = orderPays[0]?.method ?? null;
-                                const err = await printBill({
-                                  printers: printers as PrinterConfig[],
-                                  tableName,
+                                const reprintOpts = buildReprintBillOpts({
+                                  order: o,
+                                  tableName: tbl?.name ?? null,
                                   items: orderItems.map((it) => ({
                                     product_name: it.product_name,
                                     qty: Number(it.qty),
                                     unit_price: Number(it.unit_price),
+                                    modifiers: Array.isArray((it as any).modifiers) ? (it as any).modifiers : [],
                                     note: it.note ?? null,
                                   })),
-                                  subtotal: itemSubtotal,
-                                  total: displayTotal,
-                                  tip: tipSum,
-                                  interim: false,
-                                  paymentMethod: primaryMethod,
+                                  payments: orderPays.map((p) => ({
+                                    method: p.method,
+                                    amount: Number(p.amount),
+                                    tip: Number(p.tip ?? 0),
+                                  })),
+                                });
+                                const err = await printBill({
+                                  printers: printers as PrinterConfig[],
+                                  ...reprintOpts,
                                 });
                                 if (err) toast.error(`Druck: ${err}`);
                                 else toast.success("Beleg gedruckt");
