@@ -88,7 +88,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, dining_tables(name)")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, delivery_note, contact_name, contact_phone, opened_by_name, order_number, payment_preference, dining_tables(name)")
         .gte("created_at", `${isoFrom}T00:00:00`)
         .lt("created_at", `${isoToNext}T00:00:00`)
         .limit(10000);
@@ -261,7 +261,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, dining_tables(name)")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, delivery_note, contact_name, contact_phone, opened_by_name, order_number, payment_preference, dining_tables(name)")
         .eq("status", "paid")
         .gte("closed_at", `${isoFrom}T00:00:00`)
         .lt("closed_at", `${isoToNext}T00:00:00`)
@@ -277,7 +277,7 @@ function Auswertung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, contact_name, opened_by_name, order_number, dining_tables(name)")
+        .select("id, table_id, total, status, guests, created_at, closed_at, order_type, delivery_address, delivery_note, contact_name, contact_phone, opened_by_name, order_number, payment_preference, dining_tables(name)")
         .in("id", paymentOrderIds)
         .limit(10000);
       if (error) throw error;
