@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function EditReceiptDialog({ order, payments, onClose, onSaved }: Props) {
-  const { data: products = [] } = useProducts();
+  const { allProducts: products } = useProducts();
   const [original, setOriginal] = useState<EditLine[] | null>(null);
   const [lines, setLines] = useState<EditLine[]>([]);
   const [baseSentAt, setBaseSentAt] = useState<string>(order.created_at);
