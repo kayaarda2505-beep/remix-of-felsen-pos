@@ -20,3 +20,26 @@ describe("Kundenquittung Positionen", () => {
     expect(v.note).toBe("gut durch");
   });
 });
+
+import { buildBill } from "./receipt";
+
+describe("Kundenquittung Layout", () => {
+  const bill = () =>
+    buildBill({
+      tableName: "Lieferung",
+      total: 33,
+      items: [{ product_name: "Pizza Tre Formaggi - 32cm", category: "Pizza", qty: 1, unit_price: 33, modifiers: ["+ Oliven"], note: null } as never],
+      deliveryRecipient: { name: "Vidal Silvia", street: "Saumackerstrasse 78", postal: "8048 Zürich", phone: "0766050820" },
+    }).lines as Array<{ text?: string; cols?: string[]; bold?: boolean }>;
+
+  it("Kein Leerabstand zwischen Tel. und Tisch", () => {
+    const l = bill();
+    const i = l.findIndex((x) => x.text?.startsWith("Tel."));
+    expect(l[i + 1].cols?.[0]).toBe("Tisch");
+  });
+
+  it("Extra-Zutaten fett", () => {
+    const line = bill().find((x) => x.text?.includes("+ Oliven"));
+    expect(line?.bold).toBe(true);
+  });
+});
