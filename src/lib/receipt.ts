@@ -226,6 +226,36 @@ export function buildStationTicket(opts: {
 // Rechnung / Zwischenrechnung
 // ---------------------------------------------------------------------------
 
+const isLunchMenuItem = (it: { product_name: string; category?: string | null }) =>
+  /mittagsmen/i.test(it.category ?? "") || /mittagsmen/i.test(it.product_name);
+
+const cleanMod = (m: string) =>
+  m.replace(/\s*\(\+?CHF[^)]*\)\s*/gi, " ").replace(/\s*-\s*\d+\s*cm\b/gi, "").replace(/\s+/g, " ").trim();
+
+/**
+ * Darstellung einer Position auf der Kundenquittung: keine Zutatenliste,
+ * nur bestellte Änderungen und Notizen. Mittagsmenüs kurz: „Menü Pizza“,
+ * darunter Gericht, Sosse und Getränk je eine Zeile.
+ */
+export function billItemView(it: Pick<ReceiptItem, "product_name" | "category" | "modifiers" | "note">): {
+  name: string;
+  details: string[];
+  note: string | null;
+} {
+  const mods = (it.modifiers ?? []).map(cleanMod).filter(Boolean);
+  const note = it.note?.trim() || null;
+  const norm = (x: string) => x.toLocaleLowerCase("de-CH").replace(/[^a-zäöüéèà0-9]+/g, "");
+  if (isLunchMenuItem(it)) {
+    const name = it.product_name.replace(/^mittagsmen(ü|u)\s*/i, "Menü ").trim() || "Menü";
+    return { name, details: mods, note: note && !mods.some((m) => norm(m) === norm(note)) ? note : null };
+  }
+  const details = mods.length ? [mods.map((m) => (/^[+\-]/.test(m) ? m : `+ ${m}`)).join(", ")] : [];
+  // Website sendet Änderungen oft zusätzlich als Notiz → nicht doppelt drucken
+  const modsKey = norm(mods.join(""));
+  const dup = note && modsKey && norm(note.replace(/·/g, "")) === modsKey;
+  return { name: it.product_name, details, note: dup ? null : note };
+}
+
 export function buildBill(opts: {
   tableName: string;
   items: ReceiptItem[];
@@ -262,10 +292,9 @@ export function buildBill(opts: {
   if (!opts.compact) lines.push({ text: "", align: "center" });
   if (opts.deliveryRecipient) {
     const recipient = opts.deliveryRecipient;
+    // Adresse kompakt: Name, Strasse, PLZ/Ort direkt untereinander
     lines.push({ text: recipient.name, bold: true });
-    if (!opts.compact) lines.push({ text: "" });
     lines.push({ text: recipient.street, bold: true });
-    if (!opts.compact) lines.push({ text: "" });
     lines.push({ text: recipient.postal, bold: true });
     if (recipient.phone) lines.push({ text: `Tel. ${recipient.phone}` });
     if (recipient.note) lines.push({ text: `Notiz: ${recipient.note}`, bold: true });
@@ -290,7 +319,8 @@ export function buildBill(opts: {
 
   for (const it of opts.items) {
     const lineTotal = it.unit_price * it.qty;
-    const name = `${it.qty}x ${it.product_name}`;
+    const view = billItemView(it);
+    const name = `${it.qty}x ${view.name}`;
     // Wenn Name + Betrag in eine Zeile passen → cols, sonst zweizeilig
     const right = `${cur} ${fmt(lineTotal)}`;
     if (name.length + right.length + 1 <= COLS) {
@@ -302,11 +332,8 @@ export function buildBill(opts: {
     if (it.qty > 1) {
       lines.push({ text: `   à ${cur} ${fmt(it.unit_price)}` });
     }
-    if (it.modifiers?.length) {
-      lines.push({ text: `   ${it.modifiers.map((m) => /^[+\-]/.test(m) ? m : `+ ${m}`).join(", ")}` });
-    }
-    for (const detail of pizzaDetailLines(it)) lines.push({ text: `   ${detail}` });
-    if (it.note) lines.push({ text: `   Notiz: ${it.note}`, bold: true });
+    for (const d of view.details) lines.push({ text: `   ${d}` });
+    if (view.note) lines.push({ text: `   Notiz: ${view.note}`, bold: true });
   }
 
   lines.push({ separator: true });
@@ -661,8 +688,7 @@ export async function printBill(opts: {
   }
 
   const settings = await loadReceiptSettings();
-  const items = await withPizzaIngredients(opts.items);
-  const payload = buildBill({ ...opts, items, settings });
+  const payload = buildBill({ ...opts, settings });
   for (let copy = 0; copy < (opts.copies ?? 1); copy++) {
     const r = await printReceipt(billPrinter, payload);
     if (!r.ok) return `${copy} von ${opts.copies ?? 1} Bons gedruckt: ${r.error ?? "Druckfehler"}`;
