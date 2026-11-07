@@ -5,3 +5,5 @@
 - [x] Liefer-/Website-Bons zweimal drucken und Kurier-QR-Adresse aus der jeweiligen Bestellung statt veränderlichen Kundenstammdaten anzeigen.
 - [x] Mittagsmenüs: gewähltes Gericht mit Zutatenänderungen, Notizen, Saucen und Nudelsorte; Pizzen alphabetisch anzeigen.
 - [x] Website-Kurierbestellungen aus der Kassenliste ausblenden; bezahlte Umsätze in Reports unverändert belassen.- [x] Bestellungen fortlaufend nummerieren (ab 1) und Nummer auf Bons und in Listen anzeigen.
+
+- [x] Reports: „Beleg bearbeiten“ – Artikel nachträglich hinzufügen/entfernen/Menge ändern, Zahlung optional anpassen.
