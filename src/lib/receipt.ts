@@ -298,7 +298,6 @@ export function buildBill(opts: {
     lines.push({ text: recipient.postal, bold: true });
     if (recipient.phone) lines.push({ text: `Tel. ${recipient.phone}` });
     if (recipient.note) lines.push({ text: `Notiz: ${recipient.note}`, bold: true });
-    if (!opts.compact) lines.push({ text: "" });
   } else if (opts.note) {
     lines.push({ text: `Notiz: ${opts.note}`, bold: true });
     if (!opts.compact) lines.push({ text: "" });
@@ -332,7 +331,8 @@ export function buildBill(opts: {
     if (it.qty > 1) {
       lines.push({ text: `   à ${cur} ${fmt(it.unit_price)}` });
     }
-    for (const d of view.details) lines.push({ text: `   ${d}` });
+    // Extra-Zutaten (+ ...) immer fett; Menü-Auswahl (Gericht/Sosse/Getränk) normal
+    for (const d of view.details) lines.push({ text: `   ${d}`, bold: /^\s*\+/.test(d) || !isLunchMenuItem(it) });
     if (view.note) lines.push({ text: `   Notiz: ${view.note}`, bold: true });
   }
 
