@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer, Banknote, Coins, AlertTriangle, Save, CalendarDays } from "lucide-react";
+import { TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet, CreditCard, Printer, Banknote, Coins, AlertTriangle, Save, CalendarDays, Pencil } from "lucide-react";
+import { EditReceiptDialog } from "@/components/EditReceiptDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
@@ -50,6 +51,7 @@ function Auswertung() {
   const deferredTo = useDeferredValue(to);
   const queryClient = useQueryClient();
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [editingOrder, setEditingOrder] = useState<{ order: any; payments: Array<{ id: string; amount: number }> } | null>(null);
 
   // Rolle des aktuellen Users (für Löschen-Berechtigung)
   const { data: canDelete = false } = useQuery({
@@ -1095,6 +1097,22 @@ function Auswertung() {
                             {canDelete && (
                               <button
                                 type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingOrder({
+                                    order: o,
+                                    payments: orderPays.map((p) => ({ id: p.id, amount: Number(p.amount) })),
+                                  });
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs bg-white/10 hover:bg-white/15 border border-white/15 transition inline-flex items-center gap-1.5"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                Beleg bearbeiten
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                type="button"
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   if (!confirm(`Bestellung #${String(o.id).slice(0,8)} wirklich löschen? Zahlungen werden ebenfalls entfernt.`)) return;
@@ -1120,6 +1138,15 @@ function Auswertung() {
             </div>
           )}
         </motion.div>
+      )}
+
+      {editingOrder && (
+        <EditReceiptDialog
+          order={editingOrder.order}
+          payments={editingOrder.payments}
+          onClose={() => setEditingOrder(null)}
+          onSaved={() => queryClient.invalidateQueries()}
+        />
       )}
 
       {/* Expenses section */}
