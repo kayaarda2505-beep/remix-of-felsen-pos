@@ -187,6 +187,7 @@ export function buildStationTicket(opts: {
   orderType?: string;
   operatorName?: string | null;
   orderNo?: string;
+  otherStation?: "kueche" | "pizza";
 }): ReceiptPayload {
   const lines: ReceiptPayload["lines"] = [];
 
@@ -201,6 +202,7 @@ export function buildStationTicket(opts: {
   const p = (n: number) => String(n).padStart(2, "0");
   lines.push({ text: `Datum/Zeit: ${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} / ${p(d.getHours())}:${p(d.getMinutes())}` });
   if (opts.operatorName) lines.push({ text: `Benutzer: ${opts.operatorName}` });
+  if (opts.otherStation) lines.push({ text: `Tisch hat auch ${opts.otherStation === "kueche" ? "Küche" : "Pizza"} bestellt`, bold: true });
   lines.push({ separator: true });
 
   opts.items.forEach((it) => {
@@ -491,6 +493,26 @@ export async function printCardReceipt(opts: {
   return r.ok ? null : r.error ?? "Druckfehler";
 }
 
+/** Preparation-only bread: no product, payment or customer receipt is changed. */
+export function planStationTickets(opts: {
+  items: ReceiptItem[];
+  allItems?: ReceiptItem[];
+  isTableOrder?: boolean;
+  orderedAt?: Date;
+}) {
+  const stations = splitByStation(opts.items);
+  const context = splitByStation(opts.allItems ?? opts.items);
+  const hour = Number(new Intl.DateTimeFormat("de-CH", { timeZone: "Europe/Zurich", hour: "2-digit", hourCycle: "h23" }).formatToParts(opts.orderedAt ?? new Date()).find(part => part.type === "hour")?.value);
+  if (opts.isTableOrder && hour >= 14 && stations.kueche.length) {
+    stations.pizza.push({ product_name: "Pizzabrot", category: "Pizza", qty: 1, unit_price: 0 });
+  }
+  return {
+    stations,
+    pizzaOtherStation: opts.isTableOrder && context.kueche.length ? "kueche" as const : undefined,
+    kitchenOtherStation: opts.isTableOrder && context.pizza.length ? "pizza" as const : undefined,
+  };
+}
+
 export async function printOrderToStations(opts: {
   printers: PrinterConfig[];
   tableName: string;
@@ -498,9 +520,13 @@ export async function printOrderToStations(opts: {
   operatorName?: string | null;
   orderType?: string;
   orderNo?: string;
+  isTableOrder?: boolean;
+  allItems?: ReceiptItem[];
+  orderedAt?: Date;
 }): Promise<string[]> {
   const errors: string[] = [];
-  const { bar, kueche, pizza } = splitByStation(await withPizzaIngredients(opts.items));
+  const plan = planStationTickets({ ...opts, items: await withPizzaIngredients(opts.items) });
+  const { bar, kueche, pizza } = plan.stations;
 
   const barPrinter = opts.printers.find((p) => hasPrinterType(p, "bar"));
   const kuechePrinter = opts.printers.find((p) => hasPrinterType(p, "kueche"));
@@ -521,6 +547,7 @@ export async function printOrderToStations(opts: {
     const r = await printReceipt(printer, buildStationTicket({
       station, tableName: opts.tableName, items,
       orderType: opts.orderType, operatorName: opts.operatorName, orderNo,
+      otherStation: station === "pizza" ? plan.pizzaOtherStation : station === "kueche" ? plan.kitchenOtherStation : undefined,
     }));
     if (!r.ok) errors.push(`${label}: ${r.error ?? "Druck fehlgeschlagen"}`);
   }

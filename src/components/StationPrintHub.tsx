@@ -78,6 +78,12 @@ export function StationPrintHub() {
             : [],
           note: it.note ?? null,
         }));
+        // Include earlier rounds for station coordination without reprinting them.
+        const { data: allItems, error: itemsError } = await supabase
+          .from("order_items")
+          .select("product_name, category, qty, unit_price")
+          .eq("order_id", orderId);
+        if (itemsError) throw itemsError;
         const { data: printers, error: printerError } = await supabase
           .from("printers")
           .select("id, name, type, ip_address, port")
@@ -87,6 +93,9 @@ export function StationPrintHub() {
           printers: printers ?? [],
           tableName,
           items,
+          allItems: allItems ?? items,
+          isTableOrder: Boolean(order?.table_id),
+          orderedAt: new Date(claimed[0]?.sent_at ?? Date.now()),
           orderType,
           operatorName: order?.opened_by_name ?? null,
           orderNo: order?.order_number != null ? String(order.order_number) : undefined,

@@ -1,5 +1,6 @@
 QR guest-menu photos are mapped by product names in `src/lib/qr-product-images.ts` using uploaded CDN asset pointers; this keeps images out of product records and prevents ambiguous sauce/pizza name collisions.
 Station printing routes each new order to pizza, kitchen, or bar by item category/name in `src/lib/receipt.ts`; this keeps preparation tickets separate from customer receipts and selects printers by their configured type.
+Station coordination and preparation-only additions use the shared station ticket planner, with table identity and original send time supplied by the print hub; this keeps retries time-stable and prevents changes to billed items.
 The authenticated printer PC owns central station printing, polls pending items as a realtime fallback, and releases failed claims for retry; this prevents customer devices from needing printer access and avoids silently lost tickets.
 The Windows Print-Agent must use ESC/POS width()/height() for magnification (size() only chooses Font A/B); station tickets stay compact with content-dependent length, so the PC agent must be updated together with app ticket-format changes.
 Website payment preference is stored on orders as cash/card/twint and accepted by the inbound webhook; the acceptance dialog fills missing preferences so unpaid website receipts always show the intended payment method.

@@ -7,3 +7,4 @@
 - [x] Website-Kurierbestellungen aus der Kassenliste ausblenden; bezahlte Umsätze in Reports unverändert belassen.- [x] Bestellungen fortlaufend nummerieren (ab 1) und Nummer auf Bons und in Listen anzeigen.
 
 - [x] Reports: „Beleg bearbeiten“ – Artikel nachträglich hinzufügen/entfernen/Menge ändern, Zahlung optional anpassen.
+- [x] Tischbestellungen: gegenseitige Küchen-/Pizzahinweise und Pizzabrot-Bon ab 14 Uhr Schweizer Zeit.
