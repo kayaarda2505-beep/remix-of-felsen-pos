@@ -496,20 +496,20 @@ export async function printCardReceipt(opts: {
 /** Preparation-only bread: no product, payment or customer receipt is changed. */
 export function planStationTickets(opts: {
   items: ReceiptItem[];
-  allItems?: ReceiptItem[];
   isTableOrder?: boolean;
   orderedAt?: Date;
 }) {
   const stations = splitByStation(opts.items);
-  const context = splitByStation(opts.allItems ?? opts.items);
   const hour = Number(new Intl.DateTimeFormat("de-CH", { timeZone: "Europe/Zurich", hour: "2-digit", hourCycle: "h23" }).formatToParts(opts.orderedAt ?? new Date()).find(part => part.type === "hour")?.value);
   if (opts.isTableOrder && hour >= 14 && stations.kueche.length) {
     stations.pizza.push({ product_name: "Pizzabrot", category: "Pizza", qty: 1, unit_price: 0 });
   }
+  // Der Stationshinweis gilt nur für die aktuell gesendeten Positionen –
+  // frühere Bestellrunden desselben Tisches lösen keinen Hinweis aus.
   return {
     stations,
-    pizzaOtherStation: opts.isTableOrder && context.kueche.length ? "kueche" as const : undefined,
-    kitchenOtherStation: opts.isTableOrder && context.pizza.length ? "pizza" as const : undefined,
+    pizzaOtherStation: opts.isTableOrder && stations.kueche.length ? "kueche" as const : undefined,
+    kitchenOtherStation: opts.isTableOrder && stations.pizza.length ? "pizza" as const : undefined,
   };
 }
 
@@ -521,7 +521,6 @@ export async function printOrderToStations(opts: {
   orderType?: string;
   orderNo?: string;
   isTableOrder?: boolean;
-  allItems?: ReceiptItem[];
   orderedAt?: Date;
 }): Promise<string[]> {
   const errors: string[] = [];

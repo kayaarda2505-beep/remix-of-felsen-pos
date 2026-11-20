@@ -15,9 +15,11 @@ describe("Stationskoordination", () => {
     expect(plan.pizzaOtherStation).toBe("kueche");
     expect(plan.kitchenOtherStation).toBe("pizza");
   });
-  it("includes previous rounds without reprinting them", () => {
-    const plan = planStationTickets({ items: [kitchen], allItems: [pizza, kitchen], isTableOrder: true, orderedAt: at("13:59:00") });
-    expect(plan.kitchenOtherStation).toBe("pizza");
+  it("does not notify about stations from previous rounds of the same table", () => {
+    // Nur die aktuell gesendeten Positionen zählen: eine frühere Pizza-Runde
+    // desselben Tisches darf auf dem Küchenbon keinen Hinweis auslösen.
+    const plan = planStationTickets({ items: [kitchen], isTableOrder: true, orderedAt: at("13:59:00") });
+    expect(plan.kitchenOtherStation).toBeUndefined();
     expect(plan.stations.pizza).toEqual([]);
   });
   it("adds one preparation-only Pizzabrot at 14:00 Zurich", () => {
