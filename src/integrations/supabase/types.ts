@@ -1862,6 +1862,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
       login_without_pin: {
         Args: { _account_number: number }
         Returns: {

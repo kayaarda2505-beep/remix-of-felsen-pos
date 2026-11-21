@@ -78,6 +78,13 @@
       "when": 1795276271208,
       "tag": "0010_manual_revenues",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795277049967,
+      "tag": "0011_restrict_staff_tables_to_team",
+      "breakpoints": true
     }
   ]
 }
