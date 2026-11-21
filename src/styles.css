@@ -377,7 +377,7 @@
   --menu-paper: oklch(0.985 0.012 85);
   --menu-ink: oklch(0.24 0.02 60);
   --menu-muted: oklch(0.45 0.025 60);
-  --menu-gold: oklch(0.66 0.09 75);
+  --menu-gold: oklch(0.5 0.055 55);
 }
 .menu-sheet { background: var(--menu-paper); color: var(--menu-ink); }
 .menu-serif { font-family: "Cormorant Garamond", Georgia, serif; }

@@ -377,15 +377,17 @@ function MenuSheet({ week, subtitle, dishes, footer }: { week: string; subtitle:
         <div className={`flex-1 flex flex-col justify-start w-full pt-[12mm] ${many ? "gap-5" : "gap-8"}`}>
           {dishes.map((d, i) => (
             <div key={i}>
-              <div className={`menu-caps ${many ? "text-[12pt]" : "text-[14pt]"} tracking-[0.2em]`}>{d.name.toUpperCase()}</div>
+              <div className={`menu-caps ${many ? "text-[12pt]" : "text-[14pt]"} tracking-[0.2em] flex items-baseline justify-center gap-4`}>
+                <span>{d.name.toUpperCase()}</span>
+                {d.price && (
+                  <span className="menu-serif normal-case tracking-[0.1em]" style={{ color: "var(--menu-gold)" }}>
+                    {priceLabel(d.price)}
+                  </span>
+                )}
+              </div>
               {d.description && (
                 <div className={`menu-serif italic mt-1 ${many ? "text-[12pt]" : "text-[14pt]"}`} style={{ color: "var(--menu-muted)" }}>
                   {d.description}
-                </div>
-              )}
-              {d.price && (
-                <div className="menu-serif mt-1 text-[12pt] tracking-[0.1em]" style={{ color: "var(--menu-gold)" }}>
-                  {priceLabel(d.price)}
                 </div>
               )}
             </div>
