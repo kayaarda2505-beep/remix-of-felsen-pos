@@ -14,6 +14,7 @@ import { extractReceipt, type ExtractedExpense } from "@/lib/expenses-ai.functio
 import { Button } from "@/components/ui/button";
 import { ManualRevenueSection } from "@/components/ManualRevenueSection";
 import { EXPENSE_CATEGORIES, expenseCategory, filterExpenses, localDate } from "@/lib/finance-entries";
+import { SWISS_VAT_RATES, formatRate, normalizeVatLines, vatFromGross, vatTotal, type VatLine } from "@/lib/swiss-vat";
 
 export const Route = createFileRoute("/expenses")({
   head: () => ({ meta: [
@@ -37,6 +38,7 @@ type Expense = {
   description: string | null;
   receipt_url: string | null;
   vat_amount: number | null;
+  vat_lines: VatLine[] | null;
   payment_method: string | null;
 };
 
@@ -75,13 +77,13 @@ function ExpensesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
-        .select("id, expense_date, amount, currency, category, vendor, description, receipt_url, vat_amount, payment_method")
+        .select("id, expense_date, amount, currency, category, vendor, description, receipt_url, vat_amount, vat_lines, payment_method")
         .gte("expense_date", localDate(monthStart))
         .lte("expense_date", localDate(monthEnd))
         .order("expense_date", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Expense[];
+      return (data ?? []).map((row) => ({ ...row, vat_lines: normalizeVatLines(row.vat_lines) })) as Expense[];
     },
   });
 
@@ -125,6 +127,7 @@ function ExpensesPage() {
         vendor: e.vendor,
         description: e.description,
         vat_amount: e.vat_amount,
+        vat_lines: e.vat_lines,
         payment_method: e.payment_method,
         receipt_url: receiptUrl,
       });
@@ -141,11 +144,13 @@ function ExpensesPage() {
     mutationFn: async (e: Partial<Expense>) => {
       if (!isManager) throw new Error("Keine Berechtigung");
       if (!e.amount || !Number.isFinite(e.amount) || e.amount <= 0) throw new Error("Betrag fehlt");
+      const vatLines = normalizeVatLines(e.vat_lines ?? []);
+      const vatAmount = vatLines.length ? vatTotal(vatLines) : (e.vat_amount ?? null);
       if (e.id) {
         const { error } = await supabase.from("expenses").update({
           expense_date: e.expense_date, amount: e.amount, currency: e.currency,
           category: e.category, vendor: e.vendor || null, description: e.description || null,
-          vat_amount: e.vat_amount ?? null, payment_method: e.payment_method || null,
+          vat_amount: vatAmount, vat_lines: vatLines.length ? vatLines : null, payment_method: e.payment_method || null,
           receipt_url: e.receipt_url || null,
         }).eq("id", e.id);
         if (error) throw error;
@@ -155,7 +160,7 @@ function ExpensesPage() {
           amount: e.amount, currency: e.currency || "CHF",
           category: e.category || "Sonstiges",
           vendor: e.vendor || null, description: e.description || null,
-          vat_amount: e.vat_amount ?? null, payment_method: e.payment_method || null,
+          vat_amount: vatAmount, vat_lines: vatLines.length ? vatLines : null, payment_method: e.payment_method || null,
           receipt_url: e.receipt_url || null,
         });
         if (error) throw error;
@@ -294,8 +299,12 @@ function ExpensesPage() {
                 </div>
                 <div className="text-right tabular-nums">
                   <div className="font-semibold">{Number(e.amount).toFixed(2)} {e.currency}</div>
-                  {e.vat_amount != null && (
-                    <div className="text-[10px] text-muted-foreground">MwSt {Number(e.vat_amount).toFixed(2)}</div>
+                  {e.vat_lines && e.vat_lines.length > 0 ? (
+                    <div className="text-[10px] text-muted-foreground">
+                      {e.vat_lines.map((l) => `MwSt ${formatRate(l.rate)}% ${l.vat.toFixed(2)}`).join(" · ")}
+                    </div>
+                  ) : e.vat_amount != null && (
+                    <div className="text-[10px] text-muted-foreground">MwSt CHF {Number(e.vat_amount).toFixed(2)}</div>
                   )}
                 </div>
               </button>
@@ -400,20 +409,19 @@ function ExpenseEditor({
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs uppercase tracking-wider text-muted-foreground">MwSt (optional)</label>
-              <input type="number" step="0.01" value={v.vat_amount ?? ""} onChange={(e) => set("vat_amount", e.target.value === "" ? null : Number(e.target.value))}
-                className="glass rounded-xl px-3 py-3 text-sm w-full outline-none bg-transparent tabular-nums" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs uppercase tracking-wider text-muted-foreground">Zahlung</label>
-              <select value={v.payment_method ?? ""} onChange={(e) => set("payment_method", e.target.value || null)}
-                className="glass rounded-xl px-3 py-3 text-sm w-full outline-none bg-transparent">
-                <option value="" className="bg-background">—</option>
-                {["Bar", "Karte", "Twint", "Rechnung"].map((p) => <option key={p} value={p} className="bg-background">{p}</option>)}
-              </select>
-            </div>
+          <VatEditor
+            lines={v.vat_lines ?? []}
+            legacyVat={v.vat_lines && v.vat_lines.length ? null : v.vat_amount ?? null}
+            onChange={(lines) => setV((p) => ({ ...p, vat_lines: lines, vat_amount: lines.length ? vatTotal(lines) : null }))}
+          />
+
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Zahlung</label>
+            <select value={v.payment_method ?? ""} onChange={(e) => set("payment_method", e.target.value || null)}
+              className="glass rounded-xl px-3 py-3 text-sm w-full outline-none bg-transparent">
+              <option value="" className="bg-background">—</option>
+              {["Bar", "Karte", "Twint", "Rechnung"].map((p) => <option key={p} value={p} className="bg-background">{p}</option>)}
+            </select>
           </div>
 
           <div className="space-y-1.5">
@@ -481,5 +489,76 @@ function ReceiptLink({ path }: { path: string }) {
     <a href={url} target="_blank" rel="noreferrer" className="block mb-4">
       <img src={url} alt="Beleg" className="rounded-2xl w-full max-h-64 object-contain bg-white/5" />
     </a>
+  );
+}
+
+type VatRow = { rate: number; gross: string; vat: string };
+
+function VatEditor({ lines, legacyVat, onChange }: {
+  lines: VatLine[];
+  legacyVat: number | null;
+  onChange: (lines: VatLine[]) => void;
+}) {
+  const [rows, setRows] = useState<VatRow[]>(() => {
+    const rates = [...new Set<number>([8.1, 2.6, ...lines.map((l) => l.rate)])];
+    return rates.map((rate) => {
+      const l = lines.find((x) => x.rate === rate);
+      return { rate, gross: l?.gross != null ? String(l.gross) : "", vat: l ? String(l.vat) : "" };
+    });
+  });
+
+  const push = (next: VatRow[]) => {
+    setRows(next);
+    onChange(normalizeVatLines(next.map((r) => ({
+      rate: r.rate,
+      gross_amount: r.gross === "" ? null : r.gross,
+      vat_amount: r.vat === "" ? null : r.vat,
+    }))));
+  };
+  const update = (rate: number, field: "gross" | "vat", value: string) => {
+    push(rows.map((r) => {
+      if (r.rate !== rate) return r;
+      if (field === "vat") return { ...r, vat: value };
+      const g = Number(value.replace(",", "."));
+      return { ...r, gross: value, vat: value !== "" && Number.isFinite(g) && g > 0 ? String(vatFromGross(g, rate)) : "" };
+    }));
+  };
+  const missing = SWISS_VAT_RATES.filter((rate) => !rows.some((r) => r.rate === rate));
+  const total = vatTotal(normalizeVatLines(rows.map((r) => ({ rate: r.rate, gross_amount: r.gross || null, vat_amount: r.vat || null }))));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-xs uppercase tracking-wider text-muted-foreground">MwSt pro Satz (optional)</label>
+        <span className="text-xs tabular-nums text-muted-foreground">Total CHF {total.toFixed(2)}</span>
+      </div>
+      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] gap-2 text-[10px] uppercase tracking-wider text-muted-foreground px-1">
+        <span>Satz</span><span>Umsatz inkl.</span><span>MwSt CHF</span>
+      </div>
+      {rows.map((r) => (
+        <div key={r.rate} className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] gap-2 items-center">
+          <span className="text-sm font-semibold tabular-nums">{formatRate(r.rate)}%</span>
+          <input type="number" step="0.01" inputMode="decimal" value={r.gross} placeholder="0.00" aria-label={`Umsatz inkl. MwSt ${formatRate(r.rate)}%`}
+            onChange={(e) => update(r.rate, "gross", e.target.value)}
+            className="glass rounded-xl px-3 py-2.5 text-sm w-full min-w-0 outline-none bg-transparent tabular-nums" />
+          <input type="number" step="0.01" inputMode="decimal" value={r.vat} placeholder="0.00" aria-label={`MwSt CHF ${formatRate(r.rate)}%`}
+            onChange={(e) => update(r.rate, "vat", e.target.value)}
+            className="glass rounded-xl px-3 py-2.5 text-sm w-full min-w-0 outline-none bg-transparent tabular-nums" />
+        </div>
+      ))}
+      {missing.length > 0 && (
+        <div className="flex gap-2">
+          {missing.map((rate) => (
+            <button key={rate} type="button" onClick={() => setRows([...rows, { rate, gross: "", vat: "" }])}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+              <Plus className="w-3 h-3" /> {formatRate(rate)}% hinzufügen
+            </button>
+          ))}
+        </div>
+      )}
+      {legacyVat != null && (
+        <p className="text-[11px] text-muted-foreground">Früher erfasst: MwSt CHF {Number(legacyVat).toFixed(2)} ohne Satz – bitte oben pro Satz eintragen.</p>
+      )}
+    </div>
   );
 }

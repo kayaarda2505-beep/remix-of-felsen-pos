@@ -9,7 +9,10 @@ const state = vi.hoisted(() => ({ status: "open" as string, completeImpl: null a
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (opts: any) => ({ options: opts, useParams: () => ({ id: "8a2a20b0-7be6-486f-8de6-118e2b152230" }) }),
 }));
-vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: any) => fn }));
+vi.mock("@tanstack/react-start", () => {
+  const chain: any = new Proxy(() => chain, { get: () => chain, apply: () => chain });
+  return { useServerFn: (fn: any) => fn, createMiddleware: () => chain, createServerFn: () => chain };
+});
 vi.mock("@/hooks/use-courier-geo", () => ({ useCourierGeo: () => {} }));
 vi.mock("@/lib/courier.functions", () => ({
   getCourierOrder: vi.fn(async () => ({

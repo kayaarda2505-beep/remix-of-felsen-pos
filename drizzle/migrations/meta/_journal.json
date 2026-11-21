@@ -85,6 +85,13 @@
       "when": 1795277049967,
       "tag": "0011_restrict_staff_tables_to_team",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795277931972,
+      "tag": "0012_expense_vat_lines",
+      "breakpoints": true
     }
   ]
 }

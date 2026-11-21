@@ -385,6 +385,7 @@ export type Database = {
           payment_method: string | null
           receipt_url: string | null
           vat_amount: number | null
+          vat_lines: Json | null
           vendor: string | null
         }
         Insert: {
@@ -399,6 +400,7 @@ export type Database = {
           payment_method?: string | null
           receipt_url?: string | null
           vat_amount?: number | null
+          vat_lines?: Json | null
           vendor?: string | null
         }
         Update: {
@@ -413,6 +415,7 @@ export type Database = {
           payment_method?: string | null
           receipt_url?: string | null
           vat_amount?: number | null
+          vat_lines?: Json | null
           vendor?: string | null
         }
         Relationships: []

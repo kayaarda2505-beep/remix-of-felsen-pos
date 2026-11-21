@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeVatLines, snapSwissRate, vatFromGross, vatTotal, type VatLine } from "./swiss-vat";
 
 const InputSchema = z.object({
   imageDataUrl: z.string().min(20).max(15_000_000), // data:image/jpeg;base64,...
@@ -11,6 +12,7 @@ export type ExtractedExpense = {
   expense_date: string | null; // YYYY-MM-DD
   amount: number | null;
   vat_amount: number | null;
+  vat_lines: VatLine[];
   currency: string;
   category: string;
   description: string | null;
@@ -28,7 +30,9 @@ export const extractReceipt = createServerFn({ method: "POST" })
 Regeln:
 - amount = Gesamtbetrag inkl. MwSt. als Zahl (z.B. 42.50, nicht "42.50 CHF")
 - expense_date im Format YYYY-MM-DD, wenn nicht erkennbar lass leer
-- vat_amount = MwSt-Betrag wenn ersichtlich
+- MwSt: NUR Schweizer Sätze. Aktuell 8.1 (Normalsatz: Non-Food, Alkohol, Reinigung, Gastronomie), 2.6 (reduziert: Lebensmittel, alkoholfreie Getränke), 3.8 (Beherbergung). Belege vor 2024: 7.7 / 2.5 / 3.7. Niemals andere Sätze erfinden.
+- Ein Beleg kann MEHRERE Sätze haben (z. B. 2.6 und 8.1). Lies die MWST-Tabelle unten auf dem Beleg (Satz / Basis bzw. Umsatz / MWST) und gib JEDEN Satz als eigene Zeile in vat_lines zurück: rate = Prozentsatz (z. B. 2.6), vat_amount = MwSt in CHF für diesen Satz, gross_amount = Umsatz inkl. MwSt für diesen Satz.
+- vat_amount = Summe aller MwSt-Beträge in CHF (kein Prozentsatz!)
 - category aus: Wareneinkauf, Getränke, Lebensmittel, Reinigung, Reparatur, Miete, Strom/Wasser, Marketing, Büro, Transport, Personal, Sonstiges
 - payment_method: Bar, Karte, Twint, Rechnung, oder null
 - description = 1-2 Zeilen was gekauft wurde (z.B. "Vodka 70cl, Tonic Water 6x")
@@ -61,7 +65,20 @@ Regeln:
                 vendor: { type: "string" },
                 expense_date: { type: "string" },
                 amount: { type: "number" },
-                vat_amount: { type: "number" },
+                vat_amount: { type: "number", description: "Summe MwSt in CHF" },
+                vat_lines: {
+                  type: "array",
+                  description: "Eine Zeile pro Schweizer MwSt-Satz auf dem Beleg",
+                  items: {
+                    type: "object",
+                    properties: {
+                      rate: { type: "number", description: "8.1, 2.6 oder 3.8 (alt: 7.7, 2.5, 3.7)" },
+                      vat_amount: { type: "number", description: "MwSt in CHF für diesen Satz" },
+                      gross_amount: { type: "number", description: "Umsatz inkl. MwSt für diesen Satz" },
+                    },
+                    required: ["rate"],
+                  },
+                },
                 currency: { type: "string" },
                 category: { type: "string" },
                 description: { type: "string" },
@@ -93,11 +110,20 @@ Regeln:
       return { ok: false, error: "Antwort nicht lesbar" };
     }
 
+    const amount = typeof parsed.amount === "number" ? parsed.amount : null;
+    let vatLines = normalizeVatLines(parsed.vat_lines);
+    if (vatLines.length === 0 && typeof parsed.vat_amount === "number" && amount != null && amount > parsed.vat_amount) {
+      // Nur eine Summe erkannt: akzeptieren, wenn sie genau einem Schweizer Satz entspricht.
+      const rate = snapSwissRate((parsed.vat_amount / (amount - parsed.vat_amount)) * 100);
+      if (rate != null) vatLines = [{ rate, gross: amount, vat: vatFromGross(amount, rate) }];
+    }
+
     const result: ExtractedExpense = {
       vendor: typeof parsed.vendor === "string" ? parsed.vendor : null,
       expense_date: typeof parsed.expense_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.expense_date) ? parsed.expense_date : null,
-      amount: typeof parsed.amount === "number" ? parsed.amount : null,
-      vat_amount: typeof parsed.vat_amount === "number" ? parsed.vat_amount : null,
+      amount,
+      vat_amount: vatLines.length ? vatTotal(vatLines) : null,
+      vat_lines: vatLines,
       currency: typeof parsed.currency === "string" ? parsed.currency : "CHF",
       category: typeof parsed.category === "string" ? parsed.category : "Sonstiges",
       description: typeof parsed.description === "string" ? parsed.description : null,
