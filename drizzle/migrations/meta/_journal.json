@@ -71,6 +71,13 @@
       "when": 1793555760473,
       "tag": "0009_weekly_menus",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795276271208,
+      "tag": "0010_manual_revenues",
+      "breakpoints": true
     }
   ]
 }

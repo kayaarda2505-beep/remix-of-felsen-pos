@@ -8,3 +8,4 @@
 
 - [x] Reports: „Beleg bearbeiten“ – Artikel nachträglich hinzufügen/entfernen/Menge ändern, Zahlung optional anpassen.
 - [x] Tischbestellungen: gegenseitige Küchen-/Pizzahinweise und Pizzabrot-Bon ab 14 Uhr Schweizer Zeit.
+- [ ] Ausgaben: manuelle Umsätze nach Herkunft erfassen, Restaurant-Ausgabenkategorien filtern; bisherigen Umsatzbereich unverändert lassen.

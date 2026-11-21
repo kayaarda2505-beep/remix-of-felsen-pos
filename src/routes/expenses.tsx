@@ -11,9 +11,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/hooks/use-auth";
 import { extractReceipt, type ExtractedExpense } from "@/lib/expenses-ai.functions";
+import { Button } from "@/components/ui/button";
+import { ManualRevenueSection } from "@/components/ManualRevenueSection";
+import { EXPENSE_CATEGORIES, expenseCategory, filterExpenses, localDate } from "@/lib/finance-entries";
 
 export const Route = createFileRoute("/expenses")({
-  head: () => ({ meta: [{ title: "Ausgaben — Piratino POS" }] }),
+  head: () => ({ meta: [
+    { title: "Ausgaben & manuelle Umsätze — Piratino POS" },
+    { name: "description", content: "Restaurant-Ausgaben nach Kategorie und manuelle Umsätze nach Herkunft verwalten." },
+    { property: "og:title", content: "Ausgaben & manuelle Umsätze — Piratino POS" },
+    { property: "og:description", content: "Ausgaben und manuelle Umsatzeinträge für Piratino verwalten." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: ExpensesPage,
 });
 
@@ -30,15 +40,22 @@ type Expense = {
   payment_method: string | null;
 };
 
-const CATEGORIES = [
-  "Wareneinkauf", "Getränke", "Lebensmittel", "Reinigung", "Reparatur",
-  "Miete", "Strom/Wasser", "Marketing", "Büro", "Transport", "Personal", "Sonstiges",
-];
+const CATEGORIES = EXPENSE_CATEGORIES;
 
 function ExpensesPage() {
   const qc = useQueryClient();
-  const { operator } = useAuth();
-  const isManager = operator?.role === "manager";
+  const { session } = useAuth();
+  const { data: isManager = false } = useQuery({
+    queryKey: ["finance_permission", session?.user.id],
+    enabled: !!session,
+    queryFn: async () => {
+      if (!session) return false;
+      const { data, error } = await supabase.rpc("is_admin_or_manager", { _user_id: session.user.id });
+      if (error) throw error;
+      return data === true;
+    },
+  });
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [monthStart, setMonthStart] = useState(() => {
     const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d;
   });
@@ -52,14 +69,15 @@ function ExpensesPage() {
     const d = new Date(monthStart); d.setMonth(d.getMonth() + 1); d.setDate(0); return d;
   }, [monthStart]);
 
-  const { data: expenses = [] } = useQuery<Expense[]>({
-    queryKey: ["expenses", monthStart.toISOString().slice(0, 7)],
+  const { data: expenses = [], error: expenseError } = useQuery<Expense[]>({
+    queryKey: ["expenses", localDate(monthStart).slice(0, 7)],
+    enabled: isManager,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("id, expense_date, amount, currency, category, vendor, description, receipt_url, vat_amount, payment_method")
-        .gte("expense_date", monthStart.toISOString().slice(0, 10))
-        .lte("expense_date", monthEnd.toISOString().slice(0, 10))
+        .gte("expense_date", localDate(monthStart))
+        .lte("expense_date", localDate(monthEnd))
         .order("expense_date", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -67,12 +85,17 @@ function ExpensesPage() {
     },
   });
 
-  const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
+  const visibleExpenses = useMemo(() => filterExpenses(expenses, categoryFilter), [expenses, categoryFilter]);
+  const categoryOptions = useMemo(() => [...new Set<string>([...CATEGORIES, ...expenses.map((e) => expenseCategory(e.category))])], [expenses]);
+  const total = visibleExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const byCategory = useMemo(() => {
     const m = new Map<string, number>();
-    for (const e of expenses) m.set(e.category, (m.get(e.category) ?? 0) + Number(e.amount));
+    for (const e of visibleExpenses) {
+      const category = expenseCategory(e.category);
+      m.set(category, (m.get(category) ?? 0) + Number(e.amount));
+    }
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [expenses]);
+  }, [visibleExpenses]);
 
   const extract = useServerFn(extractReceipt);
 
@@ -95,7 +118,7 @@ function ExpensesPage() {
 
       const e = r.result as ExtractedExpense;
       setEditor({
-        expense_date: e.expense_date ?? new Date().toISOString().slice(0, 10),
+        expense_date: e.expense_date ?? localDate(new Date()),
         amount: e.amount ?? 0,
         currency: e.currency || "CHF",
         category: e.category || "Sonstiges",
@@ -116,7 +139,8 @@ function ExpensesPage() {
 
   const save = useMutation({
     mutationFn: async (e: Partial<Expense>) => {
-      if (!e.amount || e.amount <= 0) throw new Error("Betrag fehlt");
+      if (!isManager) throw new Error("Keine Berechtigung");
+      if (!e.amount || !Number.isFinite(e.amount) || e.amount <= 0) throw new Error("Betrag fehlt");
       if (e.id) {
         const { error } = await supabase.from("expenses").update({
           expense_date: e.expense_date, amount: e.amount, currency: e.currency,
@@ -127,7 +151,7 @@ function ExpensesPage() {
         if (error) throw error;
       } else {
         const { error } = await supabase.from("expenses").insert({
-          expense_date: e.expense_date ?? new Date().toISOString().slice(0, 10),
+          expense_date: e.expense_date ?? localDate(new Date()),
           amount: e.amount, currency: e.currency || "CHF",
           category: e.category || "Sonstiges",
           vendor: e.vendor || null, description: e.description || null,
@@ -137,16 +161,18 @@ function ExpensesPage() {
         if (error) throw error;
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["expenses"] }); setEditor(null); toast.success("Gespeichert"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["expenses"] }); qc.invalidateQueries({ predicate: (q) => ["expenses_range", "report_expenses_summary", "report_expenses_by_category"].includes(String(q.queryKey[0])) }); setEditor(null); toast.success("Gespeichert"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Fehler"),
   });
 
   const del = useMutation({
     mutationFn: async (id: string) => {
+      if (!isManager) throw new Error("Keine Berechtigung");
       const { error } = await supabase.from("expenses").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["expenses"] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Löschen fehlgeschlagen"),
   });
 
   const monthLabel = monthStart.toLocaleDateString("de-CH", { month: "long", year: "numeric" });
@@ -155,7 +181,7 @@ function ExpensesPage() {
     <div className="p-4 lg:p-10 pb-28 md:pb-10 max-w-[1400px] mx-auto">
       <PageHeader
         title="Ausgaben"
-        subtitle="Belege scannen oder manuell erfassen"
+        subtitle="Ausgaben & manuelle Umsätze"
         actions={
           <>
             <div className="flex items-center gap-1 glass rounded-xl p-1">
@@ -169,15 +195,28 @@ function ExpensesPage() {
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-            <button
+            <Button variant="outline"
               disabled={!isManager}
-              onClick={() => setEditor({ expense_date: new Date().toISOString().slice(0, 10), amount: 0, currency: "CHF", category: "Sonstiges" })}
-              className="glass rounded-xl px-3 py-2.5 text-sm flex items-center gap-2 disabled:opacity-50">
-              <Plus className="w-4 h-4" /> Manuell
-            </button>
+              onClick={() => setEditor({ expense_date: localDate(new Date()), amount: 0, currency: "CHF", category: "Sonstiges" })}>
+              <Plus className="w-4 h-4" /> Ausgabe erfassen
+            </Button>
           </>
         }
       />
+
+      <ManualRevenueSection from={localDate(monthStart)} to={localDate(monthEnd)} canManage={isManager} />
+
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+        <h2 className="text-lg font-semibold">Ausgaben</h2>
+        <div className="space-y-1.5 w-full sm:w-64">
+          <label htmlFor="expense-category-filter" className="text-xs text-muted-foreground">Ausgabenkategorie filtern</label>
+          <select id="expense-category-filter" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm">
+            <option value="all">Alle Ausgabenkategorien</option>
+            {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
+          </select>
+        </div>
+      </div>
+      {expenseError && <p role="alert" className="text-sm text-destructive mb-4">Ausgaben konnten nicht geladen werden: {expenseError.message}</p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-6">
         <div className="lg:col-span-2 glass rounded-3xl p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
@@ -207,9 +246,9 @@ function ExpensesPage() {
           </div>
         </div>
         <div className="glass rounded-3xl p-4 md:p-5">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total {monthLabel}</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Ausgaben {monthLabel}{categoryFilter !== "all" ? ` · ${categoryFilter}` : ""}</div>
           <div className="text-2xl md:text-3xl font-semibold tabular-nums mt-1">{total.toFixed(2)} CHF</div>
-          <div className="text-xs text-muted-foreground mt-1">{expenses.length} Belege</div>
+          <div className="text-xs text-muted-foreground mt-1">{visibleExpenses.length} Belege</div>
         </div>
       </div>
 
@@ -228,14 +267,14 @@ function ExpensesPage() {
       )}
 
       <div className="glass rounded-3xl overflow-hidden">
-        {expenses.length === 0 ? (
+        {visibleExpenses.length === 0 ? (
           <div className="p-12 text-center text-sm text-muted-foreground flex flex-col items-center gap-3">
             <Receipt className="w-10 h-10 opacity-40" />
-            <div>Noch keine Ausgaben für {monthLabel}.</div>
+            <div>Keine Ausgaben für {monthLabel}{categoryFilter !== "all" ? ` · ${categoryFilter}` : ""}.</div>
           </div>
         ) : (
           <div className="divide-y divide-border/30">
-            {expenses.map((e) => (
+            {visibleExpenses.map((e) => (
               <button key={e.id} onClick={() => setEditor(e)}
                 className="w-full flex items-center gap-4 p-4 hover:bg-white/[0.03] text-left">
                 {e.receipt_url ? (
@@ -249,7 +288,7 @@ function ExpensesPage() {
                   <div className="text-sm font-medium truncate">{e.vendor || e.description || e.category}</div>
                   <div className="text-[11px] text-muted-foreground truncate">
                     {new Date(e.expense_date + "T00:00:00").toLocaleDateString("de-CH", { day: "2-digit", month: "short" })}
-                    {" · "}{e.category}
+                    {" · "}{expenseCategory(e.category)}
                     {e.payment_method ? ` · ${e.payment_method}` : ""}
                   </div>
                 </div>
@@ -308,7 +347,7 @@ function ExpenseEditor({
   saving: boolean;
   onDelete?: () => void;
 }) {
-  const [v, setV] = useState<Partial<Expense>>(initial);
+  const [v, setV] = useState<Partial<Expense>>({ ...initial, category: expenseCategory(initial.category ?? "Sonstiges") });
   const set = <K extends keyof Expense>(k: K, val: Expense[K] | null) => setV((p) => ({ ...p, [k]: val }));
 
   return (
@@ -357,7 +396,7 @@ function ExpenseEditor({
             <label className="text-xs uppercase tracking-wider text-muted-foreground">Kategorie</label>
             <select value={v.category ?? "Sonstiges"} onChange={(e) => set("category", e.target.value)}
               className="glass rounded-xl px-3 py-3 text-sm w-full outline-none bg-transparent">
-              {CATEGORIES.map((c) => <option key={c} value={c} className="bg-background">{c}</option>)}
+              {[...new Set<string>([...CATEGORIES, v.category ?? "Sonstiges"])].map((c) => <option key={c} value={c} className="bg-background">{c}</option>)}
             </select>
           </div>
 
@@ -409,7 +448,8 @@ async function compressImage(file: File, maxDim: number, quality: number): Promi
   const h = Math.round(bmp.height * scale);
   const canvas = document.createElement("canvas");
   canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Bild konnte nicht verarbeitet werden.");
   ctx.drawImage(bmp, 0, 0, w, h);
   return canvas.toDataURL("image/jpeg", quality);
 }

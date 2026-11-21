@@ -673,6 +673,33 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_revenues: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          note: string | null
+          revenue_date: string
+          source: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          revenue_date?: string
+          source: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          revenue_date?: string
+          source?: string
+        }
+        Relationships: []
+      }
       marketing_campaigns: {
         Row: {
           created_at: string
