@@ -85,6 +85,7 @@ function WochenmenuPage() {
   const [subtitle, setSubtitle] = useState("Menù della Settimana");
   const [dishes, setDishes] = useState<WeeklyDish[]>([]);
   const [footer, setFooter] = useState("Montag bis Freitag · 11 – 14 Uhr");
+  const [dishPt, setDishPt] = useState(14);
   const [range, setRange] = useState(weekRange);
   const [menuId, setMenuId] = useState<string | null>(null);
   const [saving, setSaving] = useState<"" | "save" | "publish">("");
@@ -217,7 +218,7 @@ function WochenmenuPage() {
   const downloadWord = async () => {
     try {
       const { buildWeeklyMenuDocx } = await import("@/lib/weekly-menu-docx");
-      const blob = await buildWeeklyMenuDocx({ week, subtitle, dishes, footer, logoUrl: logoAsset.url });
+      const blob = await buildWeeklyMenuDocx({ week, subtitle, dishes, footer, logoUrl: logoAsset.url, dishPt });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `Wochenmenue-${week.replace(/[^\w]+/g, "-")}.docx`;
@@ -262,6 +263,18 @@ function WochenmenuPage() {
           <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
           <label className="text-xs font-medium text-muted-foreground">Fusszeile</label>
           <Input value={footer} onChange={(e) => setFooter(e.target.value)} />
+          <label className="text-xs font-medium text-muted-foreground">
+            Schriftgrösse der Gerichte: {dishPt} pt
+          </label>
+          <input
+            type="range"
+            min={9}
+            max={22}
+            step={0.5}
+            value={dishPt}
+            onChange={(e) => setDishPt(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
         </div>
 
         <div className="space-y-3">
@@ -339,7 +352,7 @@ function WochenmenuPage() {
               transformOrigin: "top left",
             }}
           >
-            <MenuSheet week={week} subtitle={subtitle} dishes={valid} footer={footer} />
+            <MenuSheet week={week} subtitle={subtitle} dishes={valid} footer={footer} dishPt={dishPt} />
           </div>
         </div>
       </div>
@@ -357,8 +370,9 @@ function Ornament() {
   );
 }
 
-function MenuSheet({ week, subtitle, dishes, footer }: { week: string; subtitle: string; dishes: WeeklyDish[]; footer: string }) {
+function MenuSheet({ week, subtitle, dishes, footer, dishPt }: { week: string; subtitle: string; dishes: WeeklyDish[]; footer: string; dishPt: number }) {
   const many = dishes.length > 6;
+  const dishSize = many ? Math.min(dishPt, 14) : dishPt;
   return (
     <div id="menu-sheet" className="menu-sheet relative shadow-2xl" style={{ width: "210mm", height: "297mm" }}>
       <div className="absolute" style={{ inset: "10mm", border: "0.6pt solid var(--menu-gold)" }} />
@@ -377,7 +391,7 @@ function MenuSheet({ week, subtitle, dishes, footer }: { week: string; subtitle:
         <div className={`flex-1 flex flex-col justify-start w-full pt-[12mm] ${many ? "gap-5" : "gap-8"}`}>
           {dishes.map((d, i) => (
             <div key={i}>
-              <div className={`menu-caps ${many ? "text-[12pt]" : "text-[14pt]"} tracking-[0.2em] flex items-baseline justify-center gap-4`}>
+              <div className="menu-caps tracking-[0.2em] flex items-baseline justify-center gap-4" style={{ fontSize: `${dishSize}pt` }}>
                 <span>{d.name.toUpperCase()}</span>
                 {d.price && (
                   <span className="menu-serif normal-case tracking-[0.1em]" style={{ color: "var(--menu-gold)" }}>
@@ -386,7 +400,7 @@ function MenuSheet({ week, subtitle, dishes, footer }: { week: string; subtitle:
                 )}
               </div>
               {d.description && (
-                <div className={`menu-serif italic mt-1 ${many ? "text-[12pt]" : "text-[14pt]"}`} style={{ color: "var(--menu-muted)" }}>
+                <div className="menu-serif italic mt-1" style={{ color: "var(--menu-muted)", fontSize: `${dishSize}pt` }}>
                   {d.description}
                 </div>
               )}

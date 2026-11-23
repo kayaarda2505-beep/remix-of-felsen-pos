@@ -40,10 +40,12 @@ export async function buildWeeklyMenuDocx(o: {
   dishes: WeeklyDish[];
   footer: string;
   logoUrl: string;
+  dishPt?: number;
 }) {
   const logo = await logoPng(o.logoUrl);
   const many = o.dishes.length > 6;
   const gap = many ? 260 : 420;
+  const dishSize = Math.round((many ? Math.min(o.dishPt ?? 14, 14) : (o.dishPt ?? 14)) * 2);
   const children: Paragraph[] = [
     center([new ImageRun({ type: "png", data: logo, transformation: { width: 110, height: 110 }, altText: { title: "Piratino", description: "Logo", name: "logo" } })]),
     center([new TextRun({ text: "P I R A T I N O", font: CAPS, size: 20, color: MUTED })], 120),
@@ -52,11 +54,11 @@ export async function buildWeeklyMenuDocx(o: {
     ornament(360, 300),
   ];
   for (const d of o.dishes) {
-    children.push(center([new TextRun({ text: d.name.toUpperCase(), font: CAPS, size: many ? 24 : 28, color: INK, characterSpacing: 30 })], gap));
-    if (d.description) children.push(center([new TextRun({ text: d.description, font: SERIF, italics: true, size: many ? 24 : 28, color: MUTED })], 40));
+    children.push(center([new TextRun({ text: d.name.toUpperCase(), font: CAPS, size: dishSize, color: INK, characterSpacing: 30 })], gap));
+    if (d.description) children.push(center([new TextRun({ text: d.description, font: SERIF, italics: true, size: dishSize, color: MUTED })], 40));
     if (d.price) {
       const n = Number(d.price.replace(",", "."));
-      children.push(center([new TextRun({ text: Number.isFinite(n) ? `CHF ${n.toFixed(2)}` : d.price, font: SERIF, size: 24, color: GOLD })], 40));
+      children.push(center([new TextRun({ text: Number.isFinite(n) ? `CHF ${n.toFixed(2)}` : d.price, font: SERIF, size: dishSize, color: GOLD })], 40));
     }
   }
   children.push(ornament(gap + 300, 160));
