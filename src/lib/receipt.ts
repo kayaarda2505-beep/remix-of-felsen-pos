@@ -274,6 +274,7 @@ export function buildBill(opts: {
   deliveryRecipient?: { name: string; street: string; postal: string; phone?: string | null; note?: string | null };
   note?: string | null;
   compact?: boolean;
+  scheduledFor?: string | null;
 }): ReceiptPayload {
   const s = opts.settings ?? DEFAULT_SETTINGS;
   const cur = s.currency;
@@ -292,6 +293,9 @@ export function buildBill(opts: {
     bold: true,
   });
   if (!opts.compact) lines.push({ text: "", align: "center" });
+  if (opts.scheduledFor?.trim()) {
+    lines.push({ text: `GEPLANT: ${opts.scheduledFor.trim()}`, align: "center", bold: true, size: "double-h" });
+  }
   if (opts.deliveryRecipient) {
     const recipient = opts.deliveryRecipient;
     // Adresse kompakt: Name, Strasse, PLZ/Ort direkt untereinander
@@ -570,6 +574,7 @@ export type ReprintOrder = {
   order_number?: number | null;
   opened_by_name?: string | null;
   payment_preference?: string | null;
+  scheduled_for?: string | null;
   total?: number | null;
 };
 
@@ -651,6 +656,7 @@ export function buildReprintBillOpts(opts: {
       qrUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/kurier/${order.id}`,
       copies: 2,
       orderNo,
+      scheduledFor: order.scheduled_for ?? null,
       ...(payments.length === 0
         ? {
             interim: true,
@@ -676,6 +682,7 @@ export function buildReprintBillOpts(opts: {
     paymentMethod,
     note: isTakeaway ? (order.delivery_note ?? null) : null,
     orderNo,
+    scheduledFor: isTakeaway ? (order.scheduled_for ?? null) : null,
   };
 }
 
@@ -694,6 +701,7 @@ export async function printBill(opts: {
   deliveryRecipient?: { name: string; street: string; postal: string; phone?: string | null; note?: string | null };
   note?: string | null;
   compact?: boolean;
+  scheduledFor?: string | null;
   copies?: number;
   orderNo?: string;
 }): Promise<string | null> {

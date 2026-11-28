@@ -27,6 +27,7 @@ const Schema = z.object({
   payment_method: z.enum(["cash", "card", "twint"]).nullable().optional().catch(null),
   items: z.array(ItemSchema).min(1).max(60),
   external_id: z.string().max(120).nullable().optional(),
+  scheduled_for: z.string().max(80).nullable().optional(),
 });
 
 type Payload = z.infer<typeof Schema>;
@@ -169,6 +170,7 @@ export const Route = createFileRoute("/api/public/orders/inbound")({
             delivery_address: address,
             delivery_note: payload.note?.trim() || null,
             payment_preference: payload.payment_method ?? null,
+            scheduled_for: payload.scheduled_for ?? null,
             total,
             opened_by_name: "Website",
             external_id: payload.external_id ?? null,
@@ -251,6 +253,7 @@ function normalizePayload(body: any) {
   let pay: unknown = null;
   for (const k of PAY_KEYS) if (body[k] != null) { pay = body[k]; break; }
   out.payment_method = mapPayment(pay);
+  out.scheduled_for = pickSchedule(body);
   const t = String(body.type ?? body.order_type ?? body.orderType ?? "").toLowerCase();
   out.type = /deliver|liefer|kurier/.test(t) ? "delivery" : "takeaway";
   const cust: any = { ...c };
@@ -282,8 +285,44 @@ function normalizePayload(body: any) {
       };
     });
   }
-  console.log("[inbound] keys", Object.keys(body), "note?", !!out.note, "pay", out.payment_method);
+  console.log("[inbound] keys", Object.keys(body), "note?", !!out.note, "pay", out.payment_method, "sched", out.scheduled_for);
   return out;
+}
+
+// Geplante Liefer-/Abholzeit (Website "später liefern")
+const SCHED_KEYS = ["scheduled_for", "scheduledFor", "scheduled_at", "scheduledAt", "scheduled_time", "scheduledTime", "delivery_time", "deliveryTime", "pickup_time", "pickupTime", "desired_time", "desiredTime", "requested_time", "requestedTime", "preferred_time", "preferredTime", "wish_time", "wishTime", "delivery_at", "deliveryAt", "pickup_at", "pickupAt", "lieferzeit", "abholzeit", "wunschzeit", "time", "uhrzeit", "zeit"];
+const SCHED_DATE_KEYS = ["scheduled_date", "scheduledDate", "delivery_date", "deliveryDate", "pickup_date", "pickupDate", "date", "datum"];
+function fmtSchedule(raw: string): string {
+  const v = raw.trim();
+  if (/^(asap|sofort|so schnell wie möglich|now)$/i.test(v)) return "";
+  if (/^\d{4}-\d{2}-\d{2}T/.test(v)) {
+    const d = new Date(v);
+    if (!isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat("de-CH", { timeZone: "Europe/Zurich", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(d);
+    }
+  }
+  return v.slice(0, 80);
+}
+function pickSchedule(body: any): string | null {
+  const srcs = [body, body?.delivery, body?.schedule, body?.customer].filter((o) => o && typeof o === "object");
+  if (body?.asap === true || body?.is_asap === true) return null;
+  for (const o of srcs) {
+    for (const k of SCHED_KEYS) {
+      const v = o[k];
+      if (v == null || v === "" || typeof v === "object") continue;
+      let t = fmtSchedule(String(v));
+      if (!t) return null;
+      if (/^\d{1,2}[:.]\d{2}$/.test(t)) {
+        const dk = SCHED_DATE_KEYS.map((x) => o[x]).find((x) => typeof x === "string" && x.trim());
+        if (dk) {
+          const m = String(dk).match(/^(\d{4})-(\d{2})-(\d{2})/);
+          t = `${m ? `${m[3]}.${m[2]}.` : String(dk).trim()} ${t}`;
+        }
+      }
+      return t;
+    }
+  }
+  return null;
 }
 
 // ---- Reservations- und Catering-Anfragen ----

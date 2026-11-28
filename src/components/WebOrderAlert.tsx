@@ -13,13 +13,14 @@ type WebOrder = {
   delivery_address: string | null;
   delivery_note: string | null;
   payment_preference: string | null;
+  scheduled_for?: string | null;
   total: number | null;
   opened_at?: string | null;
   order_number?: number | null;
 };
 
 const COLS =
-  "id, order_type, contact_name, contact_phone, delivery_address, delivery_note, payment_preference, total, opened_at, order_number";
+  "id, order_type, contact_name, contact_phone, delivery_address, delivery_note, payment_preference, scheduled_for, total, opened_at, order_number";
 
 const paymentLabels: Record<string, string> = { cash: "Bar", card: "Karte", twint: "TWINT" };
 
@@ -139,6 +140,7 @@ export function WebOrderAlert() {
         total: Number(o.total ?? 0),
         interim: true,
         title: "WEBSITE",
+        scheduledFor: o.scheduled_for ?? null,
         compact: true,
         copies: 2,
         paymentMethod: paymentLabels[payment],
@@ -181,6 +183,7 @@ export function WebOrderAlert() {
           {isDelivery && o.delivery_address && (
             <div className="text-muted-foreground">{o.delivery_address}</div>
           )}
+          {o.scheduled_for && <div className="font-bold text-base text-primary">Geplant: {o.scheduled_for}</div>}
           {o.delivery_note && <div className="italic">„{o.delivery_note}"</div>}
           {paymentLabels[o.payment_preference ?? ""] ? (
             <div>Zahlung: {paymentLabels[o.payment_preference ?? ""]}</div>
